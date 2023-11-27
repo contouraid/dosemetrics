@@ -3,6 +3,7 @@ import os
 import sys
 import numpy as np
 import SimpleITK as sitk
+import pandas as pd
 
 import dosemetrics.metrics as metrics
 import dosemetrics.plot as plot
@@ -127,25 +128,26 @@ def compute_dosemetrics(data_dir, compare_dir):
 
 if __name__ == "__main__":
     root_dir = os.path.abspath("..")
-    data_dir = "/Users/amithkamath/data"
-    output_dir = os.path.join(root_dir, "output")
+    data_dir = "/Users/amithkamath/data/DLDP"
+    output_dir = os.path.join(data_dir, "output")
     os.makedirs(output_dir, exist_ok=True)
 
-    gt_dir = os.path.join(data_dir, "DLDP", "ground_truth")
-    pred_noTTA_dir = os.path.join(
-        data_dir, "DLDP", "output_perturb_noTTA", "Prediction"
-    )
-    pred_TTA_dir = os.path.join(
-        data_dir, "DLDP", "output_perturb_withTTA", "Prediction"
-    )
+    gt_dir = os.path.join(data_dir, "ground_truth")
+    pred_noTTA_dir = os.path.join(data_dir, "output_perturb_noTTA", "Prediction")
+    pred_TTA_dir = os.path.join(data_dir, "output_perturb_withTTA", "Prediction")
 
     subjects = range(81, 100)
+    for subject_id in subjects:
+        gt_data_dir = os.path.join(gt_dir, "DLDP_" + str(subject_id).zfill(3))
+        noTTA_dir = os.path.join(pred_noTTA_dir, "DLDP_" + str(subject_id).zfill(3))
+        noTTA_scores = compute_dosemetrics(gt_data_dir, noTTA_dir)
 
-    for test_dir in [pred_noTTA_dir, pred_TTA_dir]:
-        subject_metrics = {}
-        for subject_id in subjects:
-            gt_data_dir = os.path.join(gt_dir, "DLDP_" + str(subject_id).zfill(3))
-            compare_dir = os.path.join(test_dir, "DLDP_" + str(subject_id).zfill(3))
-            scores = compute_dosemetrics(gt_data_dir, compare_dir)
-            subject_metrics[subject_id] = scores
-        print(subject_metrics)
+        TTA_dir = os.path.join(pred_TTA_dir, "DLDP_" + str(subject_id).zfill(3))
+        TTA_scores = compute_dosemetrics(gt_data_dir, TTA_dir)
+
+        noTTA_df = pd.DataFrame(noTTA_scores)
+        TTA_df = pd.DataFrame(TTA_scores)
+        subject_df = pd.concat([noTTA_df, TTA_df]).transpose()
+        subject_df.columns = ["Dose_noTTA", "DVH_noTTA", "Dose_TTA", "DVH_TTA"]
+        subject_df.to_csv(os.path.join(output_dir, str(subject_id) + ".csv"))
+        print(f"Done with subject {subject_id}")
