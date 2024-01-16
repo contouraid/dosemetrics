@@ -10,11 +10,11 @@ plt.rcParams["figure.figsize"] = [20, 12]
 def compute_dvh(dose_array, oar_mask):
     dose_in_oar = dose_array[oar_mask > 0]
     bins = np.arange(0, 65, 0.1)
-    total_voxels = len(oar_mask)
+    total_voxels = len(dose_in_oar)
     values = []
     for bin in bins:
         number = (dose_in_oar >= bin).sum()
-        value = number / total_voxels * 100
+        value = (number / total_voxels) * 100
         values.append(value)
 
     return (bins, values)
@@ -34,27 +34,26 @@ def plot_predicted_dvh_for_case(root_folder, case):
         os.makedirs(root_folder + "ISAS_GBM_" + str(subject) + "/DVH/", exist_ok=True)
         dose_array = sitk.GetArrayFromImage(dose_image)
         for structure in structures:
-            print(structure)
+            struct_name = structure.split("/")[-1].split(".")[0]
+            print(struct_name)
             oar_image = sitk.ReadImage(structure)
             oar_mask = sitk.GetArrayFromImage(oar_image)
             results = compute_dvh(dose_array, oar_mask)
 
             plt.figure()
             plt.plot(
-                results[0],
-                results[1],
-                color="b",
-                label=structure.split("/")[-1].split(".")[0],
+                results[0], results[1], color="b", label=struct_name,
             )
             plt.xlabel("Dose [Gy]")
             plt.ylabel("Ratio of Total Structure Volume [%]")
             plt.legend(loc="best")
+            plt.grid()
             plt.savefig(
                 root_folder
                 + "ISAS_GBM_"
                 + str(subject)
                 + "/DVH/"
-                + structure.split("/")[-1].split(".")[0]
+                + struct_name
                 + ".png"
             )
             plt.close()
