@@ -1,23 +1,11 @@
 import os
 import glob
-import numpy as np
+from dosemetrics.dvh import compute_dvh
 import SimpleITK as sitk
 import matplotlib.pyplot as plt
 
 plt.rcParams["figure.figsize"] = [20, 12]
-
-
-def compute_dvh(dose_array, oar_mask):
-    dose_in_oar = dose_array[oar_mask > 0]
-    bins = np.arange(0, 65, 0.1)
-    total_voxels = len(dose_in_oar)
-    values = []
-    for bin in bins:
-        number = (dose_in_oar >= bin).sum()
-        value = (number / total_voxels) * 100
-        values.append(value)
-
-    return (bins, values)
+plt.style.use("dark_background")
 
 
 def plot_predicted_dvh_for_case(root_folder, case):

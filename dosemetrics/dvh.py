@@ -54,7 +54,7 @@ def get_cmap(n, name="gist_ncar"):
     return plt.cm.get_cmap(name, n)
 
 
-def plot_dvh(dataframe, plot_title):
+def plot_dvh(dataframe: pd.DataFrame, plot_title: str) -> None:
     col_names = dataframe.columns
     cmap = get_cmap(40)
 
@@ -113,3 +113,23 @@ def compare_dvh(dose_array_gt, dose_array_pred, case_nr, name):
     plt.legend(loc="best")
 
     return fig
+
+
+def compute_dvh(
+    dose_array: np.ndarray, structure_mask: np.ndarray
+) -> tuple[list, list]:
+    dose_in_oar = dose_array[structure_mask > 0]
+    bins = np.arange(0, 65, 0.1)
+    total_voxels = len(dose_in_oar)
+    values = []
+
+    if total_voxels == 0:
+        # There's no voxels in the mask
+        values = [0] * len(bins)
+    else:
+        for bin in bins:
+            number = (dose_in_oar >= bin).sum()
+            value = (number / total_voxels) * 100
+            values.append(value)
+
+    return (bins, values)
