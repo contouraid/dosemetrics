@@ -1,29 +1,42 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 
-def dvh(dose_array: np.ndarray, structure_name: str = None):
-    """
-    plot_dvh: function that calculates and plots the DVHs based on the dose array of a specific structure
-    """
-    bins = np.arange(0, np.ceil(np.max(dose_array)), 0.1)
-    total_voxels = len(dose_array)
-    values = []
+def _get_cmap(n, name="gist_ncar"):
+    """Returns a function that maps each index in 0, 1, ..., n-1 to a distinct
+    RGB color; the keyword argument name must be a standard mpl colormap name."""
+    return plt.cm.get_cmap(name, n)
 
-    for bin in bins:
-        number = (dose_array >= bin).sum()
-        value = number / total_voxels * 100
 
-        values.append(value)
+def from_dataframe(dataframe: pd.DataFrame, plot_title: str) -> None:
+    col_names = dataframe.columns
+    cmap = _get_cmap(40)
 
-    fig = plt.figure()
-    if structure_name is not None:
-        plt.plot(bins, values, color="b", label=structure_name)
-        plt.legend(loc="best")
-    else:
-        plt.plot(bins, values, color="b")
+    plt.style.use("dark_background")
+    fig, ax = plt.subplots()
+
+    for i in range(len(col_names)):
+        if i % 2 == 0:
+            name = col_names[i].split("\n")[0]
+            line_color = cmap(i)
+            x = dataframe[col_names[i]]
+            y = dataframe[col_names[i + 1]]
+            plt.plot(x, y, color=line_color, label=name)
 
     plt.xlabel("Dose [Gy]")
+    plt.xlim([0, 65])
+    plt.grid()
     plt.ylabel("Ratio of Total Structure Volume [%]")
+    # Shrink current axis by 20%
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
 
-    return fig
+    # Put a legend to the right of the current axis
+    ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+
+    plt.title(plot_title)
+    filename = plot_title + ".png"
+    plt.savefig(filename)
+    # plt.show()
+    plt.close(fig)

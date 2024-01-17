@@ -6,7 +6,6 @@ import SimpleITK as sitk
 import pandas as pd
 
 import dosemetrics.metrics as metrics
-import dosemetrics.plot as plot
 
 if os.path.abspath("..") not in sys.path:
     sys.path.insert(0, os.path.abspath(".."))

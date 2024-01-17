@@ -1,5 +1,6 @@
 import glob
-from dosemetrics.dvh import read_dvh_file, plot_dvh
+from dosemetrics.dvh import read_from_eclipse
+from dosemetrics.plot import from_dataframe
 import matplotlib.pyplot as plt
 
 plt.rcParams["figure.figsize"] = [20, 12]
@@ -10,5 +11,5 @@ for subject in range(78, 101):
     )
     for file in cases:
         name = file.split("\\")[-1].split(".")[0]
-        data = read_dvh_file(file)
-        plot_dvh(data, name)
+        data = read_from_eclipse(file)
+        from_dataframe(data, name)

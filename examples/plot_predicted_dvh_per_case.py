@@ -8,46 +8,32 @@ plt.rcParams["figure.figsize"] = [20, 12]
 plt.style.use("dark_background")
 
 
-def plot_predicted_dvh_for_case(root_folder, case):
-    for subject in [
-        str(case).zfill(3) + str(i) for i in range(0, 4)
-    ]:  # alternatives from 0 to 4
-        structures = glob.glob(
-            root_folder + "ISAS_GBM_" + str(subject) + "/*[!Dose*].nii.gz"
-        )
-        dose_image = sitk.ReadImage(
-            root_folder + "ISAS_GBM_" + str(subject) + "/Dose.nii.gz"
-        )
+def plot_predicted_dvh_for_case(root_folder):
+    structures = glob.glob(root_folder + "/*[!Dose*].nii.gz")
+    dose_image = sitk.ReadImage(root_folder + "/Dose.nii.gz")
 
-        os.makedirs(root_folder + "ISAS_GBM_" + str(subject) + "/DVH/", exist_ok=True)
-        dose_array = sitk.GetArrayFromImage(dose_image)
-        for structure in structures:
-            struct_name = structure.split("/")[-1].split(".")[0]
-            print(struct_name)
-            oar_image = sitk.ReadImage(structure)
-            oar_mask = sitk.GetArrayFromImage(oar_image)
-            results = compute_dvh(dose_array, oar_mask)
+    os.makedirs(root_folder + "/DVH/", exist_ok=True)
+    dose_array = sitk.GetArrayFromImage(dose_image)
+    for structure in structures:
+        struct_name = structure.split("/")[-1].split(".")[0]
+        print(struct_name)
+        oar_image = sitk.ReadImage(structure)
+        oar_mask = sitk.GetArrayFromImage(oar_image)
+        results = compute_dvh(dose_array, oar_mask)
 
-            plt.figure()
-            plt.plot(
-                results[0], results[1], color="b", label=struct_name,
-            )
-            plt.xlabel("Dose [Gy]")
-            plt.ylabel("Ratio of Total Structure Volume [%]")
-            plt.legend(loc="best")
-            plt.grid()
-            plt.savefig(
-                root_folder
-                + "ISAS_GBM_"
-                + str(subject)
-                + "/DVH/"
-                + struct_name
-                + ".png"
-            )
-            plt.close()
+        plt.figure()
+        plt.plot(
+            results[0], results[1], color="b", label=struct_name,
+        )
+        plt.xlabel("Dose [Gy]")
+        plt.ylabel("Ratio of Total Structure Volume [%]")
+        plt.legend(loc="best")
+        plt.grid()
+        plt.savefig(root_folder + "/DVH/" + struct_name + ".png")
+        plt.close()
 
 
 if __name__ == "__main__":
-    root_folder = "/Users/amithkamath/data/DLDP/astute-experiments/"
-    case = 70
-    plot_predicted_dvh_for_case(root_folder, case)
+    repo_root = "/Users/amithkamath/repo/dosemetrics/"
+    data_folder = os.path.join(repo_root, "data/test_subject")
+    plot_predicted_dvh_for_case(data_folder)
