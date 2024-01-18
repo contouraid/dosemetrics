@@ -5,62 +5,10 @@ import numpy as np
 import SimpleITK as sitk
 import pandas as pd
 
-import dosemetrics.metrics as metrics
+import dosemetrics.scores as metrics
 
 if os.path.abspath("..") not in sys.path:
     sys.path.insert(0, os.path.abspath(".."))
-
-
-def copy_sitk_imageinfo(image1, image2):
-    image2.SetSpacing(image1.GetSpacing())
-    image2.SetDirection(image1.GetDirection())
-    image2.SetOrigin(image1.GetOrigin())
-
-    return image2
-
-
-def read_data(patient_dir):
-    dict_images = {}
-    list_structures = [
-        "CT",
-        "Dose_Mask",
-        "BrainStem",
-        "Chiasm",
-        "Cochlea_L",
-        "Cochlea_R",
-        "Eye_L",
-        "Eye_R",
-        "Hippocampus_L",
-        "Hippocampus_R",
-        "LacrimalGland_L",
-        "LacrimalGland_R",
-        "OpticNerve_L",
-        "OpticNerve_R",
-        "Pituitary",
-        "Dose",
-        "Target",
-    ]
-
-    for structure_name in list_structures:
-        structure_file = patient_dir + "/" + structure_name + ".nii.gz"
-
-        if structure_name == "CT":
-            dtype = sitk.sitkInt16
-        elif structure_name == "Dose":
-            dtype = sitk.sitkFloat32
-        else:
-            dtype = sitk.sitkUInt8
-
-        if os.path.exists(structure_file):
-            dict_images[structure_name] = sitk.ReadImage(structure_file, dtype)
-            # To numpy array (C * Z * H * W)
-            dict_images[structure_name] = sitk.GetArrayFromImage(
-                dict_images[structure_name]
-            )[np.newaxis, :, :, :]
-        else:
-            dict_images[structure_name] = np.zeros((1, 128, 128, 128), np.uint8)
-
-    return dict_images
 
 
 def compute_dosemetrics(data_dir, compare_dir):

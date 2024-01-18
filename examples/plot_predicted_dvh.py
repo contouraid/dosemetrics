@@ -1,14 +1,16 @@
 import os
 import glob
-from dosemetrics.dvh import compute_dvh
+
 import SimpleITK as sitk
 import matplotlib.pyplot as plt
+
+from dosemetrics.dvh import compute_dvh
 
 plt.rcParams["figure.figsize"] = [20, 12]
 plt.style.use("dark_background")
 
 
-def plot_predicted_dvh_for_case(root_folder):
+def plot_dvh_from_eclipse(root_folder):
     structures = glob.glob(root_folder + "/*[!Dose*].nii.gz")
     dose_image = sitk.ReadImage(root_folder + "/Dose.nii.gz")
 
@@ -34,6 +36,6 @@ def plot_predicted_dvh_for_case(root_folder):
 
 
 if __name__ == "__main__":
-    repo_root = "/Users/amithkamath/repo/dosemetrics/"
+    repo_root = os.path.abspath("..")
     data_folder = os.path.join(repo_root, "data/test_subject")
-    plot_predicted_dvh_for_case(data_folder)
+    plot_dvh_from_eclipse(data_folder)
