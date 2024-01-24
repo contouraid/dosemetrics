@@ -170,20 +170,27 @@ if __name__ == "__main__":
 
             mean_dose_in_variant_oar = np.mean(variant_predicted_dose[oar_mask > 0])
             variance_dose_in_variant_oar = np.std(variant_predicted_dose[oar_mask > 0])
-            oar_mean_df.loc[oar, variant] = mean_dose_in_variant_oar
+            oar_mean_df.loc[oar, variant] = (
+                mean_dose_in_variant_oar - mean_dose_in_oar_orig
+            )
 
             print(
                 f"For variant {variant}, the mean variant dose in {oar} region is: mean (var): {mean_dose_in_variant_oar} ({variance_dose_in_variant_oar})"
             )
 
             max_dose_in_variant_oar = np.max(variant_predicted_dose[oar_mask > 0])
-            oar_max_df.loc[oar, variant] = max_dose_in_variant_oar
+            oar_max_df.loc[oar, variant] = (
+                max_dose_in_variant_oar - max_dose_in_oar_orig
+            )
 
             print(
                 f"For variant {variant}, the max dose in {oar} region is: {max_dose_in_variant_oar})"
             )
 
+    oar_mean_df.loc["Total"] = oar_mean_df.sum()
     oar_mean_df.to_csv(os.path.join(output_dir, subject_prefix + "_mean.csv"))
+
+    oar_max_df.loc["Total"] = oar_max_df.sum()
     oar_max_df.to_csv(os.path.join(output_dir, subject_prefix + "_max.csv"))
 
     # Based on this, rank the four alternatives versus 0: do this separately for the dose plans;
