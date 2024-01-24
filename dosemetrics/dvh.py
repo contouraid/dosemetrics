@@ -1,6 +1,9 @@
+from typing import Tuple, Union, List, Any
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from numpy import ndarray
 
 
 def read_from_eclipse(file_name):
@@ -20,7 +23,7 @@ def read_from_eclipse(file_name):
                                 df.loc[row_cnt, name + "_vol"] = float(line.split()[2])
                                 row_cnt += 1
                             else:
-                                f.close
+                                f.close()
                                 break
                         break
         return df
@@ -78,7 +81,7 @@ def compare_dvh(dose_array_gt, dose_array_pred, case_nr, name):
 
 def compute_dvh(
     dose_array: np.ndarray, structure_mask: np.ndarray, max_dose=65, step_size=0.1,
-) -> tuple[list, list]:
+) -> tuple[ndarray, ndarray]:
     dose_in_oar = dose_array[structure_mask > 0]
     bins = np.arange(0, max_dose, step_size)
     total_voxels = len(dose_in_oar)
@@ -86,11 +89,12 @@ def compute_dvh(
 
     if total_voxels == 0:
         # There's no voxels in the mask
-        values = [0] * len(bins)
+        values = np.zeros(len(bins))
     else:
         for bin in bins:
             number = (dose_in_oar >= bin).sum()
             value = (number / total_voxels) * 100
             values.append(value)
+        values = np.asarray(values)
 
-    return (bins, values)
+    return bins, values

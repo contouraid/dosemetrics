@@ -1,14 +1,9 @@
 # -*- encoding: utf-8 -*-
 import os
-import sys
-import numpy as np
 import SimpleITK as sitk
 import pandas as pd
 
 import dosemetrics.scores as metrics
-
-if os.path.abspath("..") not in sys.path:
-    sys.path.insert(0, os.path.abspath(".."))
 
 
 def compute_dosemetrics(data_dir):
