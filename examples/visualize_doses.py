@@ -20,8 +20,7 @@ def main():
     # %%
     subject_path = os.path.abspath("..")
     base_gt_path = os.path.join(subject_path, "data", "test_subject")
-    results_path = os.path.join(base_gt_path)
-    os.makedirs(results_path, exist_ok=True)
+    results_path = os.path.join(subject_path, "data")
 
     for subject in [base_gt_path]:
         target_volume_path = os.path.join(subject, "Target.nii.gz")

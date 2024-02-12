@@ -55,7 +55,7 @@ def main():
     prediction_image = sitk.ReadImage(data_folder + "/Predicted_Dose.nii.gz")
     prediction_array = sitk.GetArrayFromImage(prediction_image)
 
-    pp = PdfPages(os.path.join(data_folder, "compare_prediction.pdf"))
+    pp = PdfPages(os.path.join(data_folder, "..", "compare_prediction.pdf"))
 
     structures = sorted(structures)
     for structure in structures:

@@ -56,7 +56,7 @@ def main():
     dose_array = sitk.GetArrayFromImage(dose_image)
 
     print(f"File path entered is: {file_path}")
-    pp = PdfPages(os.path.join(file_path, "report.pdf"))
+    pp = PdfPages(os.path.join(file_path, "..", "report_dvh_stats.pdf"))
 
     oar_file_names = askopenfilename(
         initialdir=file_path,
@@ -65,6 +65,7 @@ def main():
         multiple=True,
     )
     oar_files = list(oar_file_names)
+    oar_files = sorted(oar_files)
 
     for file in oar_files:
         stats = compute_stats(file, dose_array)
