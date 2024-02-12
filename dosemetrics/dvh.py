@@ -23,25 +23,25 @@ def volume(_struct_mask: np.ndarray, _vox_dims: tuple):
 
 def read_from_eclipse(file_name):
     df = pd.DataFrame()
-    with open(file_name, "r") as f:
-        for line in f:
-            if "Structure:" in line:
-                name = line.split(" ")[-1]
-                for line in f:
-                    if "Relative dose [%]" in line:
-                        row_cnt = 0
-                        for line in f:
-                            if len(line.split()) > 2:
-                                df.loc[row_cnt, name + "_dose"] = (
-                                    float(line.split()[1]) / 100.0
-                                )
-                                df.loc[row_cnt, name + "_vol"] = float(line.split()[2])
-                                row_cnt += 1
-                            else:
-                                f.close()
-                                break
-                        break
-        return df
+    f = open(file_name, "r")
+    for line in f:
+        if "Structure:" in line:
+            name = line.split(" ")[-1]
+            for line in f:
+                if "Relative dose [%]" in line:
+                    row_cnt = 0
+                    for line in f:
+                        if len(line.split()) > 2:
+                            df.loc[row_cnt, name + "_dose"] = (
+                                float(line.split()[1]) / 100.0
+                            )
+                            df.loc[row_cnt, name + "_vol"] = float(line.split()[2])
+                            row_cnt += 1
+                        else:
+                            break
+                    break
+    f.close()
+    return df
 
 
 def get_volumes(file_name):
@@ -64,33 +64,6 @@ def get_volumes(file_name):
                         volumes[name] = [volume]
                         break
     return volumes
-
-
-# function that calculates and plots the DVHs based on the dose array of a specific structure
-def compare_dvh(_gt: np.ndarray, _pred: np.ndarray):
-    bins = np.arange(0, np.ceil(np.max(_gt)), 0.1)
-    total_voxels = len(_gt)
-    values_gt = []
-    values_pred = []
-    for bin in bins:
-        number_gt = (_gt >= bin).sum()
-        number_pred = (_pred >= bin).sum()
-
-        value_gt = number_gt / total_voxels * 100
-        value_pred = number_pred / total_voxels * 100
-
-        values_gt.append(value_gt)
-        values_pred.append(value_pred)
-
-    fig = plt.figure()
-    plt.plot(bins, values_gt, color="b", label="ground truth")
-    plt.plot(bins, values_pred, color="r", label="prediction")
-
-    plt.xlabel("Dose [Gy]")
-    plt.ylabel("Ratio of Total Structure Volume [%]")
-    plt.legend(loc="best")
-
-    return fig
 
 
 def compute_dvh(

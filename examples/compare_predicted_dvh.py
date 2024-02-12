@@ -1,16 +1,17 @@
 import os
+import glob
 
 import SimpleITK as sitk
 import numpy as np
 
-import tkinter as tk
-from tkinter.filedialog import askopenfilename
+
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 
 plt.style.use("dark_background")
 
 from dosemetrics import dvh
+from dosemetrics import plot
 
 
 def compute_stats(_file_name: str, _dose_array: np.ndarray) -> dict:
@@ -32,8 +33,8 @@ def plot_stats(_stats):
         _stats["bins"], _stats["values"], color=_stats["color"], label=_stats["name"]
     )
     plt.legend(loc="best")
-    plt.xlabel("Gray")
-    plt.ylabel("Percentage of Volume")
+    plt.xlabel("Dose [Gy]")
+    plt.ylabel("Ratio of Total Structure Volume [%]")
     plt.title(
         f"Volume: {_stats['volume']:4.3f} (cc); Max Dose: {_stats['max']:2.3f}; Mean Dose: {_stats['mean']:2.3f}"
     )
@@ -44,44 +45,31 @@ def plot_stats(_stats):
 
 
 def main():
-    root = tk.Tk()
-    root.withdraw()
+    repo_root = os.path.abspath("..")
+    data_folder = os.path.join(repo_root, "data/test_subject")
+    structures = glob.glob(data_folder + "/*[!Dose*].nii.gz")
 
-    dose_file_name = askopenfilename(
-        title="Choose Dose file", filetypes=[("Image files", ".gz .nii")]
-    )
-    print(f"Dose file name entered is: {dose_file_name}")
-    file_path = os.path.dirname(dose_file_name)
-    dose_image = sitk.ReadImage(dose_file_name)
+    dose_image = sitk.ReadImage(data_folder + "/Dose.nii.gz")
     dose_array = sitk.GetArrayFromImage(dose_image)
 
-    print(f"File path entered is: {file_path}")
-    pp = PdfPages(os.path.join(file_path, "report.pdf"))
+    prediction_image = sitk.ReadImage(data_folder + "/Predicted_Dose.nii.gz")
+    prediction_array = sitk.GetArrayFromImage(prediction_image)
 
-    oar_file_names = askopenfilename(
-        initialdir=file_path,
-        title="Choose OAR files",
-        filetypes=[("Image files", ".gz .nii")],
-        multiple=True,
-    )
-    oar_files = list(oar_file_names)
+    pp = PdfPages(os.path.join(data_folder, "compare_prediction.pdf"))
 
-    for file in oar_files:
-        stats = compute_stats(file, dose_array)
-        stats["color"] = "b"
-        fig = plot_stats(stats)
-        pp.savefig(fig)
+    structures = sorted(structures)
+    for structure in structures:
+        struct_name = structure.split("/")[-1].split(".")[0]
+        if struct_name == "CT" or struct_name == "Dose_Mask":
+            continue
+        else:
+            oar_image = sitk.ReadImage(structure)
+            oar_mask = sitk.GetArrayFromImage(oar_image)
 
-    target_file_name = askopenfilename(
-        initialdir=file_path,
-        title="Choose Target file",
-        filetypes=[("Image files", ".gz .nii")],
-    )
-    stats = compute_stats(target_file_name, dose_array)
-    stats["color"] = "r"
-    fig = plot_stats(stats)
-
-    pp.savefig(fig)
+            fig = plot.compare_dvh(dose_array, prediction_array, oar_mask)
+            plt.title(struct_name)
+            plt.grid()
+            pp.savefig(fig)
     pp.close()
 
 

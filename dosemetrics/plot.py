@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
+import dosemetrics.dvh as dvh
 
 
 def _get_cmap(n, name="gist_ncar"):
@@ -39,3 +41,29 @@ def from_dataframe(dataframe: pd.DataFrame, plot_title: str) -> None:
     plt.savefig(filename)
     # plt.show()
     plt.close(fig)
+
+
+# function that calculates and plots the DVHs based on the dose array of a specific structure
+def compare_dvh(
+    _gt: np.ndarray,
+    _pred: np.ndarray,
+    _struct_mask: np.ndarray,
+    max_dose=65,
+    step_size=0.1,
+):
+    bins_gt, values_gt = dvh.compute_dvh(
+        _gt, _struct_mask, max_dose=max_dose, step_size=step_size
+    )
+    bins_pred, values_pred = dvh.compute_dvh(
+        _pred, _struct_mask, max_dose=max_dose, step_size=step_size
+    )
+
+    fig = plt.figure()
+    plt.plot(bins_gt, values_gt, color="b", label="ground truth")
+    plt.plot(bins_pred, values_pred, color="r", label="prediction")
+
+    plt.xlabel("Dose [Gy]")
+    plt.ylabel("Ratio of Total Structure Volume [%]")
+    plt.legend(loc="best")
+
+    return fig
