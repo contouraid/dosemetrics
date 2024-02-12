@@ -1,6 +1,7 @@
 import os
 
 import SimpleITK as sitk
+import numpy as np
 
 import tkinter as tk
 from tkinter.filedialog import askopenfilename
@@ -12,9 +13,33 @@ plt.style.use("dark_background")
 from dosemetrics import dvh
 
 
-def plotGraph(X, Y):
+def compute_stats(_file_name: str, _dose_array: np.ndarray) -> dict:
+    stats = {}
+    stats["name"] = _file_name.split("/")[-1].split(".")[0]
+    struct_image = sitk.ReadImage(_file_name)
+    struct_array = sitk.GetArrayFromImage(struct_image)
+    stats["bins"], stats["values"] = dvh.compute_dvh(_dose_array, struct_array)
+    stats["max"] = dvh.max_dose(_dose_array, struct_array)
+    stats["mean"] = dvh.mean_dose(_dose_array, struct_array)
+    stats["volume"] = dvh.volume(struct_array, struct_image.GetSpacing())
+    stats["color"] = "b"
+    return stats
+
+
+def plot_stats(_stats):
     fig = plt.figure()
-    ### Plotting arrangements ###
+    plt.plot(
+        _stats["bins"], _stats["values"], color=_stats["color"], label=_stats["name"]
+    )
+    plt.legend(loc="best")
+    plt.xlabel("Gray")
+    plt.ylabel("Percentage of Volume")
+    plt.title(
+        f"Volume: {_stats['volume']:4.3f} (cc); Max Dose: {_stats['max']:2.3f}; Mean Dose: {_stats['mean']:2.3f}"
+    )
+    plt.axvline(x=_stats["mean"], color="y")
+    plt.axvline(x=_stats["max"], color="r")
+    plt.grid()
     return fig
 
 
@@ -42,25 +67,9 @@ def main():
     oar_files = list(oar_file_names)
 
     for file in oar_files:
-        struct_name = file.split("/")[-1].split(".")[0]
-        struct_image = sitk.ReadImage(file)
-        struct_array = sitk.GetArrayFromImage(struct_image)
-        bins, values = dvh.compute_dvh(dose_array, struct_array)
-        max = dvh.max_dose(dose_array, struct_array)
-        mean = dvh.mean_dose(dose_array, struct_array)
-        volume = dvh.volume(struct_array, struct_image.GetSpacing())
-
-        fig = plt.figure()
-        plt.plot(bins, values, color="b", label=struct_name)
-        plt.legend(loc="best")
-        plt.xlabel("Gray")
-        plt.ylabel("Percentage of Volume")
-        plt.title(
-            f"Volume: {volume:4.3f} (cc); Max Dose: {max:2.3f}; Mean Dose: {mean:2.3f}"
-        )
-        plt.axvline(x=mean, color="y")
-        plt.axvline(x=max, color="r")
-        plt.grid()
+        stats = compute_stats(file, dose_array)
+        stats["color"] = "b"
+        fig = plot_stats(stats)
         pp.savefig(fig)
 
     target_file_name = askopenfilename(
@@ -68,25 +77,10 @@ def main():
         title="Choose Target file",
         filetypes=[("Image files", ".gz .nii")],
     )
-    target_name = target_file_name.split("/")[-1].split(".")[0]
-    target_image = sitk.ReadImage(target_file_name)
-    target_array = sitk.GetArrayFromImage(target_image)
-    bins, values = dvh.compute_dvh(dose_array, target_array)
-    max = dvh.max_dose(dose_array, target_array)
-    mean = dvh.mean_dose(dose_array, target_array)
-    volume = dvh.volume(target_array, target_image.GetSpacing())
+    stats = compute_stats(target_file_name, dose_array)
+    stats["color"] = "r"
+    fig = plot_stats(stats)
 
-    fig = plt.figure()
-    plt.plot(bins, values, color="r", label=target_name)
-    plt.legend(loc="best")
-    plt.xlabel("Gray")
-    plt.ylabel("Percentage of Volume")
-    plt.title(
-        f"Volume: {volume:4.3f} (cc); Max Dose: {max:2.3f}; Mean Dose: {mean:2.3f}"
-    )
-    plt.axvline(x=mean, color="y")
-    plt.axvline(x=max, color="r")
-    plt.grid()
     pp.savefig(fig)
     pp.close()
 
