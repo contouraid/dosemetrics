@@ -6,6 +6,21 @@ import matplotlib.pyplot as plt
 from numpy import ndarray
 
 
+def mean_dose(_dose: np.ndarray, _struct_mask: np.ndarray):
+    dose_in_struct = _dose[_struct_mask > 0]
+    return np.mean(dose_in_struct)
+
+
+def max_dose(_dose: np.ndarray, _struct_mask: np.ndarray):
+    dose_in_struct = _dose[_struct_mask > 0]
+    return np.max(dose_in_struct)
+
+
+def volume(_struct_mask: np.ndarray, _vox_dims: tuple):
+    num_voxels = np.count_nonzero(_struct_mask)
+    return num_voxels * np.prod(_vox_dims) / 1000.0  # in centimeter cube.
+
+
 def read_from_eclipse(file_name):
     df = pd.DataFrame()
     with open(file_name, "r") as f:
@@ -52,14 +67,14 @@ def get_volumes(file_name):
 
 
 # function that calculates and plots the DVHs based on the dose array of a specific structure
-def compare_dvh(dose_array_gt, dose_array_pred, case_nr, name):
-    bins = np.arange(0, np.ceil(np.max(dose_array_gt)), 0.1)
-    total_voxels = len(dose_array_gt)
+def compare_dvh(_gt: np.ndarray, _pred: np.ndarray):
+    bins = np.arange(0, np.ceil(np.max(_gt)), 0.1)
+    total_voxels = len(_gt)
     values_gt = []
     values_pred = []
     for bin in bins:
-        number_gt = (dose_array_gt >= bin).sum()
-        number_pred = (dose_array_pred >= bin).sum()
+        number_gt = (_gt >= bin).sum()
+        number_pred = (_pred >= bin).sum()
 
         value_gt = number_gt / total_voxels * 100
         value_pred = number_pred / total_voxels * 100
@@ -73,16 +88,15 @@ def compare_dvh(dose_array_gt, dose_array_pred, case_nr, name):
 
     plt.xlabel("Dose [Gy]")
     plt.ylabel("Ratio of Total Structure Volume [%]")
-    plt.title(case_nr + " " + name)
     plt.legend(loc="best")
 
     return fig
 
 
 def compute_dvh(
-    dose_array: np.ndarray, structure_mask: np.ndarray, max_dose=65, step_size=0.1,
+    _dose: np.ndarray, _struct_mask: np.ndarray, max_dose=65, step_size=0.1,
 ) -> tuple[ndarray, ndarray]:
-    dose_in_oar = dose_array[structure_mask > 0]
+    dose_in_oar = _dose[_struct_mask > 0]
     bins = np.arange(0, max_dose, step_size)
     total_voxels = len(dose_in_oar)
     values = []
