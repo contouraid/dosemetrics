@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 
+from dosemetrics.dvh import compute_dvh, mean_dose, max_dose
+
 
 def get_default_constraints():
 
@@ -24,6 +26,7 @@ def get_default_constraints():
         ]
     )
 
+    constraint_df.set_index("Structure", inplace=True)
     return constraint_df
 
 
@@ -35,24 +38,14 @@ def check_compliance(df, constraint):
     :return: DataFrame with compliance status and failure reason for each structure.
     """
     compliance_df = pd.DataFrame()
-    for structure in constraint["Structure"]:
+    for structure in constraint.index:
         if structure in df.index:
-            if (
-                constraint.loc[
-                    constraint["Structure"] == structure, "Constraint Type"
-                ].values[0]
-                == "max"
-            ):
-                if (
-                    df.loc[structure, "Max Dose"]
-                    > constraint.loc[
-                        constraint["Structure"] == structure, "Level"
-                    ].values[0]
-                ):
+            if constraint.loc[structure, "Constraint Type"] == "max":
+                if df.loc[structure, "Max Dose"] > constraint.loc[structure, "Level"]:
                     compliance_df.loc[structure, "Compliance"] = "❌ No"
                     compliance_df.loc[structure, "Reason"] = (
                         f"Max dose constraint: "
-                        f"{constraint.loc[constraint['Structure'] == structure, 'Level'].values[0]},"
+                        f"{constraint.loc[structure, 'Level']},"
                         f" exceeded: {df.loc[structure, 'Max Dose']:.2f}"
                     )
                 else:
@@ -60,22 +53,12 @@ def check_compliance(df, constraint):
                     compliance_df.loc[
                         structure, "Reason"
                     ] = f"Max dose is within constraint! "
-            elif (
-                constraint.loc[
-                    constraint["Structure"] == structure, "Constraint Type"
-                ].values[0]
-                == "min"
-            ):
-                if (
-                    df.loc[structure, "Min Dose"]
-                    < constraint.loc[
-                        constraint["Structure"] == structure, "Level"
-                    ].values[0]
-                ):
+            elif constraint.loc[structure, "Constraint Type"] == "min":
+                if df.loc[structure, "Min Dose"] < constraint.loc[structure, "Level"]:
                     compliance_df.loc[structure, "Compliance"] = "❌ No"
                     compliance_df.loc[structure, "Reason"] = (
                         f"Min dose constraint: "
-                        f"{constraint.loc[constraint['Structure'] == structure, 'Level'].values[0]},"
+                        f"{constraint.loc[structure, 'Level']},"
                         f" not met: {df.loc[structure, 'Min Dose']:.2f}"
                     )
                 else:
@@ -83,22 +66,12 @@ def check_compliance(df, constraint):
                     compliance_df.loc[
                         structure, "Reason"
                     ] = f"Min dose is within constraint! "
-            elif (
-                constraint.loc[
-                    constraint["Structure"] == structure, "Constraint Type"
-                ].values[0]
-                == "mean"
-            ):
-                if (
-                    df.loc[structure, "Mean Dose"]
-                    > constraint.loc[
-                        constraint["Structure"] == structure, "Level"
-                    ].values[0]
-                ):
+            elif constraint.loc[structure, "Constraint Type"] == "mean":
+                if df.loc[structure, "Mean Dose"] > constraint.loc[structure, "Level"]:
                     compliance_df.loc[structure, "Compliance"] = "❌ No"
                     compliance_df.loc[structure, "Reason"] = (
                         f"Mean dose constraint: "
-                        f"{constraint.loc[constraint['Structure'] == structure, 'Level'].values[0]},"
+                        f"{constraint.loc[structure, 'Level']},"
                         f" exceeded: {df.loc[structure, 'Mean Dose']:.2f}"
                     )
                 else:
@@ -106,15 +79,55 @@ def check_compliance(df, constraint):
                     compliance_df.loc[
                         structure, "Reason"
                     ] = f"Mean dose is within constraint! "
-            elif (
-                constraint.loc[
-                    constraint["Structure"] == structure, "Constraint Type"
-                ].values[0]
-                == "volume"
-            ):
+            elif constraint.loc[structure, "Constraint Type"] == "volume":
                 compliance_df.loc[structure, "Compliance"] = "✅ Yes"
                 compliance_df.loc[
                     structure, "Reason"
                 ] = f"Volume dose is within constraint! "
 
     return compliance_df
+
+
+def quality_index(
+    _dose: np.ndarray,
+    _struct_mask: np.ndarray,
+    _constraint_type: str,
+    _constraint_level: float,
+) -> float:
+    """
+    QUALITY_INDEX: Compute the quality index of a dose distribution.
+    :param _dose: Dose distribution.
+    :param _struct_mask: Mask of the structure of interest.
+    :param _constraint_type: max or mean.
+    :param _constraint_level: Constraint value in Gray.
+    :return: Quality index.
+    """
+    bins, values = compute_dvh(_dose, _struct_mask)
+
+    if _constraint_type == "mean":
+        _mean_dose = mean_dose(_dose, _struct_mask)
+        # For mean dose, simply compute the proportional difference.
+        return (_constraint_level - _mean_dose) / _constraint_level
+
+    elif _constraint_type == "max":
+        proportion_above = np.max(values[np.where(bins > _constraint_level)[0]])
+        if proportion_above > 0:
+            # negative value here to indicate crossing the constraint,
+            # worst case is -1, where all voxels are above constraint.
+            return -proportion_above / 100  # percentage to ratio.
+        else:
+            _max_dose = max_dose(_dose, _struct_mask)
+            gap_between = (_constraint_level - _max_dose) / _constraint_level
+            # Ideal value here is 1, as max_dose will be 0,
+            # and constraint_value will be non-zero positive.
+            return gap_between
+
+    elif _constraint_type == "min":
+        # This is for targets, but could be applied to other structures.
+        proportion_below = np.min(values[np.where(bins < _constraint_level)[0]])
+        if proportion_below < 100:
+            # negative value here to indicate crossing the constraint,
+            # worst case is -1, where all voxels are above constraint.
+            return -(100 - proportion_below) / 100  # percentage to ratio.
+        else:
+            return 0.0

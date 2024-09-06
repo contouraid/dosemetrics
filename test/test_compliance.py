@@ -28,7 +28,7 @@ class TestCompliance(unittest.TestCase):
             constraints.columns.isin(["Structure", "Constraint Type", "Level"]).all()
         )
 
-        self.assertTrue(is_string_series(constraints["Structure"]))
+        self.assertTrue(is_string_series(constraints.index))
         self.assertTrue(is_string_series(constraints["Constraint Type"]))
         constraint_types = constraints["Constraint Type"].unique()
         self.assertTrue(len(constraint_types) == 3)  # min, max and mean.
@@ -37,7 +37,7 @@ class TestCompliance(unittest.TestCase):
         self.assertFalse(np.any(constraints["Level"] < 0))  # No negative levels.
         self.assertFalse(np.any(constraints["Level"] > 70))  # No levels above 70 Gy.
 
-        self.assertTrue(constraints.shape[1] == 3)
+        self.assertTrue(constraints.shape[1] == 2)
 
     def test_check_compliance(self):
         example_df = pd.DataFrame(
@@ -48,12 +48,12 @@ class TestCompliance(unittest.TestCase):
         )
         example_df.set_index("Structure", inplace=True)
 
-        results = compliance.check_compliance(
-            example_df, compliance.get_default_constraints()
-        )
+        constraints = compliance.get_default_constraints()
+        results = compliance.check_compliance(example_df, constraints)
 
         self.assertTrue(results.columns.isin(["Compliance", "Reason"]).all())
-        self.assertTrue(results.shape == (2, 2))
+        self.assertTrue(results.shape[0] == example_df.shape[0])
+        self.assertTrue(results.shape[1] == 2)
         self.assertTrue(is_string_series(results["Compliance"]))
         self.assertTrue(is_string_series(results["Reason"]))
 
