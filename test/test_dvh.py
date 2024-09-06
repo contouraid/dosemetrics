@@ -1,9 +1,16 @@
-import dosemetrics.dvh as dvh
+import sys, os.path
+import unittest
+
+src_path = (
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..")) + "/dosemetrics/"
+)
+sys.path.append(src_path)
+from dosemetrics import dvh
 import numpy as np
 import unittest
 
 
-class TestDVH(unittest.TestCase):
+class test_dvh(unittest.TestCase):
     def test_compute_dvh_single_voxel(self):
         zero_dose = np.zeros((10, 10, 10))
         single_voxel_struct = np.zeros((10, 10, 10))
