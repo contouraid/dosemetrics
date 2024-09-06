@@ -4,7 +4,7 @@ import unittest
 from dosemetrics import metrics
 
 
-class TestOAR(unittest.TestCase):
+class TestMetrics(unittest.TestCase):
     def test_create_OAR(self):
         # Create a zero dose structure.
         oar = metrics.OAR("test_oar")

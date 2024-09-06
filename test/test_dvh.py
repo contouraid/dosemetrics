@@ -3,7 +3,7 @@ import numpy as np
 import unittest
 
 
-class test_dvh(unittest.TestCase):
+class TestDVH(unittest.TestCase):
     def test_compute_dvh_single_voxel(self):
         zero_dose = np.zeros((10, 10, 10))
         single_voxel_struct = np.zeros((10, 10, 10))

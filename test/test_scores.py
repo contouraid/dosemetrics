@@ -3,7 +3,7 @@ import numpy as np
 import unittest
 
 
-class TestDVH(unittest.TestCase):
+class TestScores(unittest.TestCase):
     def test_dose_score(self):
         zero_dose = np.zeros((10, 10, 10))
 

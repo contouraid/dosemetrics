@@ -28,12 +28,15 @@ def get_default_constraints():
 
 
 def check_compliance(df, constraint):
-
+    """
+    CHECK_COMPLIANCE: Check compliance of dose metrics with constraints.
+    :param df: DataFrame with dose metrics including columns for max-dose, mean-dose, ...
+    :param constraint: DataFrame constructed using get_default_constraints().
+    :return: DataFrame with compliance status and failure reason for each structure.
+    """
     compliance_df = pd.DataFrame()
     for structure in constraint["Structure"]:
-        if structure not in df.index:
-            compliance_df.loc[structure] = np.nan
-        else:
+        if structure in df.index:
             if (
                 constraint.loc[
                     constraint["Structure"] == structure, "Constraint Type"
