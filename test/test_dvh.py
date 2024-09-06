@@ -1,11 +1,4 @@
-import sys, os.path
-import unittest
-
-src_path = (
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..")) + "/dosemetrics/"
-)
-sys.path.append(src_path)
-from dosemetrics import dvh
+import dosemetrics.dvh as dvh
 import numpy as np
 import unittest
 
