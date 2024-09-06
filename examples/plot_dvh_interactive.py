@@ -1,16 +1,15 @@
 import os
+from dosemetrics import dvh
 
 import SimpleITK as sitk
 import numpy as np
 
 import tkinter as tk
-from tkinter.filedialog import askopenfilename
+from tkinter.filedialog import askopenfilename, asksaveasfilename
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 
 plt.style.use("dark_background")
-
-from dosemetrics import dvh
 
 
 def compute_stats(_file_name: str, _dose_array: np.ndarray) -> dict:
@@ -47,6 +46,10 @@ def main():
     root = tk.Tk()
     root.withdraw()
 
+    output_file = asksaveasfilename()
+    print(f"File path entered is: {output_file}")
+    pp = PdfPages(output_file)
+
     dose_file_name = askopenfilename(
         title="Choose Dose file", filetypes=[("Image files", ".gz .nii")]
     )
@@ -54,9 +57,6 @@ def main():
     file_path = os.path.dirname(dose_file_name)
     dose_image = sitk.ReadImage(dose_file_name)
     dose_array = sitk.GetArrayFromImage(dose_image)
-
-    print(f"File path entered is: {file_path}")
-    pp = PdfPages(os.path.join(file_path, "..", "report_dvh_stats.pdf"))
 
     oar_file_names = askopenfilename(
         initialdir=file_path,

@@ -1,12 +1,15 @@
 import numpy as np
-from numpy import ndarray
-
-"""
-These are modified from https://github.com/ababier/open-kbp
-"""
+import pandas as pd
 
 
 def dose_score(_pred: np.ndarray, _gt: np.ndarray, _dose_mask=None) -> np.ndarray:
+    """
+    DOSE_SCORE: These are modified from https://github.com/ababier/open-kbp
+    :param _pred:
+    :param _gt:
+    :param _dose_mask:
+    :return: scalar with mean average error of dose between _pred and _gt.
+    """
     if _dose_mask is not None:
         _pred = _pred[_dose_mask > 0]
         _gt = _gt[_dose_mask > 0]
@@ -17,6 +20,14 @@ def dose_score(_pred: np.ndarray, _gt: np.ndarray, _dose_mask=None) -> np.ndarra
 def dvh_score(
     _dose: np.ndarray, _mask: np.ndarray, mode: str, spacing=None
 ) -> dict[str, np.ndarray]:
+    """
+    DVH_SCORE: These are modified from https://github.com/ababier/open-kbp
+    :param _dose:
+    :param _mask:
+    :param mode:
+    :param spacing:
+    :return: dict with DVH scores.
+    """
     output = {}
 
     if mode.lower() == "target":
@@ -50,3 +61,26 @@ def dvh_score(
         raise Exception("Unknown mode!")
 
     return output
+
+
+def dose_summary(dose_volume, structure_masks):
+    """
+    DOSE_SUMMARY: summarize dose metrics for each structure.
+    :param dose_volume:
+    :param structure_masks:
+    :return: pandas.DataFrame with dose summary.
+    """
+    dose_metrics = {}
+    for structure in structure_masks.keys():
+        dose_in_structure = dose_volume[structure_masks[structure] > 0]
+        dose_metrics[structure] = {
+            "Mean Dose": np.mean(dose_in_structure),
+            "Max Dose": np.max(dose_in_structure),
+            "Min Dose": np.min(dose_in_structure),
+            "D95": np.percentile(dose_in_structure, 95),
+            "D50": np.percentile(dose_in_structure, 50),
+            "D5": np.percentile(dose_in_structure, 5),
+        }
+
+    df = pd.DataFrame.from_dict(dose_metrics).T
+    return df
