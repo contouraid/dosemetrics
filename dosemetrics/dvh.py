@@ -85,28 +85,3 @@ def dvh_by_structure(dose_volume, structure_masks):
         value_name="Volume",
     )
     return df
-
-
-def dvh_from_files(dose_file, mask_files):
-    dose_volume, dose_header = data_utils.read_file(dose_file)
-
-    structure_masks = {}
-    struct_identifiers = []
-    for mask_file in mask_files:
-        mask_volume, mask_header = data_utils.read_file(mask_file)
-        struct_name = mask_file.name.split(".")[0]
-        struct_identifiers.append(struct_name)
-        structure_masks[struct_name] = mask_volume
-
-    dvh_data = {}
-    max_dose = 65
-    step_size = 0.1
-    dvh_data["Dose"] = np.arange(0, max_dose, step_size)
-
-    for structure in structure_masks.keys():
-        bins, values = compute_dvh(dose_volume, structure_masks[structure], max_dose, step_size)
-        dvh_data[structure] = values
-
-    df = pd.DataFrame.from_dict(dvh_data)
-    df = pd.melt(df, id_vars=['Dose'], value_vars=struct_identifiers, var_name='Structure', value_name='Volume')
-    return df

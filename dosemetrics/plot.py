@@ -2,13 +2,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import dosemetrics.dvh as dvh
-import dosemetrics.data_utils as data_utils
-
-def view_dose(dose_file, slice=50):
-    dose_volume, dose_header = data_utils.read_file(dose_file)
-    # dose_volume = np.random(100, 100, 100)
-    dose_slice = dose_volume[:, :, dose_volume.shape[-1] // 2]
-    return dose_slice
 
 
 def _get_cmap(n, name="gist_ncar"):
