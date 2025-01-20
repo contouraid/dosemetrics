@@ -1,3 +1,0 @@
-plotly~=5.23.0
-streamlit~=1.37.1
-altair~=5.4.0

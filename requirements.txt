@@ -5,3 +5,8 @@ nibabel==5.2.1
 SimpleITK~=2.3.1
 nibabel==5.2.1
 pillow==10.4.0
+
+# For the UI
+plotly~=5.23.0
+streamlit~=1.37.1
+altair~=5.4.0
