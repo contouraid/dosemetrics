@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from numpy import ndarray
+import dosemetrics.data_utils as data_utils
 
 
 def mean_dose(_dose: np.ndarray, _struct_mask: np.ndarray):
@@ -16,29 +17,6 @@ def max_dose(_dose: np.ndarray, _struct_mask: np.ndarray):
 def volume(_struct_mask: np.ndarray, _vox_dims: tuple):
     num_voxels = np.count_nonzero(_struct_mask)
     return num_voxels * np.prod(_vox_dims) / 1000.0  # in centimeter cube.
-
-
-def read_from_eclipse(file_name):
-    df = pd.DataFrame()
-    f = open(file_name, "r")
-    for line in f:
-        if "Structure:" in line:
-            name = line.split(" ")[-1]
-            for line in f:
-                if "Relative dose [%]" in line:
-                    row_cnt = 0
-                    for line in f:
-                        if len(line.split()) > 2:
-                            df.loc[row_cnt, name + "_dose"] = (
-                                float(line.split()[1]) / 100.0
-                            )
-                            df.loc[row_cnt, name + "_vol"] = float(line.split()[2])
-                            row_cnt += 1
-                        else:
-                            break
-                    break
-    f.close()
-    return df
 
 
 def get_volumes(file_name):
@@ -109,26 +87,26 @@ def dvh_by_structure(dose_volume, structure_masks):
     return df
 
 
-def dvh_by_dose(dose_volumes, structure_mask, structure_name):
+def dvh_from_files(dose_file, mask_files):
+    dose_volume, dose_header = data_utils.read_file(dose_file)
+
+    structure_masks = {}
+    struct_identifiers = []
+    for mask_file in mask_files:
+        mask_volume, mask_header = data_utils.read_file(mask_file)
+        struct_name = mask_file.name.split(".")[0]
+        struct_identifiers.append(struct_name)
+        structure_masks[struct_name] = mask_volume
+
     dvh_data = {}
-    max_dose = 70
+    max_dose = 65
     step_size = 0.1
     dvh_data["Dose"] = np.arange(0, max_dose, step_size)
 
-    dose_id = []
-    for id in dose_volumes.keys():
-        bins, values = compute_dvh(
-            dose_volumes[id], structure_mask, max_dose, step_size
-        )
-        dose_id.append(structure_name + "_" + str(id))
-        dvh_data[structure_name + "_" + str(id)] = values
+    for structure in structure_masks.keys():
+        bins, values = compute_dvh(dose_volume, structure_masks[structure], max_dose, step_size)
+        dvh_data[structure] = values
 
     df = pd.DataFrame.from_dict(dvh_data)
-    df = pd.melt(
-        df,
-        id_vars=["Dose"],
-        value_vars=dose_id,
-        var_name="Structure",
-        value_name="Volume",
-    )
+    df = pd.melt(df, id_vars=['Dose'], value_vars=struct_identifiers, var_name='Structure', value_name='Volume')
     return df

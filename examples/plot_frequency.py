@@ -7,13 +7,13 @@ import matplotlib.backends.backend_pdf as pdf
 
 
 def main():
-    repo_root = os.path.abspath("/Users/amithkamath/repo/dosemetrics")
-    data_folder = os.path.join(repo_root, "data/test_subject")
+    repo_root = os.path.dirname(os.path.abspath(__file__))
+    data_folder = os.path.join(repo_root, "..", "data", "test_subject")
     
-    dose_image = sitk.ReadImage(data_folder + "/Dose.nii.gz")
+    dose_image = sitk.ReadImage(os.path.join(data_folder, "Dose.nii.gz"))
     dose_array = sitk.GetArrayFromImage(dose_image)
 
-    prediction_image = sitk.ReadImage(data_folder + "/Predicted_Dose.nii.gz")
+    prediction_image = sitk.ReadImage(os.path.join(data_folder, "Predicted_Dose.nii.gz"))
     prediction_array = sitk.GetArrayFromImage(prediction_image)
 
     dose_fs = np.fft.fftn(dose_array)

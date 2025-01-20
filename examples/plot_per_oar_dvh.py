@@ -11,10 +11,10 @@ from matplotlib.backends.backend_pdf import PdfPages
 import dosemetrics.dvh as dvh
 
 
-def plot_dvh_from_eclipse(data_folder):
-    pp = PdfPages(os.path.join(data_folder, "..", "reference_dvh_per_oar.pdf"))
-
+def plot_dvh_to_pdf(data_folder, output_file="dvh.pdf"):
+    pp = PdfPages(output_file)
     dose_image = sitk.ReadImage(data_folder + "/Dose.nii.gz")
+    dose_image.SetOrigin((0, 0, 0))
     dose_array = sitk.GetArrayFromImage(dose_image)
 
     structures = glob.glob(data_folder + "/*[!Dose*].nii.gz")
@@ -26,18 +26,15 @@ def plot_dvh_from_eclipse(data_folder):
             continue
         else:
             oar_image = sitk.ReadImage(structure)
+            oar_image.SetOrigin((0, 0, 0))
             oar_mask = sitk.GetArrayFromImage(oar_image)
-
-            if struct_name == "Target":
-                color = "r"
-            else:
-                color = "b"
 
             results = dvh.compute_dvh(dose_array, oar_mask)
             max = dvh.max_dose(dose_array, oar_mask)
             mean = dvh.mean_dose(dose_array, oar_mask)
             volume = dvh.volume(oar_mask, oar_image.GetSpacing())
 
+            color = "r"
             fig = plt.figure()
             plt.plot(
                 results[0], results[1], color=color, label=struct_name,
@@ -55,6 +52,8 @@ def plot_dvh_from_eclipse(data_folder):
 
 
 if __name__ == "__main__":
-    repo_root = os.path.abspath("..")
-    data_folder = os.path.join(repo_root, "data/test_subject")
-    plot_dvh_from_eclipse(data_folder)
+
+    repo_root = os.path.dirname(os.path.abspath(__file__))
+    data_folder = os.path.join(repo_root, "..", "data", "test_subject")
+    output_file = os.path.join(data_folder, "..", "test_subject_per_oar_dvh.pdf")
+    plot_dvh_to_pdf(data_folder, output_file)

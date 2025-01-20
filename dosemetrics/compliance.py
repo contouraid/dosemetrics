@@ -105,9 +105,17 @@ def quality_index(
     bins, values = compute_dvh(_dose, _struct_mask)
 
     if _constraint_type == "mean":
-        _mean_dose = mean_dose(_dose, _struct_mask)
-        # For mean dose, simply compute the proportional difference.
-        return (_constraint_level - _mean_dose) / _constraint_level
+        proportion_above = np.max(values[np.where(bins > _constraint_level)[0]])
+        if proportion_above > 0:
+            # negative value here to indicate crossing the constraint,
+            # worst case is -1, where all voxels are above constraint.
+            return -proportion_above / 100  # percentage to ratio.
+        else:
+            _mean_dose = mean_dose(_dose, _struct_mask)
+            gap_between = (_constraint_level - _mean_dose) / _constraint_level
+            # Ideal value here is 1, as max_dose will be 0,
+            # and constraint_value will be non-zero positive.
+            return gap_between
 
     elif _constraint_type == "max":
         proportion_above = np.max(values[np.where(bins > _constraint_level)[0]])

@@ -1,7 +1,7 @@
 import os
 import matplotlib.pyplot as plt
 
-from dosemetrics.dvh import read_from_eclipse
+from dosemetrics.data_utils import read_from_eclipse
 from dosemetrics.plot import from_dataframe
 
 plt.rcParams["figure.figsize"] = [20, 12]
