@@ -25,7 +25,7 @@ def compute_surface(volume):
     return surface
 
 
-def compute_dose_gradient_on_surface(data_folder, output_folder):
+def compute_dose_gradient_on_surface(data_folder, output_folder_):
 
     contents_files = [f for f in os.listdir(data_folder) if f.endswith(".csv")]
     if len(contents_files) > 0:
@@ -44,19 +44,19 @@ def compute_dose_gradient_on_surface(data_folder, output_folder):
             target_gradient = gradient_magnitude * target_surface
             target_gradient_image = sitk.GetImageFromArray(target_gradient)
             target_gradient_image.CopyInformation(dose_image)
-            sitk.WriteImage(target_gradient_image, os.path.join(output_folder, target + "_gradient.nii.gz"))
+            sitk.WriteImage(target_gradient_image, os.path.join(output_folder_, target + "_gradient.nii.gz"))
 
 
 if __name__ == "__main__":
 
-    dataset_root = "/Users/amithkamath/data/USZ/usz-processed-v2025-2"
+    dataset_root = "/mnt/5b9b7229-4179-4263-babd-004c30510079/data/ICR-test/ICR-output"
     output_folder = os.path.join(dataset_root, "..", "gradient-data")
     os.makedirs(output_folder, exist_ok=True)
 
     subfolders = [f.path for f in os.scandir(dataset_root) if f.is_dir()]
     subfolders = sorted(subfolders)
 
-    for subject_folder in subfolders[:5]:
+    for subject_folder in subfolders[:10]:
         subject_name = subject_folder.split("/")[-1]
         gradient_folder = os.path.join(output_folder, subject_name)
         os.makedirs(gradient_folder, exist_ok=True)

@@ -32,18 +32,18 @@ def plot_dvh_to_pdf(data_folder, output_file="dvh.pdf"):
             target_volume = data_utils.read_from_nifti(target_file)
             structure_masks[target] = target_volume
 
-        fig, ax = plt.subplots()
-        fig.set_figheight(8)
-        fig.set_figwidth(12)
-        for structure in structure_masks.keys():
-            bins, values = dvh.compute_dvh(dose_volume, structure_masks[structure])
-            ax.plot(bins, values, label=structure)
+            fig, ax = plt.subplots()
+            fig.set_figheight(8)
+            fig.set_figwidth(12)
+            for structure in structure_masks.keys():
+                bins, values = dvh.compute_dvh(dose_volume, structure_masks[structure])
+                ax.plot(bins, values, label=structure)
 
-        plt.legend()
-        plt.grid()
-        ax.legend(loc="center left", bbox_to_anchor=(0.95, 0.5))
-        pp.savefig(fig, dpi=300)
-        pp.close()
+            plt.legend()
+            plt.grid()
+            ax.legend(loc="center left", bbox_to_anchor=(0.95, 0.5))
+            pp.savefig(fig, dpi=300)
+            pp.close()
 
 
 if __name__ == "__main__":
@@ -57,5 +57,9 @@ if __name__ == "__main__":
 
     for subject_folder in subfolders:
         subject_name = subject_folder.split("/")[-1]
-        dvh_file = os.path.join(output_folder, subject_name + "_dvh.pdf")
-        plot_dvh_to_pdf(subject_folder, dvh_file)
+        dvh_file = os.path.join(dataset_root, "..", subject_name + "_dvh.pdf")
+        try:
+            plot_dvh_to_pdf(subject_folder, dvh_file)
+        except Exception as e:
+            print(f"Error processing {subject_folder}: {e}")
+            continue
