@@ -6,20 +6,18 @@ import matplotlib.pyplot as plt
 import matplotlib.backends.backend_pdf as pdf
 
 
-def main():
-    repo_root = os.path.dirname(os.path.abspath(__file__))
-    data_folder = os.path.join(repo_root, "..", "data", "test_subject")
+def plot_frequency(input_folder: str, output_folder: str):
     
-    dose_image = sitk.ReadImage(os.path.join(data_folder, "Dose.nii.gz"))
+    dose_image = sitk.ReadImage(os.path.join(input_folder, "Dose.nii.gz"))
     dose_array = sitk.GetArrayFromImage(dose_image)
 
-    prediction_image = sitk.ReadImage(os.path.join(data_folder, "Predicted_Dose.nii.gz"))
+    prediction_image = sitk.ReadImage(os.path.join(input_folder, "Predicted_Dose.nii.gz"))
     prediction_array = sitk.GetArrayFromImage(prediction_image)
 
     dose_fs = np.fft.fftn(dose_array)
     prediction_fs = np.fft.fftn(prediction_array)
 
-    pp = pdf.PdfPages(os.path.join(data_folder, "..", "fft_test.pdf"))
+    pp = pdf.PdfPages(os.path.join(output_folder, "fft.pdf"))
 
     for index in range(128):
         slice_num = index
@@ -35,4 +33,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    repo_root = os.path.dirname(os.path.abspath(__file__))
+    data_folder = os.path.join(repo_root, "..", "data", "test_subject")
+    results_folder = os.path.join(repo_root, "..", "results")
+    os.makedirs(results_folder, exist_ok=True)
+    plot_frequency(data_folder, results_folder)

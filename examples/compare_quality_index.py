@@ -9,17 +9,11 @@ import matplotlib.pyplot as plt
 plt.style.use("dark_background")
 
 
-def main():
-
-    repo_root = os.path.dirname(os.path.abspath(__file__))
-    data_folder = os.path.join(repo_root, "..", "data", "test_subject")
-
-    dose_image = sitk.ReadImage(data_folder + "/Dose.nii.gz")
+def compare_quality_index(input_folder: str, output_folder: str):
+    dose_image = sitk.ReadImage(os.path.join(input_folder, "Dose.nii.gz"))
     dose_array = sitk.GetArrayFromImage(dose_image)
 
-    predicted_dose_image = sitk.ReadImage(
-        data_folder + "/Predicted_Dose.nii.gz"
-    )
+    predicted_dose_image = sitk.ReadImage(os.path.join(input_folder, "Predicted_Dose.nii.gz"))
     predicted_dose_array = sitk.GetArrayFromImage(predicted_dose_image)
 
     df = pd.DataFrame()
@@ -60,13 +54,14 @@ def main():
             df.loc[struct_name, "Predicted QI"] = predicted_qi
     df.loc["Correlation", "Predicted QI"] = df["QI"].corr(df["Predicted QI"])
     df.to_csv(
-        os.path.join(
-            data_folder,
-            "..",
-            f"compare_quality_index_{data_folder.split('/')[-1]}.csv",
-        )
+        os.path.join(output_folder, f"compare_quality_index_{data_folder.split('/')[-1]}.csv")
     )
 
 
 if __name__ == "__main__":
-    main()
+    repo_root = os.path.dirname(os.path.abspath(__file__))
+    data_folder = os.path.join(repo_root, "..", "data", "test_subject")
+
+    result_folder = os.path.join(repo_root, "..", "results")
+    os.makedirs(result_folder, exist_ok=True)
+    compare_quality_index(data_folder, result_folder)

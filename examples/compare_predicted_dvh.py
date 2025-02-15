@@ -44,18 +44,16 @@ def plot_stats(_stats):
     return fig
 
 
-def main():
-    repo_root = os.path.abspath("..")
-    data_folder = os.path.join(repo_root, "data/test_subject")
-    structures = glob.glob(data_folder + "/*[!Dose*].nii.gz")
+def compare_predicted_dvh(input_folder: str, output_folder: str):
+    structures = glob.glob(input_folder + "/*[!Dose*].nii.gz")
 
-    dose_image = sitk.ReadImage(data_folder + "/Dose.nii.gz")
+    dose_image = sitk.ReadImage(input_folder + "/Dose.nii.gz")
     dose_array = sitk.GetArrayFromImage(dose_image)
 
-    prediction_image = sitk.ReadImage(data_folder + "/Predicted_Dose.nii.gz")
+    prediction_image = sitk.ReadImage(input_folder + "/Predicted_Dose.nii.gz")
     prediction_array = sitk.GetArrayFromImage(prediction_image)
+    pp = PdfPages(os.path.join(output_folder, "compare_prediction.pdf"))
 
-    pp = PdfPages(os.path.join(data_folder, "..", "compare_prediction.pdf"))
 
     structures = sorted(structures)
     for structure in structures:
@@ -74,4 +72,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    repo_root = os.path.abspath("..")
+    data_folder = os.path.join(repo_root, "data/test_subject")
+    result_folder = os.path.join(repo_root, "results")
+    os.makedirs(result_folder, exist_ok=True)
+    compare_predicted_dvh(data_folder, result_folder)
