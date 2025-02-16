@@ -55,6 +55,9 @@ def print_dvh_constraint(input_folder: str, output_folder: str):
             plt.plot(
                 bins, values, color="b", label=struct_name,
             )
+            plt.xlabel("Dose [Gy]")
+            plt.ylabel("Ratio of Total Structure Volume [%]")
+            plt.legend(loc="best")
             plt.axvline(x=constraint_limit, color="r", label="constraint limit")
             if constraint_type == "max":
                 max_dose = dvh.max_dose(dose_volume, oar_mask)
@@ -77,7 +80,7 @@ def print_dvh_constraint(input_folder: str, output_folder: str):
 
 if __name__ == "__main__":
     repo_root = os.path.dirname(os.path.abspath(__file__))
-    data_folder = os.path.join(repo_root, "..", "data", "compare_plans", "time_1")
+    data_folder = os.path.join(repo_root, "..", "data", "compare_plans", "first")
     results_folder = os.path.join(repo_root, "..", "results")
     print_dvh_constraint(data_folder, results_folder)
 

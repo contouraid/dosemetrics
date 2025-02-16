@@ -54,6 +54,6 @@ def plot_dvh_to_pdf(data_folder, output_file="dvh.pdf"):
 if __name__ == "__main__":
 
     repo_root = os.path.dirname(os.path.abspath(__file__))
-    data_folder = os.path.join(repo_root, "..", "data", "compare_plans", "time_1")
-    output_file = os.path.join(repo_root, "..", "results", "time_1_per_oar_dvh.pdf")
+    data_folder = os.path.join(repo_root, "..", "data", "compare_plans", "first")
+    output_file = os.path.join(repo_root, "..", "results", "first_per_oar_dvh.pdf")
     plot_dvh_to_pdf(data_folder, output_file)
