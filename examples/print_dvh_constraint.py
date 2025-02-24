@@ -1,6 +1,5 @@
 from dosemetrics import dvh
 from dosemetrics import compliance
-from dosemetrics import data_utils
 from dosemetrics import scores
 
 import os
@@ -10,17 +9,10 @@ import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 
+from dosemetrics.data_utils import read_dose_and_mask_files
+
 plt.style.use("dark_background")
 
-
-def read_dose_and_mask_files(dose_file, mask_files):
-    dose_volume = data_utils.read_from_nifti(dose_file)
-    structure_masks = {}
-    for mask_file in mask_files:
-        mask_volume = data_utils.read_from_nifti(mask_file)
-        struct_name = mask_file.split("/")[-1].split(".")[0]
-        structure_masks[struct_name] = mask_volume
-    return dose_volume, structure_masks
 
 def print_dvh_constraint(input_folder: str, output_folder: str):
     contents = os.path.join(input_folder, "standard_contents.csv")

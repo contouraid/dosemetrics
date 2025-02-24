@@ -82,3 +82,13 @@ def read_from_nifti(nifti_filename):
     """
     img = sitk.ReadImage(nifti_filename)
     return sitk.GetArrayFromImage(img)
+
+
+def read_dose_and_mask_files(dose_file, mask_files):
+    dose_volume = read_from_nifti(dose_file)
+    structure_masks = {}
+    for mask_file in mask_files:
+        mask_volume = read_from_nifti(mask_file)
+        struct_name = mask_file.split("/")[-1].split(".")[0]
+        structure_masks[struct_name] = mask_volume
+    return dose_volume, structure_masks

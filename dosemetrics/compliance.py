@@ -19,7 +19,7 @@ def get_custom_constraints():
     • Eye balls, retina: ≤40 G to Dmax
     • Lens: 10 Gy to 0.03cc
     • Lacrimal glands: <40 Gy to 0.03cc
-    • Cochlea: ≤45 Gy if both sides are involved; otherwise ≤60 Gy. (Low priority OaR)to 0.03cc
+    • Cochlea: ≤45 Gy if both sides are involved; otherwise ≤60 Gy. (Low priority OaR) to 0.03cc
     • The dose to the normal brain minus the PTV should be kept as low as possible. The Dmean is to be ≤ 30 Gy    
     """
     constraint_df = pd.DataFrame(
