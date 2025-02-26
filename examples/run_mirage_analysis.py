@@ -265,9 +265,9 @@ if __name__ == "__main__":
     plot_dvh(data_root, output_file)
     """
     data_root = "/Users/amithkamath/data/EORTC-ICR/output/"
-    subject_name = "002_site_306"
-    first_plan = "eortc_0001_002_site_306_delineation_1_corrected"
-    last_plan = "eortc_0003_002_site_306_delineation_2_dose_1_corrected"
+    subject_name = "099_site_233"
+    first_plan = "eortc_0001_099_site_233_delineation_1_corrected"
+    last_plan = "eortc_0003_099_site_233_delineation_2_dose_1_corrected"
 
     first_folder = os.path.join(data_root, subject_name, first_plan)
     last_folder = os.path.join(data_root, subject_name, last_plan)

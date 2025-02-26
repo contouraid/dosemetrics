@@ -55,7 +55,7 @@ if __name__ == "__main__":
     plot_dvh(data_root, output_file)
     """
 
-    test_folder = "/Users/amithkamath/data/EORTC-ICR/output/012_site_1751"
+    test_folder = "/Users/amithkamath/data/EORTC-ICR/output/100_site_335"
     subfolder = [f.path for f in os.scandir(test_folder) if f.is_dir()]
     for sub in subfolder:
         sub_name = sub.split("/")[-1]
