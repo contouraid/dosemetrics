@@ -60,7 +60,7 @@ def compute_dose_compliance(data_folder):
 
 if __name__ == "__main__":
 
-    dataset_root = "/mnt/5b9b7229-4179-4263-babd-004c30510079/data/ICR-test/ICR-output"
+    dataset_root = "/mnt/5b9b7229-4179-4263-babd-004c30510079/data/USZ/nifti-output"
     output_folder = os.path.join(dataset_root, "..", "compliance-data")
     os.makedirs(output_folder, exist_ok=True)
 
