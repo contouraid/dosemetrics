@@ -7,7 +7,7 @@ import matplotlib.backends.backend_pdf as pdf
 plt.rcParams["figure.figsize"] = [30, 15]
 
 
-def main(subject_path: str = None, output_file: str = None):
+def visualize_doses(subject_path: str = None, output_file: str = None):
     pp = pdf.PdfPages(output_file)
 
     target_volume_path = os.path.join(subject_path, "Target.nii.gz")
@@ -41,5 +41,5 @@ def main(subject_path: str = None, output_file: str = None):
 if __name__ == "__main__":
     repo_root = os.path.dirname(os.path.abspath(__file__))
     data_folder = os.path.join(repo_root, "..", "data", "test_subject")
-    output_file = os.path.join(data_folder, "..", "test_subject.pdf")
-    main(data_folder, output_file)
+    output_file = os.path.join(repo_root, "..", "results", "visualize_doses.pdf")
+    visualize_doses(data_folder, output_file)

@@ -74,12 +74,12 @@ def dose_summary(dose_volume, structure_masks):
     for structure in structure_masks.keys():
         dose_in_structure = dose_volume[structure_masks[structure] > 0]
         dose_metrics[structure] = {
-            "Mean Dose": np.mean(dose_in_structure),
-            "Max Dose": np.max(dose_in_structure),
-            "Min Dose": np.min(dose_in_structure),
-            "D95": np.percentile(dose_in_structure, 95),
-            "D50": np.percentile(dose_in_structure, 50),
-            "D5": np.percentile(dose_in_structure, 5),
+            "Mean Dose": f"{np.mean(dose_in_structure):.3f}",
+            "Max Dose": f"{np.max(dose_in_structure):.3f}",
+            "Min Dose": f"{np.min(dose_in_structure):.3f}",
+            "D95": f"{np.percentile(dose_in_structure, 95):.3f}",
+            "D50": f"{np.percentile(dose_in_structure, 50):.3f}",
+            "D5": f"{np.percentile(dose_in_structure, 5):.3f}",
         }
 
     df = pd.DataFrame.from_dict(dose_metrics).T

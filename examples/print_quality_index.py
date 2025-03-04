@@ -11,20 +11,13 @@ import matplotlib.pyplot as plt
 plt.style.use("dark_background")
 
 
-def main():
-
-    repo_root = os.path.dirname(os.path.abspath(__file__))
-    data_folder = os.path.join(repo_root, "..", "data", "test_subject")
-    dose_image = sitk.ReadImage(data_folder + "/Dose.nii.gz")
+def print_quality_index(input_folder: str, output_folder: str):
+    dose_image = sitk.ReadImage(input_folder + "/Dose.nii.gz")
     dose_array = sitk.GetArrayFromImage(dose_image)
 
     df = pd.DataFrame()
 
-    pp = PdfPages(
-        os.path.join(
-            data_folder, "..", f"quality_index_{data_folder.split('/')[-1]}.pdf"
-        )
-    )
+    pp = PdfPages(os.path.join(output_folder, "quality_index.pdf"))
 
     constraints = compliance.get_default_constraints()
 
@@ -69,12 +62,11 @@ def main():
             df.loc[struct_name, "Limit"] = constraint_limit
             df.loc[struct_name, "QI"] = qi
     pp.close()
-    df.to_csv(
-        os.path.join(
-            data_folder, "..", f"quality_index_{data_folder.split('/')[-1]}.csv"
-        )
-    )
+    df.to_csv(os.path.join(output_folder, "quality_index.csv"))
 
 
 if __name__ == "__main__":
-    main()
+    repo_root = os.path.dirname(os.path.abspath(__file__))
+    data_folder = os.path.join(repo_root, "..", "data", "test_subject")
+    results_folder = os.path.join(repo_root, "..", "results")
+    print_quality_index(data_folder, results_folder)

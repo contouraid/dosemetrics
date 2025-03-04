@@ -76,7 +76,7 @@ if __name__ == "__main__":
     repo_root = os.path.abspath("..")
     data_dir = os.path.join(repo_root, "data", "test_subject")
     subject_name = data_dir.split("/")[-1]
-    output_dir = os.path.join(data_dir, "..")
+    output_dir = os.path.join(repo_root, "results")
     os.makedirs(output_dir, exist_ok=True)
 
     print(f"Working on subject: {subject_name}")

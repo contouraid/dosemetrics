@@ -10,7 +10,7 @@ def _get_cmap(n, name="gist_ncar"):
     return plt.cm.get_cmap(name, n)
 
 
-def from_dataframe(dataframe: pd.DataFrame, plot_title: str) -> None:
+def from_dataframe(dataframe: pd.DataFrame, plot_title: str, output_path: str) -> None:
     col_names = dataframe.columns
     cmap = _get_cmap(40)
 
@@ -37,9 +37,7 @@ def from_dataframe(dataframe: pd.DataFrame, plot_title: str) -> None:
     ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
     plt.title(plot_title)
-    filename = plot_title + ".png"
-    plt.savefig(filename)
-    # plt.show()
+    plt.savefig(output_path)
     plt.close(fig)
 
 

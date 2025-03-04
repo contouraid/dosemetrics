@@ -1,10 +1,3 @@
-# %% [markdown]
-# # Visualize dose differences
-#
-# This notebook contains code that will generate subject-wise results to compare ground truth predictions and C3D generated dose volumes.
-
-# %%
-# Setup library paths
 import os
 import numpy as np
 import SimpleITK as sitk
@@ -14,30 +7,10 @@ import matplotlib.backends.backend_pdf as pdf
 plt.rcParams["figure.figsize"] = [30, 15]
 
 
-def main():
-    # %%
-    subject_path = os.path.abspath("..")
-    base_gt_path = os.path.join(subject_path, "data", "test_subject")
-    results_path = os.path.join(subject_path, "data")
+def visualize_dose_differences(input_folder: str, output_file: str):
+    for subject in [input_folder]:
 
-    for subject in [base_gt_path]:
-        target_volume_path = os.path.join(subject, "Target.nii.gz")
-        target_image = sitk.ReadImage(target_volume_path)
-        target_array = sitk.GetArrayFromImage(target_image)
-
-        brain_volume_path = os.path.join(subject, "Brain.nii.gz")
-        brain_image = sitk.ReadImage(brain_volume_path)
-        brain_array = sitk.GetArrayFromImage(brain_image)
-
-        relative_target_volume = np.sum(target_array) / (
-            np.sum(brain_array) + np.sum(target_array)
-        )
-
-        print(f"Relative target size is: {relative_target_volume}")
-
-    for subject in [base_gt_path]:
-
-        pp = pdf.PdfPages(os.path.join(results_path, "compare_slices.pdf"))
+        pp = pdf.PdfPages(output_file)
 
         # Read GT
         dose_path = os.path.join(subject, "Dose.nii.gz")
@@ -86,4 +59,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    subject_path = os.path.abspath("..")
+    base_gt_path = os.path.join(subject_path, "data", "test_subject")
+    results_path = os.path.join(subject_path, "results")
+    results_file = os.path.join(results_path, "visualize_dose_differences.pdf")
+
+    visualize_dose_differences(base_gt_path, results_file)
