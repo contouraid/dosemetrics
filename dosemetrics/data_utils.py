@@ -29,6 +29,20 @@ def read_file(byte_file):
     return arr, img.header
 
 
+def read_dose(dose_file):
+    dose_volume, dose_header = read_file(dose_file)
+    return dose_volume, dose_header
+
+
+def read_masks(mask_files):
+    structure_masks = {}
+    for mask_file in mask_files:
+        mask_volume, mask_header = read_file(mask_file)
+        struct_name = mask_file.name.split(".")[0]
+        structure_masks[struct_name] = mask_volume
+    return structure_masks
+
+
 def read_byte_data(dose_file, mask_files):
     """
     READ_BYTE_DATA: Read the dose and mask files from the byte data.
@@ -92,3 +106,5 @@ def read_dose_and_mask_files(dose_file, mask_files):
         struct_name = mask_file.split("/")[-1].split(".")[0]
         structure_masks[struct_name] = mask_volume
     return dose_volume, structure_masks
+
+

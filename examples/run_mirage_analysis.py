@@ -13,6 +13,7 @@ from matplotlib.pyplot import figure
 import dosemetrics.dvh as dvh
 import dosemetrics.data_utils as data_utils
 import dosemetrics.scores as scores
+import dosemetrics.compliance as compliance
 
 plt.style.use("dark_background")
 figure(figsize=(12, 8), dpi=100)
@@ -115,147 +116,6 @@ def plot_dvh(dose_volume: np.ndarray, structure_masks: dict, output_file: str):
     plt.close()
 
 
-def compute_compliance(dose_volume: np.ndarray, structure_masks: dict, output_csv: str):
-    compliance_stats = {}
-
-    for struct_name in sorted(structure_masks.keys()):
-        struct_mask = structure_masks[struct_name]
-        dose_in_struct = dose_volume[struct_mask > 0]
-        if struct_name == "Chiasm":
-            # Optic Chiasm: ≤55 Gy. to 0.03cc, Optic Chiasm PRV ≤55Gy to 0.03cc
-            # Checking for 4 because our voxel grid is 2mmx2mmx2mm, meaning each voxel is 8mm3.
-            # 0.03cc is 30mm3, which is between 3 and 4 voxels - 24mm3 and 32mm3.
-            if struct_mask.sum() > 4:
-                sorted_dose = np.sort(dose_in_struct)[::-1]
-                calculated_dose = sorted_dose[3]
-                limit_dose = 55
-                if calculated_dose >= limit_dose:
-                    reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc violated. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Fail", reason]
-                else:
-                    reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc achieved. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Pass", reason]
-            else:
-                reason = f"{struct_name} volume is smaller than 0.03cc."
-                compliance_stats[struct_name] = ["NA", reason]
-            print(compliance_stats[struct_name])
-
-        elif struct_name == "Brainstem":
-            # Brainstem: ≤56 Gy. to 0.03cc
-            if struct_mask.sum() > 4:
-                sorted_dose = np.sort(dose_in_struct)[::-1]
-                calculated_dose = sorted_dose[3]
-                limit_dose = 56
-                if calculated_dose >= limit_dose:
-                    reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc violated. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Fail", reason]
-                else:
-                    reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc achieved. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Pass", reason]
-            else:
-                reason = f"{struct_name} volume is smaller than 0.03cc."
-                compliance_stats[struct_name] = ["NA", reason]
-            print(compliance_stats[struct_name])
-
-        elif "Cochlea" in struct_name:
-            # Cochlea: ≤45 Gy if both sides are involved; otherwise ≤60 Gy. (Low priority OaR) to 0.03cc
-            if struct_mask.sum() > 4:
-                sorted_dose = np.sort(dose_in_struct)[::-1]
-                calculated_dose = sorted_dose[3]
-                limit_dose = 45
-                if calculated_dose >= limit_dose:
-                    reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc violated. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Fail", reason]
-                else:
-                    reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc achieved. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Pass", reason]
-            else:
-                reason = f"{struct_name} volume is smaller than 0.03cc."
-                compliance_stats[struct_name] = ["NA", reason]
-            print(compliance_stats[struct_name])
-
-        elif "LacrimalGland" in struct_name:
-            # Lacrimal glands: <40 Gy to 0.03cc
-            if struct_mask.sum() > 4:
-                sorted_dose = np.sort(dose_in_struct)[::-1]
-                calculated_dose = sorted_dose[3]
-                limit_dose = 40
-                if calculated_dose >= limit_dose:
-                    reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc violated. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Fail", reason]
-                else:
-                    reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc achieved. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Pass", reason]
-            else:
-                reason = f"{struct_name} volume is smaller than 0.03cc."
-                compliance_stats[struct_name] = ["NA", reason]
-            print(compliance_stats[struct_name])
-
-        elif "OpticNerve" in struct_name:
-            # Optic Nerves ≤ 56 Gy to 0.03cc, Optic Nerves PRV: ≤56 Gy. to 0.03cc            
-            if struct_mask.sum() > 4:
-                sorted_dose = np.sort(dose_in_struct)[::-1]
-                calculated_dose = sorted_dose[3]
-                limit_dose = 56
-                if calculated_dose >= limit_dose:
-                    reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc violated. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Fail", reason]
-                else:
-                    reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc achieved. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Pass", reason]
-            else:
-                reason = f"{struct_name} volume is smaller than 0.03cc."
-                compliance_stats[struct_name] = ["NA", reason]
-            print(compliance_stats[struct_name])
-
-        elif struct_name == "Brain":
-            # The dose to the normal brain minus the PTV should be kept as low as possible. The Dmean is to be ≤ 30 Gy
-            limit_dose = 30
-            calculated_dose = dose_in_struct.mean()
-            if calculated_dose >= limit_dose:
-                reason = f"{struct_name} Dmean <= {limit_dose} Gy is violated. Dmean is {calculated_dose:.3f}"
-                compliance_stats[struct_name] = ["Fail", reason]
-            else:
-                reason = f"{struct_name} Dmean <= {limit_dose} Gy is achieved. Dmean is {calculated_dose:.3f}"
-                compliance_stats[struct_name] = ["Pass", reason]
-            print(compliance_stats[struct_name])
-
-        elif "Eye" in struct_name:
-            # Eye balls, retina <= 40 G to Dmax
-            limit_dose = 40
-            calculated_dose = dose_in_struct.max()
-            if calculated_dose >= limit_dose:
-                reason = f"{struct_name} Dmax <= {limit_dose} Gy is violated. Dmean is {calculated_dose:.3f}"
-                compliance_stats[struct_name] = ["Fail", reason]
-            else:
-                reason = f"{struct_name} Dmax <= {limit_dose} Gy is achieved. Dmean is {calculated_dose:.3f}"
-                compliance_stats[struct_name] = ["Pass", reason]
-            print(compliance_stats[struct_name])
-
-        elif "Lens" in struct_name:
-            # Lens: 10 Gy to 0.03cc
-            if struct_mask.sum() > 4:
-                sorted_dose = np.sort(dose_in_struct)[::-1]
-                calculated_dose = sorted_dose[3]
-                limit_dose = 10
-                if calculated_dose >= limit_dose:
-                    reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc violated. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Fail", reason]
-                else:
-                    reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc achieved. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Pass", reason]
-            else:
-                reason = f"{struct_name} volume is smaller than 0.03cc."
-                compliance_stats[struct_name] = ["NA", reason]
-            print(compliance_stats[struct_name])
-
-        else:
-            compliance_stats[struct_name] = ["NA", f"{struct_name} either has no constraints; or is not defined for both versions."]
-
-    compliance_df = pd.DataFrame.from_dict(compliance_stats, orient="index")
-    compliance_df.columns = ["Status", "Reason"]
-    compliance_df.to_csv(output_csv)
-
 if __name__ == "__main__":
 
     repo_root = os.path.dirname(os.path.abspath(__file__))
@@ -314,10 +174,13 @@ if __name__ == "__main__":
     # Finally check what the clinical constraint violations look like.
 
     output_csv = os.path.join(data_root, subject_name, "a_first_dose_first_structures_compliance.csv")
-    compute_compliance(first_dose, first_structures, output_csv)
+    compliance_df = compliance.compute_mirage_compliance(first_dose, first_structures)
+    compliance_df.to_csv(output_csv)
 
     output_csv = os.path.join(data_root, subject_name, "b_first_dose_last_structures_compliance.csv")
-    compute_compliance(first_dose, last_structures, output_csv)
+    compliance_df = compliance.compute_mirage_compliance(first_dose, last_structures)
+    compliance_df.to_csv(output_csv)
 
     output_csv = os.path.join(data_root, subject_name, "c_last_dose_last_structures_compliance.csv")
-    compute_compliance(last_dose, last_structures, output_csv)
+    compliance_df = compliance.compute_mirage_compliance(last_dose, last_structures)
+    compliance_df.to_csv(output_csv)

@@ -16,14 +16,14 @@ def list_beams(ds: pydicom.Dataset) -> str:
 
 def read_rtplan(filename: str):
     plan = pydicom.dcmread(filename, force=True)
-    print(list_beams(plan))
-    #print(plan)
+    #print(list_beams(plan))
+    print(plan)
 
 
 if __name__ == "__main__":
     #rtplan_folder = "/Users/amithkamath/data/EORTC-ICR/test_plan/"
     #rtplan_filename = "1.3.6.1.4.1.25111.0095.20180818.165038.00.3.00.RP.dcm"
-    rtplan_folder = "/Users/amithkamath/data/EORTC-ICR/test_plan_2/"
+    rtplan_folder = ("/Users/amithkamath/data/EORTC-ICR/testing/test_plan_2/")
     rtplan_filename = "rtplan.dcm"
     rtplan_file = os.path.join(rtplan_folder, rtplan_filename)
     read_rtplan(rtplan_file)

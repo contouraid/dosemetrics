@@ -8,6 +8,7 @@ import plotly.express as px
 
 from dosemetrics.data_utils import read_byte_data
 from dosemetrics.dvh import dvh_by_structure
+import dosemetrics.mirage_app as mirage_app
 
 # Run this from >> streamlit run app.py
 
@@ -110,7 +111,7 @@ def main_loop():
 
         if files_uploaded:
             st.divider()
-            st.markdown(f"## Step 2: Visualize DVH")
+            st.markdown(f"## Step 2: Visualize Dose")
             dose_volume, structure_masks = read_byte_data(dose_file, mask_files)
             plt.figure(figsize=(6, 6), dpi=80)
             fig, ax = plt.subplots()
@@ -132,8 +133,13 @@ def main_loop():
             st.pyplot(fig)
 
 
+    def compare_across_doses():
+        st.markdown(f"# {list(page_names_to_funcs.keys())[2]}")
+        mirage_app.panel()
+
+
     def instructions():
-        st.markdown(f"# {list(page_names_to_funcs.keys())[1]}")
+        st.markdown(f"# {list(page_names_to_funcs.keys())[3]}")
         st.sidebar.success("Select an option above.")
 
         st.markdown(
@@ -146,10 +152,10 @@ def main_loop():
         """
         )
 
-
     page_names_to_funcs = {
         "Calculate DVH": calculate_dvh,
         "Visualize Dose": visualize_dose,
+        "MIRAGE analysis": compare_across_doses,
         "Instructions": instructions
     }
 
