@@ -125,62 +125,70 @@ if __name__ == "__main__":
     plot_dvh(data_root, output_file)
     """
     data_root = "/home/akamath/Documents/data/ICR/output"
-    subject_name = "555_site_502"
-    first_plan = "eortc_0138_555_site_502_delineation_1_corrected"
-    last_plan = "eortc_0139_555_site_502_delineation_2_dose_1_corrected"
 
-    first_folder = os.path.join(data_root, subject_name, first_plan)
-    last_folder = os.path.join(data_root, subject_name, last_plan)
+    data_struct = pd.read_csv(os.path.join(data_root, "first_last_data.csv"))
 
-    first_dose = get_dose(first_folder)
-    first_structures, first_mask_files = get_structures(first_folder)
+    for index, row in data_struct.iterrows():
+        subject_name = row["case"]
+        first_plan = row["first"]
+        last_plan = row["last"]
 
-    last_dose = get_dose(last_folder)
-    last_structures, last_mask_files = get_structures(last_folder)
+        if (type(first_plan) is not str) or (type(last_plan) is       not str):
+            continue
+        else:
+            print(f"Analyzing subject: {subject_name} with first plan: {first_plan} and last plan: {last_plan}")
+            first_folder = os.path.join(data_root, subject_name, first_plan)
+            last_folder = os.path.join(data_root, subject_name, last_plan)
 
-    # First compute geometric evaluations
-    geometric_scores = compute_geometric_scores(first_mask_files, last_mask_files)
-    output_csv = os.path.join(data_root, subject_name, "geometric_differences.csv")
-    print(f"Geometric Scores between: first structures, last structures: ")
-    print(geometric_scores)
-    geometric_scores.to_csv(output_csv)
+            first_dose = get_dose(first_folder)
+            first_structures, first_mask_files = get_structures(first_folder)
 
-    # Then create the A, B, and C conditions for dosimetric evaluations
-    # and generate the corresponding DVHs and dose metrics
-    output_csv = os.path.join(data_root, subject_name, "a_first_dose_first_structures_dvh.csv")
-    output_image = os.path.join(data_root, subject_name, "a_first_dose_first_structures_dvh.png")
-    a_df = scores.dose_summary(first_dose, first_structures)
-    print(f"Dose Summary for A: first dose, first structures: ")
-    print(a_df)
-    a_df.to_csv(output_csv)
-    plot_dvh(first_dose, first_structures, output_image)
+            last_dose = get_dose(last_folder)
+            last_structures, last_mask_files = get_structures(last_folder)
 
-    output_csv = os.path.join(data_root, subject_name, "b_first_dose_last_structures_dvh.csv")
-    output_image = os.path.join(data_root, subject_name, "b_first_dose_last_structures_dvh.png")
-    b_df = scores.dose_summary(first_dose, last_structures)
-    print(f"Dose Summary for B: first dose, last structures: ")
-    print(b_df)
-    b_df.to_csv(output_csv)
-    plot_dvh(first_dose, last_structures, output_image)
+            # First compute geometric evaluations
+            geometric_scores = compute_geometric_scores(first_mask_files, last_mask_files)
+            output_csv = os.path.join(data_root, subject_name, "geometric_differences.csv")
+            print(f"Geometric Scores between: first structures, last structures: ")
+            print(geometric_scores)
+            geometric_scores.to_csv(output_csv)
 
-    output_csv = os.path.join(data_root, subject_name, "c_last_dose_last_structures_dvh.csv")
-    output_image = os.path.join(data_root, subject_name, "c_last_dose_last_structures_dvh.png")
-    c_df = scores.dose_summary(last_dose, last_structures)
-    print(f"Dose Summary for C: last dose, last structures: ")
-    print(c_df)
-    c_df.to_csv(output_csv)
-    plot_dvh(last_dose, last_structures, output_image)
+            # Then create the A, B, and C conditions for dosimetric evaluations
+            # and generate the corresponding DVHs and dose metrics
+            output_csv = os.path.join(data_root, subject_name, "a_first_dose_first_structures_dvh.csv")
+            output_image = os.path.join(data_root, subject_name, "a_first_dose_first_structures_dvh.png")
+            a_df = scores.dose_summary(first_dose, first_structures)
+            print(f"Dose Summary for A: first dose, first structures: ")
+            print(a_df)
+            a_df.to_csv(output_csv)
+            plot_dvh(first_dose, first_structures, output_image)
 
-    # Finally check what the clinical constraint violations look like.
+            output_csv = os.path.join(data_root, subject_name, "b_first_dose_last_structures_dvh.csv")
+            output_image = os.path.join(data_root, subject_name, "b_first_dose_last_structures_dvh.png")
+            b_df = scores.dose_summary(first_dose, last_structures)
+            print(f"Dose Summary for B: first dose, last structures: ")
+            print(b_df)
+            b_df.to_csv(output_csv)
+            plot_dvh(first_dose, last_structures, output_image)
 
-    output_csv = os.path.join(data_root, subject_name, "a_first_dose_first_structures_compliance.csv")
-    compliance_df = compliance.compute_mirage_compliance(first_dose, first_structures)
-    compliance_df.to_csv(output_csv)
+            output_csv = os.path.join(data_root, subject_name, "c_last_dose_last_structures_dvh.csv")
+            output_image = os.path.join(data_root, subject_name, "c_last_dose_last_structures_dvh.png")
+            c_df = scores.dose_summary(last_dose, last_structures)
+            print(f"Dose Summary for C: last dose, last structures: ")
+            print(c_df)
+            c_df.to_csv(output_csv)
+            plot_dvh(last_dose, last_structures, output_image)
 
-    output_csv = os.path.join(data_root, subject_name, "b_first_dose_last_structures_compliance.csv")
-    compliance_df = compliance.compute_mirage_compliance(first_dose, last_structures)
-    compliance_df.to_csv(output_csv)
+            # Finally check what the clinical constraint violations look like.
 
-    output_csv = os.path.join(data_root, subject_name, "c_last_dose_last_structures_compliance.csv")
-    compliance_df = compliance.compute_mirage_compliance(last_dose, last_structures)
-    compliance_df.to_csv(output_csv)
+            output_csv = os.path.join(data_root, subject_name, "a_first_dose_first_structures_compliance.csv")
+            compliance_df = compliance.compute_mirage_compliance(first_dose, first_structures)
+            compliance_df.to_csv(output_csv)
+
+            output_csv = os.path.join(data_root, subject_name, "b_first_dose_last_structures_compliance.csv")
+            compliance_df = compliance.compute_mirage_compliance(first_dose, last_structures)
+            compliance_df.to_csv(output_csv)
+
+            output_csv = os.path.join(data_root, subject_name, "c_last_dose_last_structures_compliance.csv")
+            compliance_df = compliance.compute_mirage_compliance(last_dose, last_structures)
+            compliance_df.to_csv(output_csv)

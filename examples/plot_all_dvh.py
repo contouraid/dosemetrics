@@ -55,9 +55,12 @@ if __name__ == "__main__":
     plot_dvh(data_root, output_file)
     """
 
-    test_folder = "/Users/amithkamath/data/EORTC-ICR/output/100_site_335"
+    test_folder = "/home/akamath/Documents/data/ICR/output"
     subfolder = [f.path for f in os.scandir(test_folder) if f.is_dir()]
     for sub in subfolder:
         sub_name = sub.split("/")[-1]
-        output_file = os.path.join(sub, "..", sub_name + "_overall_dvh.png")
-        plot_dvh(sub, output_file)
+        planfolders = [k.path for k in os.scandir(sub) if k.is_dir()]
+        for plan in planfolders:
+            plan_name = plan.split("/")[-1]
+            output_file = os.path.join(plan, "..", plan_name + "_overall_dvh.png")
+            plot_dvh(plan, output_file)
