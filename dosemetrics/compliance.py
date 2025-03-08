@@ -215,13 +215,13 @@ def compute_mirage_compliance(dose_volume: np.ndarray, structure_masks: dict):
                 limit_dose = 55
                 if calculated_dose >= limit_dose:
                     reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc violated. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Fail", reason]
+                    compliance_stats[struct_name] = ["Fail", reason, limit_dose - calculated_dose]
                 else:
                     reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc achieved. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Pass", reason]
+                    compliance_stats[struct_name] = ["Pass", reason, limit_dose - calculated_dose]
             else:
                 reason = f"{struct_name} volume is smaller than 0.03cc."
-                compliance_stats[struct_name] = ["NA", reason]
+                compliance_stats[struct_name] = ["NA", reason, 0]
             print(compliance_stats[struct_name])
 
         elif struct_name == "Brainstem":
@@ -232,13 +232,13 @@ def compute_mirage_compliance(dose_volume: np.ndarray, structure_masks: dict):
                 limit_dose = 56
                 if calculated_dose >= limit_dose:
                     reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc violated. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Fail", reason]
+                    compliance_stats[struct_name] = ["Fail", reason, limit_dose - calculated_dose]
                 else:
                     reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc achieved. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Pass", reason]
+                    compliance_stats[struct_name] = ["Pass", reason, limit_dose - calculated_dose]
             else:
                 reason = f"{struct_name} volume is smaller than 0.03cc."
-                compliance_stats[struct_name] = ["NA", reason]
+                compliance_stats[struct_name] = ["NA", reason, 0]
             print(compliance_stats[struct_name])
 
         elif "Cochlea" in struct_name:
@@ -249,13 +249,13 @@ def compute_mirage_compliance(dose_volume: np.ndarray, structure_masks: dict):
                 limit_dose = 45
                 if calculated_dose >= limit_dose:
                     reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc violated. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Fail", reason]
+                    compliance_stats[struct_name] = ["Fail", reason, limit_dose - calculated_dose]
                 else:
                     reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc achieved. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Pass", reason]
+                    compliance_stats[struct_name] = ["Pass", reason, limit_dose - calculated_dose]
             else:
                 reason = f"{struct_name} volume is smaller than 0.03cc."
-                compliance_stats[struct_name] = ["NA", reason]
+                compliance_stats[struct_name] = ["NA", reason, 0]
             print(compliance_stats[struct_name])
 
         elif "LacrimalGland" in struct_name:
@@ -266,13 +266,13 @@ def compute_mirage_compliance(dose_volume: np.ndarray, structure_masks: dict):
                 limit_dose = 40
                 if calculated_dose >= limit_dose:
                     reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc violated. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Fail", reason]
+                    compliance_stats[struct_name] = ["Fail", reason, limit_dose - calculated_dose]
                 else:
                     reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc achieved. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Pass", reason]
+                    compliance_stats[struct_name] = ["Pass", reason, limit_dose - calculated_dose]
             else:
                 reason = f"{struct_name} volume is smaller than 0.03cc."
-                compliance_stats[struct_name] = ["NA", reason]
+                compliance_stats[struct_name] = ["NA", reason, 0]
             print(compliance_stats[struct_name])
 
         elif "OpticNerve" in struct_name:
@@ -283,13 +283,13 @@ def compute_mirage_compliance(dose_volume: np.ndarray, structure_masks: dict):
                 limit_dose = 56
                 if calculated_dose >= limit_dose:
                     reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc violated. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Fail", reason]
+                    compliance_stats[struct_name] = ["Fail", reason, limit_dose - calculated_dose]
                 else:
                     reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc achieved. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Pass", reason]
+                    compliance_stats[struct_name] = ["Pass", reason, limit_dose - calculated_dose]
             else:
                 reason = f"{struct_name} volume is smaller than 0.03cc."
-                compliance_stats[struct_name] = ["NA", reason]
+                compliance_stats[struct_name] = ["NA", reason, 0]
             print(compliance_stats[struct_name])
 
         elif struct_name == "Brain":
@@ -298,10 +298,10 @@ def compute_mirage_compliance(dose_volume: np.ndarray, structure_masks: dict):
             calculated_dose = dose_in_struct.mean()
             if calculated_dose >= limit_dose:
                 reason = f"{struct_name} Dmean <= {limit_dose} Gy is violated. Dmean is {calculated_dose:.3f}"
-                compliance_stats[struct_name] = ["Fail", reason]
+                compliance_stats[struct_name] = ["Fail", reason, limit_dose - calculated_dose]
             else:
                 reason = f"{struct_name} Dmean <= {limit_dose} Gy is achieved. Dmean is {calculated_dose:.3f}"
-                compliance_stats[struct_name] = ["Pass", reason]
+                compliance_stats[struct_name] = ["Pass", reason, limit_dose - calculated_dose]
             print(compliance_stats[struct_name])
 
         elif "Eye" in struct_name:
@@ -310,10 +310,10 @@ def compute_mirage_compliance(dose_volume: np.ndarray, structure_masks: dict):
             calculated_dose = dose_in_struct.max()
             if calculated_dose >= limit_dose:
                 reason = f"{struct_name} Dmax <= {limit_dose} Gy is violated. Dmean is {calculated_dose:.3f}"
-                compliance_stats[struct_name] = ["Fail", reason]
+                compliance_stats[struct_name] = ["Fail", reason, limit_dose - calculated_dose]
             else:
                 reason = f"{struct_name} Dmax <= {limit_dose} Gy is achieved. Dmean is {calculated_dose:.3f}"
-                compliance_stats[struct_name] = ["Pass", reason]
+                compliance_stats[struct_name] = ["Pass", reason, limit_dose - calculated_dose]
             print(compliance_stats[struct_name])
 
         elif "Lens" in struct_name:
@@ -324,18 +324,30 @@ def compute_mirage_compliance(dose_volume: np.ndarray, structure_masks: dict):
                 limit_dose = 10
                 if calculated_dose >= limit_dose:
                     reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc violated. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Fail", reason]
+                    compliance_stats[struct_name] = ["Fail", reason, limit_dose - calculated_dose]
                 else:
                     reason = f"{struct_name} <= {limit_dose} Gy to 0.03cc achieved. Dose in 0.03cc is {calculated_dose:.3f}"
-                    compliance_stats[struct_name] = ["Pass", reason]
+                    compliance_stats[struct_name] = ["Pass", reason, limit_dose - calculated_dose]
             else:
                 reason = f"{struct_name} volume is smaller than 0.03cc."
-                compliance_stats[struct_name] = ["NA", reason]
+                compliance_stats[struct_name] = ["NA", reason, 0]
+            print(compliance_stats[struct_name])
+
+        elif "PTV" in struct_name:
+            # PTV: encompassed by the 95% isodose line at 60Gy
+            limit_dose = 60 * 0.95
+            calculated_dose = dose_in_struct.min()
+            if calculated_dose <= limit_dose:
+                reason = f"{struct_name} Dmin >= {limit_dose} Gy is violated. Dmin is {calculated_dose:.3f}"
+                compliance_stats[struct_name] = ["Fail", reason, limit_dose - calculated_dose]
+            else:
+                reason = f"{struct_name} Dmin >= {limit_dose} Gy is achieved. Dmin is {calculated_dose:.3f}"
+                compliance_stats[struct_name] = ["Pass", reason, limit_dose - calculated_dose]
             print(compliance_stats[struct_name])
 
         else:
-            compliance_stats[struct_name] = ["NA", f"{struct_name} either has no constraints; or is not defined for both versions."]
+            compliance_stats[struct_name] = ["NA", f"{struct_name} either has no constraints; or is not defined for both versions.", 0]
 
     compliance_df = pd.DataFrame.from_dict(compliance_stats, orient="index")
-    compliance_df.columns = ["Status", "Reason"]
+    compliance_df.columns = ["Status", "Reason", "Constraint-True"]
     return compliance_df

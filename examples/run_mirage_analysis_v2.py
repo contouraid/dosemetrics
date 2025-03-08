@@ -61,7 +61,8 @@ def compute_geometric_scores(a_mask_files, b_mask_files):
                    "HausdorffDistance100 (mm)",
                    "VolumeSimilarity",
                    "SurfaceDice",
-                   "FalseNegative (cc)"
+                   "FalseNegative (cc)",
+                   "SizeChange"
                    ]
     metrics = [metric.DiceCoefficient(),
                metric.HausdorffDistance(percentile=95, metric='HDRFDST95'),
@@ -79,6 +80,15 @@ def compute_geometric_scores(a_mask_files, b_mask_files):
             last_mask = sitk.ReadImage(b_masks[struct_name])
             last_mask.SetOrigin((0, 0, 0))
 
+            last_array = sitk.GetArrayFromImage(last_mask)
+            first_array = sitk.GetArrayFromImage(first_mask)
+            if last_array.sum() > first_array.sum():
+                size_change = "larger"
+            elif last_array.sum() == first_array.sum():
+                size_change = "same"
+            else:
+                size_change = "smaller"
+
             evaluator = eval_.SegmentationEvaluator(metrics, labels)
             evaluator.evaluate(first_mask, last_mask, struct_name)
             writer.ConsoleWriter().write(evaluator.results)
@@ -88,6 +98,7 @@ def compute_geometric_scores(a_mask_files, b_mask_files):
                                   f"{evaluator.results[3].value:.3f}",
                                   f"{evaluator.results[4].value:.3f}",
                                   f"{evaluator.results[5].value * 0.008:.3f}",
+                                  size_change,
                                   ]
 
     geom_df = pd.DataFrame.from_dict(stats, orient="index")
@@ -119,11 +130,6 @@ def plot_dvh(dose_volume: np.ndarray, structure_masks: dict, output_file: str):
 if __name__ == "__main__":
 
     repo_root = os.path.dirname(os.path.abspath(__file__))
-    """
-    data_root = os.path.join(repo_root, "..", "data", "compare_plans", "first")
-    output_file = os.path.join(repo_root, "..", "results", "first_overall_dvh.png")
-    plot_dvh(data_root, output_file)
-    """
     data_root = "/home/akamath/Documents/data/ICR/output"
 
     data_struct = pd.read_csv(os.path.join(data_root, "first_last_data.csv"))
