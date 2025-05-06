@@ -9,6 +9,7 @@ import plotly.express as px
 from dosemetrics.data_utils import read_byte_data
 from dosemetrics.dvh import dvh_by_structure
 import dosemetrics.mirage_app as mirage_app
+import dosemetrics.dvh_family as dvh_family
 
 # Run this from >> streamlit run app.py
 
@@ -133,13 +134,18 @@ def main_loop():
             st.pyplot(fig)
 
 
-    def compare_across_doses():
+    def dice_dvh_analysis():
         st.markdown(f"# {list(page_names_to_funcs.keys())[2]}")
+        dvh_family.panel()
+
+
+    def compare_across_doses():
+        st.markdown(f"# {list(page_names_to_funcs.keys())[3]}")
         mirage_app.panel()
 
 
     def instructions():
-        st.markdown(f"# {list(page_names_to_funcs.keys())[3]}")
+        st.markdown(f"# {list(page_names_to_funcs.keys())[4]}")
         st.sidebar.success("Select an option above.")
 
         st.markdown(
@@ -155,6 +161,7 @@ def main_loop():
     page_names_to_funcs = {
         "Calculate DVH": calculate_dvh,
         "Visualize Dose": visualize_dose,
+        "Dice DVH Analysis": dice_dvh_analysis,
         "MIRAGE analysis": compare_across_doses,
         "Instructions": instructions
     }

@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import pandas as pd
 import numpy as np
 import dosemetrics.dvh as dvh
@@ -65,3 +66,46 @@ def compare_dvh(
     plt.legend(loc="best")
 
     return fig
+
+
+def dvh_family(dose_volume, structure_mask, constraint_limit, structure_of_interest):
+    fig = plt.figure()
+    n_lines = 100
+    n_est = 5
+
+    max_dsc = 0.0
+    min_dsc = 1.0
+
+    cmap = mpl.colormaps['viridis']
+    colors = cmap(np.linspace(0, 1, n_lines + 1))
+    for x_range in range(-n_est, n_est+1):
+        for y_range in range(-n_est, n_est+1):
+            for z_range in range(-n_est, n_est+1):
+                new_structure_mask = structure_mask.copy()
+                new_structure_mask = np.roll(new_structure_mask, x_range, axis=0)
+                new_structure_mask = np.roll(new_structure_mask, y_range, axis=1)
+                new_structure_mask = np.roll(new_structure_mask, z_range, axis=2)
+                bins, values = dvh.compute_dvh(dose_volume, new_structure_mask)
+
+                intersection = np.logical_and(structure_mask, new_structure_mask)
+                dice = 2 * intersection.sum() / (structure_mask.sum() + new_structure_mask.sum())
+                if dice > max_dsc:
+                    max_dsc = dice
+                if dice < min_dsc:
+                    min_dsc = dice
+                color = colors[int(dice * n_lines)]
+                sc = plt.scatter(
+                    bins, values, s=0.5, c=color, alpha=0.25
+                )
+    bins, values = dvh.compute_dvh(dose_volume, structure_mask)
+    plt.plot(
+        bins, values, color='r', label=structure_of_interest
+    )
+    plt.axvline(x=constraint_limit, color="g", label="Constraint Limit")
+    plt.xlabel("Dose [Gy]")
+    plt.ylabel("Ratio of Total Structure Volume [%]")
+    plt.title(f"DVH Family for {structure_of_interest}")
+    color_bar = plt.colorbar(sc)
+    color_bar.solids.set(alpha=1)
+    plt.grid()
+    return fig, (max_dsc, min_dsc)

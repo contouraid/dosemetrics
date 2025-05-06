@@ -2,6 +2,7 @@ from dosemetrics import dvh
 from dosemetrics import compliance
 from dosemetrics import data_utils
 from dosemetrics import scores
+from dosemetrics import plot
 
 import os
 import numpy as np
@@ -27,47 +28,8 @@ def generate_dvh_family(input_folder: str, constraints: pd.DataFrame, structure_
     print(dose_compliance)
 
     constraint_limit = constraints.loc[structure_of_interest, "Level"]
-
-    fig = plt.figure()
-    n_lines = 100
-    n_est = 5
-    cmap = mpl.colormaps['jet']
-    colors = cmap(np.linspace(0, 1, n_lines + 1))
-    for x_range in range(-n_est, n_est+1):
-        for y_range in range(-n_est, n_est+1):
-            for z_range in range(-n_est, n_est+1):
-                new_structure_mask = structure_mask.copy()
-                new_structure_mask = np.roll(new_structure_mask, x_range, axis=0)
-                new_structure_mask = np.roll(new_structure_mask, y_range, axis=1)
-                new_structure_mask = np.roll(new_structure_mask, z_range, axis=2)
-                bins, values = dvh.compute_dvh(dose_volume, new_structure_mask)
-
-                intersection = np.logical_and(structure_mask, new_structure_mask)
-                dice = 2 * intersection.sum() / (structure_mask.sum() + new_structure_mask.sum())
-                print(f"Dice: {dice}")
-                color = colors[int(dice * n_lines)]
-                plt.scatter(
-                    bins, values, s=0.5, c=color, alpha=0.25
-                )
-    bins, values = dvh.compute_dvh(dose_volume, structure_mask)
-    plt.plot(
-        bins, values, color='r', label=structure_of_interest
-    )
-    plt.axvline(x=constraint_limit, color="g", label="Constraint Limit")
-    plt.xlabel("Dose [Gy]")
-    plt.ylabel("Ratio of Total Structure Volume [%]")
-    plt.title(f"DVH Family for {structure_of_interest}")
-    plt.grid()
+    plot.dvh_family(dose_volume, structure_mask, constraint_limit, structure_of_interest)
     plt.savefig(os.path.join(output_folder, f"{structure_of_interest}_dvh_family.png"))
-
-    """
-    # To create a dummy colorbar that we add later on to the image.
-    fig = plt.figure()
-    img = plt.imshow(np.array([[0,1]]), cmap=cmap)
-    img.set_visible(False)
-    plt.colorbar(orientation="vertical")
-    plt.show()
-    """
 
 
 if __name__ == "__main__":

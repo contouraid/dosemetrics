@@ -83,7 +83,7 @@ def check_compliance(df, constraint):
     for structure in constraint.index:
         if structure in df.index:
             if constraint.loc[structure, "Constraint Type"] == "max":
-                if df.loc[structure, "Max Dose"] > constraint.loc[structure, "Level"]:
+                if pd.to_numeric(df.loc[structure, "Max Dose"]) > constraint.loc[structure, "Level"]:
                     compliance_df.loc[structure, "Compliance"] = "❌ No"
                     compliance_df.loc[structure, "Reason"] = (
                         f"Max dose constraint: "
@@ -96,12 +96,12 @@ def check_compliance(df, constraint):
                         structure, "Reason"
                     ] = f"Max dose is within constraint! "
             elif constraint.loc[structure, "Constraint Type"] == "min":
-                if df.loc[structure, "Min Dose"] < constraint.loc[structure, "Level"]:
+                if pd.to_numeric(df.loc[structure, "Min Dose"]) < constraint.loc[structure, "Level"]:
                     compliance_df.loc[structure, "Compliance"] = "❌ No"
                     compliance_df.loc[structure, "Reason"] = (
-                        f"Min dose constraint: "
-                        f"{constraint.loc[structure, 'Level']},"
-                        f" not met: {df.loc[structure, 'Min Dose']:.2f}"
+                        "Min dose constraint: " +
+                        str(constraint.loc[structure, 'Level']) +
+                        " not met: " + str(df.loc[structure, 'Min Dose'])
                     )
                 else:
                     compliance_df.loc[structure, "Compliance"] = "✅ Yes"
@@ -109,7 +109,7 @@ def check_compliance(df, constraint):
                         structure, "Reason"
                     ] = f"Min dose is within constraint! "
             elif constraint.loc[structure, "Constraint Type"] == "mean":
-                if df.loc[structure, "Mean Dose"] > constraint.loc[structure, "Level"]:
+                if pd.to_numeric(df.loc[structure, "Mean Dose"]) > constraint.loc[structure, "Level"]:
                     compliance_df.loc[structure, "Compliance"] = "❌ No"
                     compliance_df.loc[structure, "Reason"] = (
                         f"Mean dose constraint: "
@@ -224,7 +224,7 @@ def compute_mirage_compliance(dose_volume: np.ndarray, structure_masks: dict):
                 compliance_stats[struct_name] = ["NA", reason, 0]
             print(compliance_stats[struct_name])
 
-        elif struct_name == "Brainstem":
+        elif (struct_name == "Brainstem") or (struct_name == "BrainStem"):
             # Brainstem: ≤56 Gy. to 0.03cc
             if struct_mask.sum() > 4:
                 sorted_dose = np.sort(dose_in_struct)[::-1]

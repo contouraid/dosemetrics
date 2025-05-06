@@ -12,7 +12,7 @@ figure(figsize=(12, 8), dpi=100)
 if __name__ == "__main__":
 
     repo_root = os.path.dirname(os.path.abspath(__file__))
-    data_root = "/home/akamath/Documents/data/ICR/output"
+    data_root = "/Users/amithkamath/data/EORTC-ICR/output"
 
     data_struct = pd.read_csv(os.path.join(data_root, "first_last_data.csv"))
 
