@@ -40,3 +40,4 @@ jobs:
         python -m unittest test/test_dvh.py
         python -m unittest test/test_metrics.py
         python -m unittest test/test_scores.py
+        python -m unittest test/test_compliance.py
