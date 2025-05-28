@@ -16,3 +16,6 @@ dependencies = [
     "simpleitk>=2.4",
     "streamlit~=1.45.0",
 ]
+
+[tool.setuptools.packages.find]
+include = ["dosemetrics*"]
