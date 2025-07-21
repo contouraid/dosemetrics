@@ -24,7 +24,7 @@ def read_file(byte_file):
     """
     # See https://stackoverflow.com/questions/62579425/simpleitk-read-io-byteio
     fh = FileHolder(fileobj=GzipFile(fileobj=byte_file))
-    img = Nifti1Image.from_file_map({'header': fh, 'image': fh})
+    img = Nifti1Image.from_file_map({"header": fh, "image": fh})
     arr = np.array(img.dataobj)
     return arr, img.header
 
@@ -108,3 +108,38 @@ def read_dose_and_mask_files(dose_file, mask_files):
     return dose_volume, structure_masks
 
 
+def get_dose(data_path: str):
+    """
+    GET_DOSE:
+    Read the dose volume from the specified data root directory.
+    :param data_root: Path to the directory containing the dose file.
+    :return: Dose volume as a numpy array.
+    """
+    dose_file = os.path.join(data_path, "Dose.nii.gz")
+    dose_volume = read_from_nifti(dose_file)
+    return dose_volume
+
+
+def get_structures(data_path: str):
+    """
+    GET_STRUCTURES:
+    Read the structure masks from the specified data root directory.
+    :param data_root: Path to the directory containing the structure files.
+    :return: A dictionary of structure masks and a list of mask files.
+    """
+    contents_file = glob(os.path.join(data_path, "*.csv"))
+
+    mask_structures = {}
+    mask_files = []
+    if len(contents_file) == 1:
+        cf = pd.read_csv(contents_file[0])
+        info = cf[["Structure", "Type"]].copy()
+
+        for i in range(info.shape[0]):
+            if info.loc[i, "Type"] == "Target" or info.loc[i, "Type"] == "OAR":
+                mask_file = os.path.join(
+                    data_path, str(info.loc[i, "Structure"]) + ".nii.gz"
+                )
+                mask_structures[info.loc[i, "Structure"]] = read_from_nifti(mask_file)
+                mask_files.append(mask_file)
+    return mask_structures, mask_files

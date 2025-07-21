@@ -1,5 +1,9 @@
 import numpy as np
 import pandas as pd
+import SimpleITK as sitk
+import pymia.evaluation.metric as metric
+import pymia.evaluation.evaluator as eval_
+import pymia.evaluation.writer as writer
 
 
 def dose_score(_pred: np.ndarray, _gt: np.ndarray, _dose_mask=None) -> np.ndarray:
@@ -84,3 +88,74 @@ def dose_summary(dose_volume, structure_masks):
 
     df = pd.DataFrame.from_dict(dose_metrics).T
     return df
+
+
+def compute_geometric_scores(a_mask_files, b_mask_files):
+    """
+    COMPUTE_GEOMETRIC_SCORES:
+    Compute geometric scores between two sets of structure masks.
+    :param a_mask_files: List of file paths for the first set of structure masks.
+    :param b_mask_files: List of file paths for the second set of structure masks.
+    :return: A DataFrame containing geometric scores for each structure.
+    """
+    a_masks = {}
+    for a_file in a_mask_files:
+        struct_name = a_file.split("/")[-1].split(".")[0]
+        a_masks[struct_name] = a_file
+    b_masks = {}
+    for b_file in b_mask_files:
+        struct_name = b_file.split("/")[-1].split(".")[0]
+        b_masks[struct_name] = b_file
+
+    metric_list = [
+        "DSC",
+        "HausdorffDistance95 (mm)",
+        "HausdorffDistance100 (mm)",
+        "VolumeSimilarity",
+        "SurfaceDice",
+        "FalseNegative (cc)",
+        "SizeChange",
+    ]
+    metrics = [
+        metric.DiceCoefficient(),
+        metric.HausdorffDistance(percentile=95, metric="HDRFDST95"),
+        metric.HausdorffDistance(percentile=100, metric="HDRFDST"),
+        metric.VolumeSimilarity(),
+        metric.SurfaceDiceOverlap(),
+        metric.FalseNegative(),
+    ]
+    labels = {1: "FG"}
+
+    stats = {}
+    for struct_name in b_masks:
+        if struct_name in a_masks:
+            first_mask = sitk.ReadImage(a_masks[struct_name])
+            first_mask.SetOrigin((0, 0, 0))
+            last_mask = sitk.ReadImage(b_masks[struct_name])
+            last_mask.SetOrigin((0, 0, 0))
+
+            last_array = sitk.GetArrayFromImage(last_mask)
+            first_array = sitk.GetArrayFromImage(first_mask)
+            if last_array.sum() > first_array.sum():
+                size_change = "larger"
+            elif last_array.sum() == first_array.sum():
+                size_change = "same"
+            else:
+                size_change = "smaller"
+
+            evaluator = eval_.SegmentationEvaluator(metrics, labels)
+            evaluator.evaluate(first_mask, last_mask, struct_name)
+            writer.ConsoleWriter().write(evaluator.results)
+            stats[struct_name] = [
+                f"{evaluator.results[0].value:.3f}",
+                f"{evaluator.results[1].value:.3f}",
+                f"{evaluator.results[2].value:.3f}",
+                f"{evaluator.results[3].value:.3f}",
+                f"{evaluator.results[4].value:.3f}",
+                f"{evaluator.results[5].value * 0.008:.3f}",
+                size_change,
+            ]
+
+    geom_df = pd.DataFrame.from_dict(stats, orient="index")
+    geom_df.columns = metric_list
+    return geom_df

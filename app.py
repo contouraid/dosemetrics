@@ -18,8 +18,12 @@ def request_dose_and_masks(instruction_text):
     st.markdown(instruction_text)
     st.markdown(f"Check instructions on the sidebar for more information.")
 
-    dose_file = st.file_uploader("Upload a dose distribution volume (in .nii.gz)", type=['gz'])
-    mask_files = st.file_uploader("Upload mask volumes (in .nii.gz)", accept_multiple_files=True, type=['gz'])
+    dose_file = st.file_uploader(
+        "Upload a dose distribution volume (in .nii.gz)", type=["gz"]
+    )
+    mask_files = st.file_uploader(
+        "Upload mask volumes (in .nii.gz)", accept_multiple_files=True, type=["gz"]
+    )
 
     return dose_file, mask_files
 
@@ -119,30 +123,25 @@ def main_loop():
             slice_num = st.slider("Choose an axial slice number:", 1, 128, 64)
             plt.imshow(np.rot90(dose_volume[:, :, slice_num], 3), cmap="hot")
             plt.tick_params(
-                axis='x',  # changes apply to the x-axis
-                which='both',  # both major and minor ticks are affected
+                axis="x",  # changes apply to the x-axis
+                which="both",  # both major and minor ticks are affected
                 bottom=False,  # ticks along the bottom edge are off
                 top=False,  # ticks along the top edge are off
-                labelbottom=False)
+                labelbottom=False,
+            )
             plt.tick_params(
-                axis='y',  # changes apply to the x-axis
-                which='both',  # both major and minor ticks are affected
+                axis="y",  # changes apply to the x-axis
+                which="both",  # both major and minor ticks are affected
                 left=False,  # ticks along the bottom edge are off
                 right=False,  # ticks
-                labelleft=False)
+                labelleft=False,
+            )
             plt.title("Dose Volume")
             st.pyplot(fig)
-
 
     def dice_dvh_analysis():
         st.markdown(f"# {list(page_names_to_funcs.keys())[2]}")
         dvh_family.panel()
-
-
-    def compare_across_doses():
-        st.markdown(f"# {list(page_names_to_funcs.keys())[3]}")
-        mirage_app.panel()
-
 
     def instructions():
         st.markdown(f"# {list(page_names_to_funcs.keys())[4]}")
@@ -162,8 +161,7 @@ def main_loop():
         "Calculate DVH": calculate_dvh,
         "Visualize Dose": visualize_dose,
         "Dice DVH Analysis": dice_dvh_analysis,
-        "MIRAGE analysis": compare_across_doses,
-        "Instructions": instructions
+        "Instructions": instructions,
     }
 
     task_selection = st.sidebar.selectbox("Choose a task:", page_names_to_funcs.keys())

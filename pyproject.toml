@@ -13,6 +13,8 @@ dependencies = [
     "pandas>=2.1.4",
     "pillow==10.4.0",
     "plotly~=5.23.0",
+    "pydicom>=3.0.1",
+    "pymia>=0.3.4",
     "simpleitk>=2.4",
     "streamlit~=1.45.0",
 ]
