@@ -8,7 +8,6 @@ import plotly.express as px
 
 from dosemetrics.data_utils import read_byte_data
 from dosemetrics.dvh import dvh_by_structure
-import dosemetrics.mirage_app as mirage_app
 import dosemetrics.dvh_family as dvh_family
 
 # Run this from >> streamlit run app.py
@@ -144,7 +143,7 @@ def main_loop():
         dvh_family.panel()
 
     def instructions():
-        st.markdown(f"# {list(page_names_to_funcs.keys())[4]}")
+        st.markdown(f"# {list(page_names_to_funcs.keys())[3]}")
         st.sidebar.success("Select an option above.")
 
         st.markdown(
