@@ -4,7 +4,8 @@ import pandas as pd
 from glob import glob
 from gzip import GzipFile
 import SimpleITK as sitk
-from nibabel import FileHolder, Nifti1Image
+from nibabel.fileholders import FileHolder
+from nibabel.nifti1 import Nifti1Image
 
 
 def find_all_files(name, path):

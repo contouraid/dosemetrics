@@ -69,7 +69,7 @@ def compare_dvh(
     return fig
 
 
-def dvh_family(dose_volume, structure_mask, constraint_limit, structure_of_interest):
+def variability(dose_volume, structure_mask, constraint_limit, structure_of_interest):
     fig = plt.figure()
     n_lines = 100
     n_est = 5
@@ -79,6 +79,7 @@ def dvh_family(dose_volume, structure_mask, constraint_limit, structure_of_inter
 
     cmap = mpl.colormaps["viridis"]
     colors = cmap(np.linspace(0, 1, n_lines + 1))
+    sc = None  # Initialize sc to None
     for x_range in range(-n_est, n_est + 1):
         for y_range in range(-n_est, n_est + 1):
             for z_range in range(-n_est, n_est + 1):
@@ -106,8 +107,9 @@ def dvh_family(dose_volume, structure_mask, constraint_limit, structure_of_inter
     plt.xlabel("Dose [Gy]")
     plt.ylabel("Ratio of Total Structure Volume [%]")
     plt.title(f"DVH Family for {structure_of_interest}")
-    color_bar = plt.colorbar(sc)
-    color_bar.solids.set(alpha=1)
+    if sc is not None:
+        color_bar = plt.colorbar(sc)
+        color_bar.set_alpha(1)
     plt.grid()
     return fig, (max_dsc, min_dsc)
 

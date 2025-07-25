@@ -8,7 +8,7 @@ import plotly.express as px
 
 from dosemetrics.data_utils import read_byte_data
 from dosemetrics.dvh import dvh_by_structure
-import dosemetrics.dvh_family as dvh_family
+import dosemetrics.variations_tab as variations_tab
 
 # Run this from >> streamlit run app.py
 
@@ -140,7 +140,7 @@ def main_loop():
 
     def dice_dvh_analysis():
         st.markdown(f"# {list(page_names_to_funcs.keys())[2]}")
-        dvh_family.panel()
+        variations_tab.panel()
 
     def instructions():
         st.markdown(f"# {list(page_names_to_funcs.keys())[3]}")

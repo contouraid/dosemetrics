@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from numpy import ndarray
-import dosemetrics.data_utils as data_utils
 
 
 def mean_dose(_dose: np.ndarray, _struct_mask: np.ndarray):
@@ -42,7 +41,10 @@ def get_volumes(file_name):
 
 
 def compute_dvh(
-    _dose: np.ndarray, _struct_mask: np.ndarray, max_dose=65, step_size=0.1,
+    _dose: np.ndarray,
+    _struct_mask: np.ndarray,
+    max_dose=65,
+    step_size=0.1,
 ) -> tuple[ndarray, ndarray]:
 
     dose_in_oar = _dose[_struct_mask > 0]
@@ -95,11 +97,18 @@ def dvh_by_dose(dose_volumes, structure_mask, structure_name):
 
     dose_id = []
     for id in dose_volumes.keys():
-        bins, values = compute_dvh(dose_volumes[id], structure_mask, max_dose, step_size)
+        bins, values = compute_dvh(
+            dose_volumes[id], structure_mask, max_dose, step_size
+        )
         dose_id.append(structure_name + "_" + str(id))
         dvh_data[structure_name + "_" + str(id)] = values
 
     df = pd.DataFrame.from_dict(dvh_data)
-    df = pd.melt(df, id_vars=['Dose'], value_vars=dose_id,
-                 var_name='Structure', value_name='Volume')
+    df = pd.melt(
+        df,
+        id_vars=["Dose"],
+        value_vars=dose_id,
+        var_name="Structure",
+        value_name="Volume",
+    )
     return df
