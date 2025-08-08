@@ -1,11 +1,16 @@
 import numpy as np
 import unittest
+import logging
 
 from dosemetrics import metrics
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class TestMetrics(unittest.TestCase):
     def test_create_OAR(self):
+        logger.info("Testing OAR creation ...")
         # Create a zero dose structure.
         oar = metrics.OAR("test_oar")
 
@@ -20,3 +25,4 @@ class TestMetrics(unittest.TestCase):
         # Test max and mean dose
         self.assertTrue(oar.max_dose() == np.max(oar.dose))
         self.assertTrue(oar.mean_dose() == np.mean(oar.dose))
+        logger.info("... completed testing OAR creation.")

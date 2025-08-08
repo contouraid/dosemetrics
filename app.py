@@ -159,7 +159,7 @@ def main_loop():
     page_names_to_funcs = {
         "Calculate DVH": calculate_dvh,
         "Visualize Dose": visualize_dose,
-        "Dice DVH Analysis": dice_dvh_analysis,
+        "Contour Variation Robustness": dice_dvh_analysis,
         "Instructions": instructions,
     }
 

@@ -2,6 +2,11 @@ import dosemetrics.compliance as compliance
 import pandas as pd
 import numpy as np
 import unittest
+import logging
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def is_string_series(s: pd.Series):
@@ -10,18 +15,23 @@ def is_string_series(s: pd.Series):
     :param s: Pandas series object.
     :return: True if all elements in s are strings.
     """
+    logger.info(f"Checking if series is string series: {s.name}")
     if isinstance(s.dtype, pd.StringDtype):
         # The series was explicitly created as a string series (Pandas>=1.0.0)
+        logger.info("Series is explicitly a string series.")
         return True
     elif s.dtype == "object":
         # Object series, check each value
-        return all((v is None) or isinstance(v, str) for v in s)
+        result = all((v is None) or isinstance(v, str) for v in s)
+        logger.info(f"Series is object type, all values are strings: {result}")
+        return result
     else:
         return False
 
 
 class TestCompliance(unittest.TestCase):
     def test_default_compliance(self):
+        logger.info("Testing default compliance.")
         constraints = compliance.get_default_constraints()
 
         self.assertTrue(
@@ -40,6 +50,7 @@ class TestCompliance(unittest.TestCase):
         self.assertTrue(constraints.shape[1] == 2)
 
     def test_check_compliance(self):
+        logger.info("Testing check compliance.")
         example_df = pd.DataFrame(
             [
                 {"Structure": "Brain", "Mean Dose": 25, "Max Dose": 30},
