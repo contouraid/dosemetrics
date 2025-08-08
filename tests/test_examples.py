@@ -24,7 +24,7 @@ class TestExamples(unittest.TestCase):
         """Test that all example files can be imported successfully."""
         # Temporarily disabled - examples will be converted to notebooks for Google Colab
         self.skipTest("Examples test temporarily disabled pending notebook conversion")
-        
+
         failed_imports = []
 
         for example_file in self.example_files:

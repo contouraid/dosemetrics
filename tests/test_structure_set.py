@@ -9,7 +9,11 @@ import os
 from unittest.mock import patch, MagicMock
 
 import dosemetrics as dm
-from dosemetrics.data import StructureSet, create_structure_set_from_masks, StructureType
+from dosemetrics.data import (
+    StructureSet,
+    create_structure_set_from_masks,
+    StructureType,
+)
 
 
 class TestStructureSet(unittest.TestCase):

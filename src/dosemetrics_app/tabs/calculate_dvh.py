@@ -28,7 +28,9 @@ def panel():
 
     instruction_text = f"## Step 1: Upload dose distribution volume and mask files"
     dose_file, mask_files = request_dose_and_masks(instruction_text)
-    files_uploaded = (dose_file is not None) and (mask_files is not None and len(mask_files) > 0)
+    files_uploaded = (dose_file is not None) and (
+        mask_files is not None and len(mask_files) > 0
+    )
 
     if files_uploaded:
         st.divider()
