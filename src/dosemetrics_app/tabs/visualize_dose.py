@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
-from dosemetrics.io import read_byte_data
+from dosemetrics.data import read_byte_data
 
 
 def request_dose_and_masks(instruction_text):

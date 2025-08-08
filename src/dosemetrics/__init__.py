@@ -12,12 +12,19 @@ Public API:
 """
 
 # Core structure classes
-from .structures import (
+from .data import (
     Structure,
     OAR,
     Target,
     StructureType,
     AvoidanceStructure,
+)
+
+# Structure set management
+from .data import (
+    StructureSet,
+    create_structure_set_from_folder,
+    create_structure_set_from_masks,
 )
 
 # Core metrics and calculations
@@ -39,13 +46,18 @@ from .metrics import (
 )
 
 # I/O utilities
-from .io import (
+from .data import (
     read_file,
     read_byte_data,
     read_from_eclipse,
     read_dose_and_mask_files,
     read_from_nifti,
     find_all_files,
+    read_dose_and_mask_files_as_structure_set,
+    get_dose_and_structures_as_structure_set,
+    create_structure_set_from_existing_data,
+    get_dose,
+    get_structures,
 )
 
 # Utility functions
@@ -76,12 +88,16 @@ __version__ = "0.2.0"
 __all__ = [
     # Version
     "__version__",
-    # Structure
+    # Structure classes
     "Structure",
     "OAR",
     "Target",
     "StructureType",
     "AvoidanceStructure",
+    # Structure set management
+    "StructureSet",
+    "create_structure_set_from_folder",
+    "create_structure_set_from_masks",
     # Core metrics
     "mean_dose",
     "max_dose",
@@ -98,7 +114,12 @@ __all__ = [
     "read_from_eclipse",
     "read_dose_and_mask_files",
     "read_from_nifti",
+    "read_dose_and_mask_files_as_structure_set",
+    "get_dose_and_structures_as_structure_set",
+    "create_structure_set_from_existing_data",
     "find_all_files",
+    "get_dose",
+    "get_structures",
     # Utilities
     "get_default_constraints",
     "check_compliance",

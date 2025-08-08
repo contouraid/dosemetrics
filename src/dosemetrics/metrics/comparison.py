@@ -18,7 +18,7 @@ from .dvh import compute_dvh
 from .scores import dose_summary
 from ..utils.compliance import quality_index, get_default_constraints
 from ..utils.plot import compare_dvh
-from ..io.data_io import read_from_nifti
+from ..data.data_io import read_from_nifti
 
 
 def compare_predicted_doses(

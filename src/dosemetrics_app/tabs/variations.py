@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
 
-from dosemetrics.io import read_byte_data, read_dose, read_masks
+from dosemetrics.data import read_byte_data, read_dose, read_masks
 from dosemetrics.metrics import dvh_by_structure, dvh_by_dose, dose_summary
 from dosemetrics.utils import (
     get_default_constraints,

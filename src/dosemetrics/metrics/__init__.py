@@ -2,7 +2,7 @@
 Core dose metrics and calculations.
 """
 
-from ..structures import Structure, OAR, Target, StructureType, AvoidanceStructure
+from ..data import Structure, OAR, Target, StructureType, AvoidanceStructure
 from .dvh import (
     mean_dose,
     max_dose,

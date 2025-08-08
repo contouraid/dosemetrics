@@ -9,19 +9,6 @@ def get_custom_constraints():
     GET_CUSTOM_CONSTRAINTS: Get custom constraints for common structures.
     :return: DataFrame with custom constraints for common structures.
     """
-
-    """
-    • Optic Chiasm: ≤55 Gy. to 0.03cc
-    • Optic Chiasm PRV ≤55Gy to 0.03cc
-    • Brainstem: ≤56 Gy. to 0.03cc
-    • Optic Nerves ≤ 56 Gy to 0.03cc
-    • Optic Nerves PRV: ≤56 Gy. to 0.03cc
-    • Eye balls, retina: ≤40 G to Dmax
-    • Lens: 10 Gy to 0.03cc
-    • Lacrimal glands: <40 Gy to 0.03cc
-    • Cochlea: ≤45 Gy if both sides are involved; otherwise ≤60 Gy. (Low priority OaR) to 0.03cc
-    • The dose to the normal brain minus the PTV should be kept as low as possible. The Dmean is to be ≤ 30 Gy    
-    """
     constraint_df = pd.DataFrame(
         [
             {"Structure": "Brain", "Constraint Type": "mean", "Level": 30},

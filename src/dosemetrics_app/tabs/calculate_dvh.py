@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 
-from dosemetrics.io import read_byte_data
+from dosemetrics.data import read_byte_data
 from dosemetrics.metrics import dvh_by_structure
 
 

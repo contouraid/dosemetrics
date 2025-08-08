@@ -1,9 +1,6 @@
 """
-Comprehensive tests for dosemetrics.structures module.
-
-Tests the radiotherapy structure classes (Structure, OAR, Target, AvoidanceStructure)
-with extensive functionality including geometric analysis, dose statistics, DVH computation,
-and target-specific metrics.
+Tests for dosemetrics.structures module.
+Tests the radiotherapy structure classes (Structure, OAR, Target, AvoidanceStructure) with functionality including geometric analysis, dose statistics, DVH computation, and target-specific metrics.
 """
 
 import numpy as np
