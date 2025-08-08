@@ -1,9 +1,40 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "dosemetrics"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.2.0"
+description = "Measuring radiotherapy doses - plotting visualizations"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.9"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Amith Kamath", email = "amith.kamath@unibe.ch"}
+]
+keywords = [
+    "medical image analysis",
+    "machine learning", 
+    "neuro",
+    "radiotherapy",
+    "dose metrics"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: Other/Proprietary License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Libraries",
+]
 dependencies = [
     "altair~=5.4.0",
     "gpssi>=0.1.2",
@@ -19,5 +50,13 @@ dependencies = [
     "streamlit~=1.45.0",
 ]
 
-[tool.setuptools.packages.find]
-include = ["dosemetrics*"]
+[project.urls]
+Homepage = "https://github.com/amithjkamath/dosemetrics"
+Repository = "https://github.com/amithjkamath/dosemetrics"
+Issues = "https://github.com/amithjkamath/dosemetrics/issues"
+
+[tool.setuptools]
+packages = ["dosemetrics"]
+
+[tool.setuptools.package-dir]
+dosemetrics = "dosemetrics"
