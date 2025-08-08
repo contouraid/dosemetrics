@@ -2,7 +2,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://python.org)
 [![PyPI version](https://badge.fury.io/py/dosemetrics.svg)](https://badge.fury.io/py/dosemetrics)
-[![Tests](https://github.com/amithjkamath/dosemetrics/actions/workflows/python-app.yml/badge.svg)](https://github.com/amithjkamath/dosemetrics/actions/workflows/python-app.yml)
+[![Tests](https://github.com/amithjkamath/dosemetrics/actions/workflows/tests.yml/badge.svg)](https://github.com/amithjkamath/dosemetrics/actions/workflows/tests.yml)
 [![License](https://img.shields.io/badge/license-CC%20BY--SA--NC%204.0-green.svg)](LICENSE)
 [![Development Status](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/amithjkamath/dosemetrics)
 
