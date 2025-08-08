@@ -1,17 +1,7 @@
 # DoseMetrics
 
 [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://python.org)
-[![PyPI version](htt├── src/dosemetrics/          # Core library
-│   ├── structures.py        # Radiotherapy structure classes (OAR, Target, etc.)
-│   ├── io/                  # Data I/O utilities
-│   │   └── data_io.py      # File loading and data reading
-│   ├── metrics/            # Core dose calculations
-│   │   ├── dvh.py         # DVH calculation
-│   │   └── scores.py      # Scoring algorithms
-│   └── utils/             # Utility functions
-│       ├── comparison.py  # Plan comparison tools
-│       ├── compliance.py  # Constraint checking
-│       └── plot.py       # Visualization toolsfury.io/py/dosemetrics.svg)](https://badge.fury.io/py/dosemetrics)
+[![PyPI version](https://badge.fury.io/py/dosemetrics.svg)](https://badge.fury.io/py/dosemetrics)
 [![Tests](https://github.com/amithjkamath/dosemetrics/actions/workflows/tests.yml/badge.svg)](https://github.com/amithjkamath/dosemetrics/actions/workflows/tests.yml)
 [![License](https://img.shields.io/badge/license-CC%20BY--SA--NC%204.0-green.svg)](LICENSE)
 [![Development Status](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/amithjkamath/dosemetrics)
