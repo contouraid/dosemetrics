@@ -1,5 +1,3 @@
-import dosemetrics
-
 import os
 import numpy as np
 import SimpleITK as sitk
@@ -7,14 +5,16 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import pandas as pd
 
+import dosemetrics
+
 plt.style.use("dark_background")
 
 
 def read_dose_and_mask_files(dose_file, mask_files):
-    dose_volume = data_utils.read_from_nifti(dose_file)
+    dose_volume = dosemetrics.read_from_nifti(dose_file)
     structure_masks = {}
     for mask_file in mask_files:
-        mask_volume = data_utils.read_from_nifti(mask_file)
+        mask_volume = dosemetrics.read_from_nifti(mask_file)
         struct_name = mask_file.split("/")[-1].split(".")[0]
         structure_masks[struct_name] = mask_volume
     return dose_volume, structure_masks
@@ -28,14 +28,16 @@ def generate_dvh_family(
 ):
     dose_file = os.path.join(input_folder, "Dose.nii.gz")
     structure_file = os.path.join(input_folder, structure_of_interest + ".nii.gz")
-    dose_volume = data_utils.read_from_nifti(dose_file)
+    dose_volume = dosemetrics.read_from_nifti(dose_file)
     structure_image = sitk.ReadImage(structure_file)
     structure_mask = sitk.GetArrayFromImage(structure_image)
     spacing = structure_image.GetSpacing()
     print(f"Spacing: {spacing}")
 
-    dose_df = scores.dose_summary(dose_volume, {structure_of_interest: structure_mask})
-    dose_compliance = compliance.check_compliance(dose_df, constraints)
+    dose_df = dosemetrics.dose_summary(
+        dose_volume, {structure_of_interest: structure_mask}
+    )
+    dose_compliance = dosemetrics.check_compliance(dose_df, constraints)
     print(dose_compliance)
 
     constraint_limit = constraints.loc[structure_of_interest, "Level"]
@@ -51,7 +53,7 @@ def generate_dvh_family(
     new_structure_mask = np.roll(new_structure_mask, x_range, axis=0)
     new_structure_mask = np.roll(new_structure_mask, y_range, axis=1)
     new_structure_mask = np.roll(new_structure_mask, z_range, axis=2)
-    bins, values = dvh.compute_dvh(dose_volume, new_structure_mask)
+    bins, values = dosemetrics.compute_dvh(dose_volume, new_structure_mask)
     plt.plot(
         bins,
         values,
@@ -59,7 +61,7 @@ def generate_dvh_family(
     )
     intersection = np.logical_and(structure_mask, new_structure_mask)
     dice = 2 * intersection.sum() / (structure_mask.sum() + new_structure_mask.sum())
-    bins, values = dvh.compute_dvh(dose_volume, structure_mask)
+    bins, values = dosemetrics.compute_dvh(dose_volume, structure_mask)
     plt.plot(bins, values, color="r", label=structure_of_interest)
     # plt.axvline(x=constraint_limit, color="g", label="Constraint Limit")
     plt.xlabel("Dose [Gy]")
@@ -83,7 +85,7 @@ if __name__ == "__main__":
         "LacrimalGland_R",
         "Target",
     ]
-    constraints = compliance.get_default_constraints()
+    constraints = dosemetrics.get_default_constraints()
 
     for structure_of_interest in structures:
         results_folder = os.path.join(repo_root, "..", "results", "test_subject_TPS-X")
