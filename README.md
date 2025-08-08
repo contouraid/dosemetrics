@@ -1,17 +1,18 @@
 # DoseMetrics
 
 [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://python.org)
+[![PyPI version](https://badge.fury.io/py/dosemetrics.svg)](https://badge.fury.io/py/dosemetrics)
 [![Tests](https://github.com/amithjkamath/dosemetrics/actions/workflows/python-app.yml/badge.svg)](https://github.com/amithjkamath/dosemetrics/actions/workflows/python-app.yml)
 [![License](https://img.shields.io/badge/license-CC%20BY--SA--NC%204.0-green.svg)](LICENSE)
 [![Development Status](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/amithjkamath/dosemetrics)
 
 A comprehensive Python library for measuring radiotherapy doses and creating interactive visualizations for radiation therapy treatment planning and analysis.
 
-## 🎯 Overview
+## Overview
 
 DoseMetrics provides tools for analyzing radiation dose distributions, calculating dose-volume histograms (DVH), evaluating treatment plan quality, and creating publication-ready visualizations. This library is designed for medical physicists, radiation oncologists, and researchers working with radiotherapy treatment planning data.
 
-## ✨ Features
+## Features
 
 - **Dose Analysis**: Calculate and analyze 3D dose distributions
 - **DVH Generation**: Create dose-volume histograms for organs at risk (OARs) and targets
@@ -22,17 +23,17 @@ DoseMetrics provides tools for analyzing radiation dose distributions, calculati
 - **Geometric Analysis**: Compute spatial differences and overlaps between structures
 - **Export Capabilities**: Save results in various formats (CSV, PDF, PNG)
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Installation
 
-Install DoseMetrics using pip:
+Install it easily using pip:
 
 ```bash
 pip install dosemetrics
 ```
 
-Or for development, install in editable mode:
+**For development**, clone the repository and install in editable mode:
 
 ```bash
 git clone https://github.com/amithjkamath/dosemetrics.git
@@ -50,7 +51,7 @@ streamlit run app.py
 
 This provides a user-friendly interface for uploading DICOM files, analyzing dose distributions, and generating reports.
 
-## 📖 Usage Examples
+## Usage Examples
 
 ### Basic DVH Analysis
 
@@ -98,7 +99,7 @@ compliance_results = dm.compliance.check_constraints(
 )
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 dosemetrics/
@@ -116,7 +117,7 @@ dosemetrics/
 └── app.py              # Streamlit web application
 ```
 
-## 🧪 Examples
+## Examples
 
 The `examples/` directory contains comprehensive examples:
 
@@ -134,14 +135,14 @@ python examples/compare_quality_index.py
 python examples/generate_dvh_family.py
 ```
 
-## 🔬 Supported Data Formats
+## Supported Data Formats
 
 - **DICOM**: RT Dose, RT Structure Set
 - **NIfTI**: `.nii`, `.nii.gz` files
 - **NRRD**: Near Raw Raster Data format
 - **Text**: Eclipse DVH export files
 
-## 🛠️ Development
+## Development
 
 ### Running Tests
 
@@ -166,11 +167,11 @@ We welcome contributions! Please see our contributing guidelines:
 - Python 3.9 or higher
 - See `pyproject.toml` for complete dependency list
 
-## 📚 Documentation
+## Documentation
 
 For detailed API documentation and tutorials, visit our [documentation site](https://github.com/amithjkamath/dosemetrics) (coming soon).
 
-## 🤝 Citation
+## Citation
 
 If you use DoseMetrics in your research, please cite:
 
@@ -184,15 +185,15 @@ If you use DoseMetrics in your research, please cite:
 }
 ```
 
-## 📄 License
+## License
 
 This project is licensed under the Creative Commons Attribution-ShareAlike-NonCommercial 4.0 International License - see the [LICENSE](LICENSE) file for details.
 
 **Non-Commercial Use**: This software is freely available for academic, research, and personal use. Commercial use requires explicit written permission from the copyright holder.
 
-For commercial licensing inquiries, please contact: amith.kamath@unibe.ch
+For commercial licensing inquiries, please contact the folks at contouraid.
 
-## 👥 Contributors
+## Contributors
 
 - **Amith Kamath** - *Lead Developer* - [amithjkamath](https://github.com/amithjkamath)
 
@@ -202,8 +203,7 @@ For commercial licensing inquiries, please contact: amith.kamath@unibe.ch
 - Open source medical imaging libraries that make this work possible
 - Contributors and users who help improve the library
 
-## 📞 Support
+## Support
 
 - **Issues**: [GitHub Issues](https://github.com/amithjkamath/dosemetrics/issues)
-- **Email**: amith.kamath@unibe.ch
 - **Discussions**: [GitHub Discussions](https://github.com/amithjkamath/dosemetrics/discussions)
