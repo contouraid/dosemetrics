@@ -1,16 +1,22 @@
 # DoseMetrics
 
-[![Python Version](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://python.org)
+[![Python Version](https://img.shield.io/python-3.9%2B-blue.svg)](https://python.org)
 [![PyPI version](https://badge.fury.io/py/dosemetrics.svg)](https://badge.fury.io/py/dosemetrics)
 [![Tests](https://github.com/amithjkamath/dosemetrics/actions/workflows/python-app.yml/badge.svg)](https://github.com/amithjkamath/dosemetrics/actions/workflows/python-app.yml)
 [![License](https://img.shields.io/badge/license-CC%20BY--SA--NC%204.0-green.svg)](LICENSE)
 [![Development Status](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/amithjkamath/dosemetrics)
 
-A comprehensive Python library for measuring radiotherapy doses and creating interactive visualizations for radiation therapy treatment planning and analysis.
+A Python library for measuring radiotherapy doses and creating interactive visualizations for radiation therapy treatment planning and analysis.
 
 ## Overview
 
 DoseMetrics provides tools for analyzing radiation dose distributions, calculating dose-volume histograms (DVH), evaluating treatment plan quality, and creating publication-ready visualizations. This library is designed for medical physicists, radiation oncologists, and researchers working with radiotherapy treatment planning data.
+
+### Package Structure
+- `dosemetrics.metrics`: Core dose calculation functions (DVH, scores, etc.)
+- `dosemetrics.io`: File I/O utilities for reading dose and mask data  
+- `dosemetrics.utils`: Utility functions for compliance, plotting, etc.
+- App-specific code moved to separate `dosemetrics_app` package (not distributed on PyPI)
 
 ## Features
 
@@ -22,6 +28,7 @@ DoseMetrics provides tools for analyzing radiation dose distributions, calculati
 - **Comparative Analysis**: Compare predicted vs. actual dose distributions
 - **Geometric Analysis**: Compute spatial differences and overlaps between structures
 - **Export Capabilities**: Save results in various formats (CSV, PDF, PNG)
+- **Command Line Interface**: Basic CLI for common operations
 
 ## Quick Start
 
@@ -46,41 +53,57 @@ pip install --editable .
 Launch the interactive Streamlit application:
 
 ```bash
-streamlit run app.py
+cd src && streamlit run dosemetrics_app/app.py
 ```
 
-This provides a user-friendly interface for uploading DICOM files, analyzing dose distributions, and generating reports.
+Or alternatively, from the root directory:
+
+```bash
+PYTHONPATH=src streamlit run src/dosemetrics_app/app.py
+```
+
+**Note**: The application includes password authentication that is currently disabled for development/testing. If you need to enable authentication, uncomment the authentication check in `src/dosemetrics_app/app.py` and configure the `secrets.toml` file with user passwords.
+
+This provides a user-friendly interface for uploading NIfTI files, analyzing dose distributions, and generating reports.
 
 ## Usage Examples
 
 ### Basic DVH Analysis
 
 ```python
-import dosemetrics as dm
+import dosemetrics
 
-# Load dose and structure data
-dose_data = dm.data_utils.load_dose("path/to/dose.nii.gz")
-structures = dm.data_utils.load_structures("path/to/structures/")
+# Load dose and structure data (using the new structure)
+dose_data = dosemetrics.read_from_nifti("path/to/dose.nii.gz")
+structures = {"PTV": dosemetrics.read_from_nifti("path/to/ptv.nii.gz")}
 
 # Generate DVH
-dvh = dm.dvh.calculate_dvh(dose_data, structures["PTV"])
+dvh_df = dosemetrics.dvh_by_structure(dose_data, structures)
 
 # Plot DVH
-dm.plot.plot_dvh(dvh, title="Target DVH")
+dosemetrics.plot_dvh(dose_data, structures, "output.pdf")
 ```
 
-### Quality Index Calculation
+### Quality Metrics Calculation
 
 ```python
-# Calculate conformity and homogeneity indices
-quality_metrics = dm.metrics.calculate_quality_indices(
-    dose_data, 
-    target_structure, 
-    prescription_dose=50
-)
+# Calculate dose summary statistics
+quality_metrics = dosemetrics.dose_summary(dose_data, structures)
 
-print(f"Conformity Index: {quality_metrics['CI']:.3f}")
-print(f"Homogeneity Index: {quality_metrics['HI']:.3f}")
+print(f"Quality metrics: {quality_metrics}")
+```
+
+### Command Line Interface
+
+```bash
+# Generate DVH from command line
+dosemetrics dvh dose.nii.gz structure1.nii.gz structure2.nii.gz -o dvh_results.csv
+
+# Compute quality metrics  
+dosemetrics quality dose.nii.gz structure1.nii.gz structure2.nii.gz -o quality_report.csv
+
+# Check version
+dosemetrics --version
 ```
 
 ### Compliance Checking
@@ -103,18 +126,27 @@ compliance_results = dm.compliance.check_constraints(
 
 ```
 dosemetrics/
-├── dosemetrics/           # Core library modules
-│   ├── comparison.py      # Plan comparison tools
-│   ├── compliance.py      # Constraint checking
-│   ├── data_utils.py      # Data loading utilities
-│   ├── dvh.py            # DVH calculation
-│   ├── metrics.py        # Quality metrics
-│   ├── plot.py           # Visualization tools
-│   └── scores.py         # Scoring algorithms
-├── examples/             # Usage examples and scripts
-├── test/                # Unit tests
-├── data/                # Sample data for testing
-└── app.py              # Streamlit web application
+├── src/dosemetrics/           # Core library modules (new structure)
+│   ├── io/                    # Data I/O utilities
+│   │   └── data_io.py        # File loading and data reading
+│   ├── metrics/              # Core dose calculations
+│   │   ├── dvh.py           # DVH calculation
+│   │   ├── exposure.py      # Exposure metrics (formerly metrics.py)
+│   │   └── scores.py        # Scoring algorithms
+│   └── utils/               # Utility functions
+│       ├── comparison.py    # Plan comparison tools
+│       ├── compliance.py    # Constraint checking
+│       └── plot.py         # Visualization tools
+├── src/dosemetrics_app/      # Streamlit web application
+│   ├── app.py               # Main application entry point
+│   └── tabs/                # Application tab modules
+│       └── variations.py    # Variations analysis tab
+├── examples/                # Usage examples and scripts
+├── tests/                   # Organized unit tests
+│   ├── data_io/            # Tests for I/O functionality
+│   ├── metrics/            # Tests for metrics calculations
+│   └── utils/              # Tests for utility functions
+└── data/                   # Sample data for testing
 ```
 
 ## Examples
@@ -149,7 +181,7 @@ python examples/generate_dvh_family.py
 Execute the test suite to ensure everything works correctly:
 
 ```bash
-python -m unittest discover -s test -p "test_*.py"
+python -m unittest discover -s tests -p "test_*.py"
 ```
 
 ### Contributing
@@ -197,7 +229,7 @@ For commercial licensing inquiries, please contact the folks at contouraid.
 
 - **Amith Kamath** - *Lead Developer* - [amithjkamath](https://github.com/amithjkamath)
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Medical physics community for guidance and feedback
 - Open source medical imaging libraries that make this work possible

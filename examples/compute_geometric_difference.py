@@ -1,6 +1,6 @@
 import numpy as np
 
-from dosemetrics import data_utils
+import dosemetrics
 import os
 import SimpleITK as sitk
 import pandas as pd
@@ -18,7 +18,7 @@ def get_structures(input_folder: str):
 def read_mask_files(mask_files):
     structure_masks = {}
     for mask_file in mask_files:
-        mask_volume = data_utils.read_from_nifti(mask_file)
+        mask_volume = dosemetrics.read_from_nifti(mask_file)
         struct_name = mask_file.split("/")[-1].split(".")[0]
         structure_masks[struct_name] = mask_volume
     return structure_masks
@@ -63,7 +63,9 @@ if __name__ == "__main__":
     compute_geometric_metrics((structures_first, structures_last), results_folder)
     """
 
-    dataset_folder = "/Users/amithkamath/data/EORTC-ICR/ICR-unacceptable-variation-output"
+    dataset_folder = (
+        "/Users/amithkamath/data/EORTC-ICR/ICR-unacceptable-variation-output"
+    )
     subject_folders = [f.path for f in os.scandir(dataset_folder) if f.is_dir()]
     for subject_folder in subject_folders:
         print(f"Processing {subject_folder} ...\n")
@@ -74,7 +76,9 @@ if __name__ == "__main__":
             structures_last = get_structures(last_folder)
 
             results_folder = os.path.join(subject_folder)
-            compute_geometric_metrics((structures_first, structures_last), results_folder)
+            compute_geometric_metrics(
+                (structures_first, structures_last), results_folder
+            )
         except:
-                print(f"Failed to process {subject_folder}.\n")
+            print(f"Failed to process {subject_folder}.\n")
         print(f"Completed {subject_folder}.\n")

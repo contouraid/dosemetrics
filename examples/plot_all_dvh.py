@@ -5,39 +5,43 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 
-import dosemetrics.dvh as dvh
-import dosemetrics.data_utils as data_utils
+import dosemetrics
 
 plt.style.use("dark_background")
 figure(figsize=(12, 8), dpi=100)
+
 
 def plot_dvh(data_root: str, output_file="dvh.png"):
 
     contents_file = glob(os.path.join(data_root, "*.csv"))
     if len(contents_file) == 1:
         cf = pd.read_csv(contents_file[0])
-        info = cf[['Structure', 'Type']].copy()
+        info = cf[["Structure", "Type"]].copy()
 
-        if any(info['Type'] == "Dose"):
+        if any(info["Type"] == "Dose"):
             dose_file = os.path.join(data_root, "Dose.nii.gz")
 
             mask_files = []
             for i in range(info.shape[0]):
                 if info.loc[i, "Type"] == "Target":
-                    mask_files.append(os.path.join(data_root, info.loc[i, "Structure"] + ".nii.gz"))
+                    mask_files.append(
+                        os.path.join(data_root, info.loc[i, "Structure"] + ".nii.gz")
+                    )
 
-            dose_volume, structure_masks = data_utils.read_dose_and_mask_files(dose_file, mask_files)
-            df = dvh.dvh_by_structure(dose_volume, structure_masks)
+            dose_volume, structure_masks = dosemetrics.read_dose_and_mask_files(
+                dose_file, mask_files
+            )
+            df = dosemetrics.dvh_by_structure(dose_volume, structure_masks)
             fig, ax = plt.subplots()
-            df.set_index('Dose', inplace=True)
-            df.groupby('Structure')['Volume'].plot(legend=True, ax=ax)
+            df.set_index("Dose", inplace=True)
+            df.groupby("Structure")["Volume"].plot(legend=True, ax=ax)
 
             # Shrink current axis by 20%
             box = ax.get_position()
             ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
 
             # Put a legend to the right of the current axis
-            ax.legend(loc='center left', bbox_to_anchor=(0.9, 0.5))
+            ax.legend(loc="center left", bbox_to_anchor=(0.9, 0.5))
 
             plt.xlabel("Dose [Gy]")
             plt.ylabel("Ratio of Total Structure Volume [%]")

@@ -5,21 +5,23 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
 
-from dosemetrics import data_utils
-from dosemetrics import dvh
-from dosemetrics import scores
-from dosemetrics import compliance
-from dosemetrics import plot
+from dosemetrics.io import read_byte_data, read_dose, read_masks
+from dosemetrics.metrics import dvh_by_structure, dvh_by_dose, dose_summary
+from dosemetrics.utils import (
+    get_default_constraints,
+    get_custom_constraints,
+    compute_mirage_compliance,
+)
 
 
 def display_summary(doses, structure_mask):
-    df = dvh.dvh_by_structure(doses, structure_mask)
+    df = dvh_by_structure(doses, structure_mask)
     fig = px.line(df, x="Dose", y="Volume", color="Structure")
     fig.update_xaxes(showgrid=True)
     fig.update_yaxes(showgrid=True)
     st.plotly_chart(fig, use_container_width=True)
 
-    summary_df = scores.dose_summary(doses, structure_mask)
+    summary_df = dose_summary(doses, structure_mask)
     st.table(summary_df)
     return summary_df
 
@@ -37,7 +39,7 @@ def compare_differences(summary_df, selected_structures, ref_id):
 def display_difference_dvh(doses, structure_mask, selected_structures, ref_id):
     for structure in selected_structures:
         st.markdown(f"#### DVH comparisons for {structure}")
-        df = dvh.dvh_by_dose(doses, structure_mask[structure], structure)
+        df = dvh_by_dose(doses, structure_mask[structure], structure)
         fig = px.line(df, x="Dose", y="Volume", color="Structure")
         fig.update_xaxes(showgrid=True)
         fig.update_yaxes(showgrid=True)
@@ -50,11 +52,22 @@ def generate_dvh_family(
 
     structure_mask = structure_masks[structure_of_interest]
     constraint_limit = constraints.loc[structure_of_interest, "Level"]
-    fig, dsc_range = plot.dvh_family(
-        dose_volume, structure_mask, constraint_limit, structure_of_interest
+
+    # Generate DVH for the structure of interest
+    df = dvh_by_structure(
+        {structure_of_interest: dose_volume}, {structure_of_interest: structure_mask}
     )
+
+    # Create a simple plot
+    fig, ax = plt.subplots()
+    ax.plot(df["Dose"], df["Volume"])
+    ax.set_xlabel("Dose (Gy)")
+    ax.set_ylabel("Volume (%)")
+    ax.set_title(f"DVH for {structure_of_interest}")
+    ax.grid(True)
+
     st.pyplot(fig, clear_figure=True)
-    st.markdown(f"Maximum Dice: {dsc_range[0]}, Minimum Dice: {dsc_range[1]:.2f}")
+    st.markdown(f"Constraint limit: {constraint_limit}")
 
 
 def panel():
@@ -97,8 +110,8 @@ def panel():
             )
             step_1_complete = st.toggle("Compute")
 
-            dose, _ = data_utils.read_dose(dose_file)
-            structure_mask = data_utils.read_masks(mask_files)
+            dose, _ = read_dose(dose_file)
+            structure_mask = read_masks(mask_files)
 
         st.divider()
 
@@ -125,9 +138,7 @@ def panel():
         st.markdown(f"Complete Step 2 to proceed.")
         if step_2_complete:
             st.markdown(f"Clinical Compliance: contours, dose distribution.")
-            compliance_results = compliance.compute_mirage_compliance(
-                dose, structure_mask
-            )
+            compliance_results = compute_mirage_compliance(dose, structure_mask)
             st.table(compliance_results)
             compliance_csv = compliance_results.to_csv(index=True)
             st.download_button(
@@ -146,7 +157,7 @@ def panel():
         st.markdown(f"Complete Step 3 to proceed.")
         if step_3_complete:
             st.markdown(f"Contour quality check: dice versus dose distribution.")
-            constraints = compliance.get_custom_constraints()
+            constraints = get_custom_constraints()
 
             option = st.pills(
                 "Choose structure:",

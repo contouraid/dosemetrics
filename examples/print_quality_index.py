@@ -1,5 +1,4 @@
-from dosemetrics import dvh
-from dosemetrics import compliance
+import dosemetrics
 
 import os
 import glob
@@ -19,7 +18,7 @@ def print_quality_index(input_folder: str, output_folder: str):
 
     pp = PdfPages(os.path.join(output_folder, "quality_index.pdf"))
 
-    constraints = compliance.get_default_constraints()
+    constraints = dosemetrics.get_default_constraints()
 
     structures = glob.glob(data_folder + "/*[!Dose*].nii.gz")
     structures = sorted(structures)
@@ -34,20 +33,23 @@ def print_quality_index(input_folder: str, output_folder: str):
             constraint_type = constraints.loc[struct_name, "Constraint Type"]
             constraint_limit = constraints.loc[struct_name, "Level"]
 
-            bins, values = dvh.compute_dvh(dose_array, oar_mask)
-            qi = compliance.quality_index(
+            bins, values = dosemetrics.compute_dvh(dose_array, oar_mask)
+            qi = dosemetrics.quality_index(
                 dose_array, oar_mask, constraint_type, constraint_limit
             )
             fig = plt.figure()
             plt.plot(
-                bins, values, color="b", label=struct_name,
+                bins,
+                values,
+                color="b",
+                label=struct_name,
             )
             plt.axvline(x=constraint_limit, color="r", label="constraint limit")
             if constraint_type == "max":
-                max_dose = dvh.max_dose(dose_array, oar_mask)
+                max_dose = dosemetrics.max_dose(dose_array, oar_mask)
                 plt.axvline(x=max_dose, color="g", label="max_dose")
             elif constraint_type == "mean":
-                mean_dose = dvh.mean_dose(dose_array, oar_mask)
+                mean_dose = dosemetrics.mean_dose(dose_array, oar_mask)
                 plt.axvline(x=mean_dose, color="g", label="mean_dose")
             print(
                 f"{struct_name}, Type: {constraint_type}, Limit: {constraint_limit}, QI: {qi:.2f}"

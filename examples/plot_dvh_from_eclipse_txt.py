@@ -1,15 +1,14 @@
 import os
 import matplotlib.pyplot as plt
 
-from dosemetrics.data_utils import read_from_eclipse
-from dosemetrics.plot import from_dataframe
+import dosemetrics
 
 plt.rcParams["figure.figsize"] = [20, 12]
 
 
 def plot_dvh_from_eclipse(path_to_txt_file: str, output_path: str = ".") -> None:
-    data = read_from_eclipse(path_to_txt_file)
-    from_dataframe(data, "test_subject", output_path)
+    data = dosemetrics.read_from_eclipse(path_to_txt_file)
+    dosemetrics.from_dataframe(data, "test_subject", output_path)
 
 
 if __name__ == "__main__":

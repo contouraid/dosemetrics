@@ -3,7 +3,7 @@ import os
 import SimpleITK as sitk
 import pandas as pd
 
-import dosemetrics.scores as metrics
+import dosemetrics
 
 
 def compute_dosemetrics(data_dir):
@@ -42,21 +42,23 @@ def compute_dosemetrics(data_dir):
         oar_array = sitk.GetArrayFromImage(oar_nii)
 
         # Dose score computation
-        dose_result = metrics.dose_score(predicted_dose_array, dose_array, oar_array)
+        dose_result = dosemetrics.dose_score(
+            predicted_dose_array, dose_array, oar_array
+        )
 
         # DVH score computation
         if oar == "Target":
-            actual_dvh_results = metrics.dvh_score(
+            actual_dvh_results = dosemetrics.dvh_score(
                 dose_array, oar_array, "target", spacing
             )
-            predicted_dvh_results = metrics.dvh_score(
+            predicted_dvh_results = dosemetrics.dvh_score(
                 predicted_dose_array, oar_array, "target", spacing
             )
         else:
-            actual_dvh_results = metrics.dvh_score(
+            actual_dvh_results = dosemetrics.dvh_score(
                 dose_array, oar_array, "OAR", spacing
             )
-            predicted_dvh_results = metrics.dvh_score(
+            predicted_dvh_results = dosemetrics.dvh_score(
                 predicted_dose_array, oar_array, "OAR", spacing
             )
 

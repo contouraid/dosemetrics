@@ -10,8 +10,7 @@ import matplotlib.pyplot as plt
 
 plt.style.use("dark_background")
 
-from dosemetrics import dvh
-from dosemetrics import plot
+import dosemetrics
 
 
 def compute_stats(_file_name: str, _dose_array: np.ndarray) -> dict:
@@ -19,10 +18,12 @@ def compute_stats(_file_name: str, _dose_array: np.ndarray) -> dict:
     stats["name"] = _file_name.split("/")[-1].split(".")[0]
     struct_image = sitk.ReadImage(_file_name)
     struct_array = sitk.GetArrayFromImage(struct_image)
-    stats["bins"], stats["values"] = dvh.compute_dvh(_dose_array, struct_array)
-    stats["max"] = dvh.max_dose(_dose_array, struct_array)
-    stats["mean"] = dvh.mean_dose(_dose_array, struct_array)
-    stats["volume"] = dvh.volume(struct_array, struct_image.GetSpacing())
+    stats["bins"], stats["values"] = dosemetrics.metrics.dvh.compute_dvh(
+        _dose_array, struct_array
+    )
+    stats["max"] = dosemetrics.max_dose(_dose_array, struct_array)
+    stats["mean"] = dosemetrics.mean_dose(_dose_array, struct_array)
+    stats["volume"] = dosemetrics.volume(struct_array, struct_image.GetSpacing())
     stats["color"] = "b"
     return stats
 
@@ -54,7 +55,6 @@ def compare_predicted_dvh(input_folder: str, output_folder: str):
     prediction_array = sitk.GetArrayFromImage(prediction_image)
     pp = PdfPages(os.path.join(output_folder, "compare_prediction.pdf"))
 
-
     structures = sorted(structures)
     for structure in structures:
         struct_name = structure.split("/")[-1].split(".")[0]
@@ -64,7 +64,7 @@ def compare_predicted_dvh(input_folder: str, output_folder: str):
             oar_image = sitk.ReadImage(structure)
             oar_mask = sitk.GetArrayFromImage(oar_image)
 
-            fig = plot.compare_dvh(dose_array, prediction_array, oar_mask)
+            fig = dosemetrics.compare_dvh(dose_array, prediction_array, oar_mask)
             plt.title(struct_name)
             plt.grid()
             pp.savefig(fig)

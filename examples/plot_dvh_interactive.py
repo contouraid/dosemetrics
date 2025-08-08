@@ -1,5 +1,5 @@
 import os
-from dosemetrics import dvh
+import dosemetrics
 
 import SimpleITK as sitk
 import numpy as np
@@ -17,10 +17,10 @@ def compute_stats(_file_name: str, _dose_array: np.ndarray) -> dict:
     stats["name"] = _file_name.split("/")[-1].split(".")[0]
     struct_image = sitk.ReadImage(_file_name)
     struct_array = sitk.GetArrayFromImage(struct_image)
-    stats["bins"], stats["values"] = dvh.compute_dvh(_dose_array, struct_array)
-    stats["max"] = dvh.max_dose(_dose_array, struct_array)
-    stats["mean"] = dvh.mean_dose(_dose_array, struct_array)
-    stats["volume"] = dvh.volume(struct_array, struct_image.GetSpacing())
+    stats["bins"], stats["values"] = dosemetrics.compute_dvh(_dose_array, struct_array)
+    stats["max"] = dosemetrics.max_dose(_dose_array, struct_array)
+    stats["mean"] = dosemetrics.mean_dose(_dose_array, struct_array)
+    stats["volume"] = dosemetrics.volume(struct_array, struct_image.GetSpacing())
     stats["color"] = "b"
     return stats
 

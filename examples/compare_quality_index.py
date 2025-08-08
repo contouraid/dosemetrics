@@ -1,4 +1,4 @@
-from dosemetrics import compliance
+import dosemetrics
 
 import os
 import glob
@@ -13,12 +13,14 @@ def compare_quality_index(input_folder: str, output_folder: str):
     dose_image = sitk.ReadImage(os.path.join(input_folder, "Dose.nii.gz"))
     dose_array = sitk.GetArrayFromImage(dose_image)
 
-    predicted_dose_image = sitk.ReadImage(os.path.join(input_folder, "Predicted_Dose.nii.gz"))
+    predicted_dose_image = sitk.ReadImage(
+        os.path.join(input_folder, "Predicted_Dose.nii.gz")
+    )
     predicted_dose_array = sitk.GetArrayFromImage(predicted_dose_image)
 
     df = pd.DataFrame()
 
-    constraints = compliance.get_default_constraints()
+    constraints = dosemetrics.get_default_constraints()
 
     structures = glob.glob(data_folder + "/*[!Dose*].nii.gz")
     structures = sorted(structures)
@@ -33,10 +35,10 @@ def compare_quality_index(input_folder: str, output_folder: str):
             constraint_type = constraints.loc[struct_name, "Constraint Type"]
             constraint_limit = constraints.loc[struct_name, "Level"]
 
-            qi = compliance.quality_index(
+            qi = dosemetrics.quality_index(
                 dose_array, oar_mask, constraint_type, constraint_limit
             )
-            predicted_qi = compliance.quality_index(
+            predicted_qi = dosemetrics.quality_index(
                 predicted_dose_array,
                 oar_mask,
                 constraint_type,
@@ -54,7 +56,9 @@ def compare_quality_index(input_folder: str, output_folder: str):
             df.loc[struct_name, "Predicted QI"] = predicted_qi
     df.loc["Correlation", "Predicted QI"] = df["QI"].corr(df["Predicted QI"])
     df.to_csv(
-        os.path.join(output_folder, f"compare_quality_index_{data_folder.split('/')[-1]}.csv")
+        os.path.join(
+            output_folder, f"compare_quality_index_{data_folder.split('/')[-1]}.csv"
+        )
     )
 
 

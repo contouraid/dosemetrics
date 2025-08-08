@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from dosemetrics.dvh import compute_dvh, mean_dose, max_dose
+from ..metrics.dvh import mean_dose, max_dose, compute_dvh
 
 
 def get_custom_constraints():

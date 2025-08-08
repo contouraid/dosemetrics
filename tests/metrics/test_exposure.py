@@ -1,18 +1,26 @@
+"""
+Tests for dosemetrics.metrics.exposure module.
+
+Tests structure classes (OAR, Target, Structure).
+"""
+
 import numpy as np
 import unittest
 import logging
-
-from dosemetrics import metrics
+import dosemetrics
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class TestMetrics(unittest.TestCase):
+class TestExposure(unittest.TestCase):
+    """Test structure exposure classes."""
+
     def test_create_OAR(self):
+        """Test OAR (Organ at Risk) structure creation and functionality."""
         logger.info("Testing OAR creation ...")
         # Create a zero dose structure.
-        oar = metrics.OAR("test_oar")
+        oar = dosemetrics.OAR("test_oar")
 
         # Test the structure name and default volume
         self.assertTrue(oar.name == "test_oar")
@@ -26,3 +34,7 @@ class TestMetrics(unittest.TestCase):
         self.assertTrue(oar.max_dose() == np.max(oar.dose))
         self.assertTrue(oar.mean_dose() == np.mean(oar.dose))
         logger.info("... completed testing OAR creation.")
+
+
+if __name__ == "__main__":
+    unittest.main()

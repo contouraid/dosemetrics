@@ -1,4 +1,10 @@
-import dosemetrics.compliance as compliance
+"""
+Tests for dosemetrics.utils.compliance module.
+
+Tests compliance checking and constraint handling functionality.
+"""
+
+import dosemetrics
 import pandas as pd
 import numpy as np
 import unittest
@@ -15,7 +21,7 @@ def is_string_series(s: pd.Series):
     :param s: Pandas series object.
     :return: True if all elements in s are strings.
     """
-    logger.info(f"Checking if series is string series: {s.name}")
+    logger.info("Checking if series is string series: %s", s.name)
     if isinstance(s.dtype, pd.StringDtype):
         # The series was explicitly created as a string series (Pandas>=1.0.0)
         logger.info("Series is explicitly a string series.")
@@ -23,16 +29,19 @@ def is_string_series(s: pd.Series):
     elif s.dtype == "object":
         # Object series, check each value
         result = all((v is None) or isinstance(v, str) for v in s)
-        logger.info(f"Series is object type, all values are strings: {result}")
+        logger.info("Series is object type, all values are strings: %s", result)
         return result
     else:
         return False
 
 
 class TestCompliance(unittest.TestCase):
+    """Test compliance checking functionality."""
+
     def test_default_compliance(self):
+        """Test default constraint loading and validation."""
         logger.info("Testing default compliance.")
-        constraints = compliance.get_default_constraints()
+        constraints = dosemetrics.get_default_constraints()
 
         self.assertTrue(
             constraints.columns.isin(["Structure", "Constraint Type", "Level"]).all()
@@ -50,6 +59,7 @@ class TestCompliance(unittest.TestCase):
         self.assertTrue(constraints.shape[1] == 2)
 
     def test_check_compliance(self):
+        """Test compliance checking against constraints."""
         logger.info("Testing check compliance.")
         example_df = pd.DataFrame(
             [
@@ -59,8 +69,8 @@ class TestCompliance(unittest.TestCase):
         )
         example_df.set_index("Structure", inplace=True)
 
-        constraints = compliance.get_default_constraints()
-        results = compliance.check_compliance(example_df, constraints)
+        constraints = dosemetrics.get_default_constraints()
+        results = dosemetrics.check_compliance(example_df, constraints)
 
         self.assertTrue(results.columns.isin(["Compliance", "Reason"]).all())
         self.assertTrue(results.shape[0] == example_df.shape[0])

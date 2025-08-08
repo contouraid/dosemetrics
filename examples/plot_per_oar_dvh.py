@@ -8,7 +8,7 @@ plt.style.use("dark_background")
 
 from matplotlib.backends.backend_pdf import PdfPages
 
-import dosemetrics.dvh as dvh
+import dosemetrics
 
 
 def plot_dvh_to_pdf(data_folder, output_file="dvh.pdf"):
@@ -29,21 +29,24 @@ def plot_dvh_to_pdf(data_folder, output_file="dvh.pdf"):
             oar_image.SetOrigin((0, 0, 0))
             oar_mask = sitk.GetArrayFromImage(oar_image)
 
-            results = dvh.compute_dvh(dose_array, oar_mask)
-            max = dvh.max_dose(dose_array, oar_mask)
-            mean = dvh.mean_dose(dose_array, oar_mask)
-            volume = dvh.volume(oar_mask, oar_image.GetSpacing())
+            results = dosemetrics.compute_dvh(dose_array, oar_mask)
+            max_val = dosemetrics.max_dose(dose_array, oar_mask)
+            mean = dosemetrics.mean_dose(dose_array, oar_mask)
+            volume = dosemetrics.volume(oar_mask, oar_image.GetSpacing())
 
             color = "r"
             fig = plt.figure()
             plt.plot(
-                results[0], results[1], color=color, label=struct_name,
+                results[0],
+                results[1],
+                color=color,
+                label=struct_name,
             )
             plt.xlabel("Dose [Gy]")
             plt.ylabel("Ratio of Total Structure Volume [%]")
             plt.legend(loc="best")
             plt.title(
-                f"Volume: {volume:4.3f} (cc); Max Dose: {max:2.3f}; Mean Dose: {mean:2.3f}"
+                f"Volume: {volume:4.3f} (cc); Max Dose: {max_val:2.3f}; Mean Dose: {mean:2.3f}"
             )
             plt.grid()
             pp.savefig(fig)

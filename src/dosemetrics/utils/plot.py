@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import pandas as pd
 import numpy as np
-import dosemetrics.dvh as dvh
+from ..metrics.dvh import dvh_by_structure, compute_dvh
 from matplotlib.transforms import Bbox
 
 
@@ -51,10 +51,10 @@ def compare_dvh(
     max_dose=65,
     step_size=0.1,
 ):
-    bins_gt, values_gt = dvh.compute_dvh(
+    bins_gt, values_gt = compute_dvh(
         _gt, _struct_mask, max_dose=max_dose, step_size=step_size
     )
-    bins_pred, values_pred = dvh.compute_dvh(
+    bins_pred, values_pred = compute_dvh(
         _pred, _struct_mask, max_dose=max_dose, step_size=step_size
     )
 
@@ -87,7 +87,7 @@ def variability(dose_volume, structure_mask, constraint_limit, structure_of_inte
                 new_structure_mask = np.roll(new_structure_mask, x_range, axis=0)
                 new_structure_mask = np.roll(new_structure_mask, y_range, axis=1)
                 new_structure_mask = np.roll(new_structure_mask, z_range, axis=2)
-                bins, values = dvh.compute_dvh(dose_volume, new_structure_mask)
+                bins, values = compute_dvh(dose_volume, new_structure_mask)
 
                 intersection = np.logical_and(structure_mask, new_structure_mask)
                 dice = (
@@ -101,7 +101,7 @@ def variability(dose_volume, structure_mask, constraint_limit, structure_of_inte
                     min_dsc = dice
                 color = colors[int(dice * n_lines)]
                 sc = plt.scatter(bins, values, s=0.5, c=color, alpha=0.25)
-    bins, values = dvh.compute_dvh(dose_volume, structure_mask)
+    bins, values = compute_dvh(dose_volume, structure_mask)
     plt.plot(bins, values, color="r", label=structure_of_interest)
     plt.axvline(x=constraint_limit, color="g", label="Constraint Limit")
     plt.xlabel("Dose [Gy]")
@@ -122,7 +122,7 @@ def plot_dvh(dose_volume: np.ndarray, structure_masks: dict, output_file: str):
     :param structure_masks: Dictionary of structure masks.
     :param output_file: Path to save the DVH plot.
     """
-    df = dvh.dvh_by_structure(dose_volume, structure_masks)
+    df = dvh_by_structure(dose_volume, structure_masks)
     _, ax = plt.subplots()
     df.set_index("Dose", inplace=True)
     df.groupby("Structure")["Volume"].plot(legend=True, ax=ax)

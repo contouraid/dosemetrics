@@ -1,4 +1,10 @@
-import dosemetrics.dvh as dvh
+"""
+Tests for dosemetrics.metrics.dvh module.
+
+Tests DVH computation functions and related dose calculations.
+"""
+
+import dosemetrics
 import numpy as np
 import unittest
 import logging
@@ -8,12 +14,15 @@ logger = logging.getLogger(__name__)
 
 
 class TestDVH(unittest.TestCase):
+    """Test DVH computation functions."""
+
     def test_compute_dvh_single_voxel(self):
+        """Test DVH computation for a single voxel structure."""
         logger.info("Testing compute DVH for single voxel ...")
         zero_dose = np.zeros((10, 10, 10))
         single_voxel_struct = np.zeros((10, 10, 10))
         single_voxel_struct[5, 5, 5] = 1.0
-        results = dvh.compute_dvh(zero_dose, single_voxel_struct)
+        results = dosemetrics.compute_dvh(zero_dose, single_voxel_struct)
         logger.info(f"DVH results: {results}")
 
         self.assertTrue(len(results[0]) == 650)
@@ -30,6 +39,7 @@ class TestDVH(unittest.TestCase):
         logger.info("... completed testing compute DVH for single voxel.")
 
     def test_compute_dvh_zero_voxels(self):
+        """Test DVH computation for different max dose and step size parameters."""
         logger.info("Testing compute DVH for zero voxels ...")
         zero_dose = np.zeros((10, 10, 10))
         single_voxel_struct = np.zeros((10, 10, 10))
@@ -39,7 +49,7 @@ class TestDVH(unittest.TestCase):
 
         for md in max_dose:
             for ss in step_size:
-                results = dvh.compute_dvh(
+                results = dosemetrics.compute_dvh(
                     zero_dose, single_voxel_struct, max_dose=md, step_size=ss
                 )
 

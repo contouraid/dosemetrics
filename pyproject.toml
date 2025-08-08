@@ -55,8 +55,12 @@ Homepage = "https://github.com/amithjkamath/dosemetrics"
 Repository = "https://github.com/amithjkamath/dosemetrics"
 Issues = "https://github.com/amithjkamath/dosemetrics/issues"
 
-[tool.setuptools]
-packages = ["dosemetrics"]
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["dosemetrics*", "dosemetrics_cli*"]
 
 [tool.setuptools.package-dir]
-dosemetrics = "dosemetrics"
+"" = "src"
+
+[project.scripts]
+dosemetrics = "dosemetrics_cli.__main__:main"
