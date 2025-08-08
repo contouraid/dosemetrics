@@ -1,9 +1,8 @@
+import os
 import numpy as np
+import pandas as pd
 
 import dosemetrics
-import os
-import SimpleITK as sitk
-import pandas as pd
 
 
 def get_structures(input_folder: str):

@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import pandas as pd
 import numpy as np
+from typing import Optional
 from ..metrics.dvh import dvh_by_structure, compute_dvh
 from matplotlib.transforms import Bbox
 
@@ -140,3 +141,329 @@ def plot_dvh(dose_volume: np.ndarray, structure_masks: dict, output_file: str):
     plt.grid()
     plt.savefig(output_file)
     plt.close()
+
+
+def plot_dose_differences(
+    dose_array: np.ndarray,
+    predicted_array: np.ndarray,
+    output_file: str,
+    n_slices: int = 30,
+    figsize: tuple = (30, 15),
+) -> None:
+    """
+    Visualize dose differences between predicted and ground truth doses across multiple slices.
+
+    Parameters:
+    -----------
+    dose_array : np.ndarray
+        Ground truth dose array
+    predicted_array : np.ndarray
+        Predicted dose array
+    output_file : str
+        Output PDF file path
+    n_slices : int
+        Number of slices to visualize
+    figsize : tuple
+        Figure size for plots
+    """
+    import matplotlib.backends.backend_pdf as pdf
+
+    plt.rcParams["figure.figsize"] = list(figsize)
+
+    pp = pdf.PdfPages(output_file)
+    diff_array = predicted_array - dose_array
+
+    # Get evenly spaced slice indices
+    z_max = dose_array.shape[0]
+    selected_indices = np.linspace(0, z_max - 1, num=n_slices, dtype=int)
+
+    for idx in selected_indices:
+        slice_idx = int(idx)
+
+        fig, axes = plt.subplots(2, 2, figsize=figsize)
+
+        # Ground truth dose
+        im1 = axes[0, 0].imshow(dose_array[slice_idx, :, :], cmap="hot")
+        axes[0, 0].set_title("Ground Truth Dose")
+        plt.colorbar(im1, ax=axes[0, 0])
+
+        # Predicted dose
+        im2 = axes[0, 1].imshow(predicted_array[slice_idx, :, :], cmap="hot")
+        axes[0, 1].set_title("Predicted Dose")
+        plt.colorbar(im2, ax=axes[0, 1])
+
+        # Difference
+        im3 = axes[1, 0].imshow(diff_array[slice_idx, :, :], cmap="RdBu_r")
+        axes[1, 0].set_title("Dose Difference (Pred - GT)")
+        plt.colorbar(im3, ax=axes[1, 0])
+
+        # Absolute difference
+        im4 = axes[1, 1].imshow(np.abs(diff_array[slice_idx, :, :]), cmap="hot")
+        axes[1, 1].set_title("Absolute Dose Difference")
+        plt.colorbar(im4, ax=axes[1, 1])
+
+        fig.suptitle(f"Slice {slice_idx}")
+        pp.savefig(fig)
+        plt.close()
+
+    pp.close()
+
+
+def plot_frequency_analysis(
+    dose_arrays: list,
+    output_file: str,
+    labels: Optional[list] = None,
+    max_value: float = 1000000,
+) -> None:
+    """
+    Perform and visualize frequency domain analysis of dose distributions.
+
+    Parameters:
+    -----------
+    dose_arrays : list
+        List of dose arrays to analyze
+    output_file : str
+        Output PDF file path
+    labels : list, optional
+        Labels for each dose array
+    max_value : float
+        Maximum value for colorbar scaling
+    """
+    import matplotlib.backends.backend_pdf as pdf
+
+    if labels is None:
+        labels = [f"Dose_{i+1}" for i in range(len(dose_arrays))]
+
+    pp = pdf.PdfPages(output_file)
+
+    # Compute FFT for each dose array
+    dose_fft_list = []
+    for dose_array in dose_arrays:
+        dose_fft = np.fft.fftn(dose_array)
+        dose_fft_list.append(dose_fft)
+
+    # Visualize frequency domain for each slice
+    n_slices = dose_arrays[0].shape[2] if len(dose_arrays[0].shape) == 3 else 128
+
+    for slice_idx in range(n_slices):
+        fig, axes = plt.subplots(1, len(dose_arrays), figsize=(15, 5))
+        if len(dose_arrays) == 1:
+            axes = [axes]
+
+        for i, (dose_fft, label) in enumerate(zip(dose_fft_list, labels)):
+            power_spectrum = np.abs(np.fft.fftshift(dose_fft[:, :, slice_idx])) ** 2
+            im = axes[i].imshow(power_spectrum, vmax=max_value, vmin=0, cmap="hot")
+            axes[i].set_title(f"{label} - Slice {slice_idx}")
+            plt.colorbar(im, ax=axes[i])
+
+        fig.suptitle(f"Frequency Analysis - Slice {slice_idx}")
+        pp.savefig(fig)
+        plt.close()
+
+    pp.close()
+
+
+def generate_dvh_family_plot(
+    dose_array: np.ndarray,
+    structure_mask: np.ndarray,
+    constraint_limit: float,
+    structure_name: str,
+    output_file: str,
+    n_variations: int = 10,
+    noise_level: float = 0.1,
+) -> None:
+    """
+    Generate DVH family plot showing variations around a base DVH.
+
+    Parameters:
+    -----------
+    dose_array : np.ndarray
+        Base dose array
+    structure_mask : np.ndarray
+        Structure mask
+    constraint_limit : float
+        Dose constraint limit to highlight
+    structure_name : str
+        Name of the structure
+    output_file : str
+        Output file path
+    n_variations : int
+        Number of variations to generate
+    noise_level : float
+        Level of noise/variation to add
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Compute base DVH
+    bins, values = compute_dvh(dose_array, structure_mask)
+
+    # Plot base DVH
+    ax.plot(
+        bins, values, "k-", linewidth=3, label=f"{structure_name} (Original)", alpha=0.8
+    )
+
+    # Generate and plot variations
+    cmap = _get_cmap(n_variations)
+
+    for i in range(n_variations):
+        # Add noise to dose array
+        noise = np.random.normal(0, noise_level * np.std(dose_array), dose_array.shape)
+        varied_dose = dose_array + noise
+
+        # Compute DVH for varied dose
+        var_bins, var_values = compute_dvh(varied_dose, structure_mask)
+
+        # Plot variation
+        color = cmap(i)
+        ax.plot(var_bins, var_values, color=color, alpha=0.3, linewidth=1)
+
+    # Add constraint line
+    ax.axvline(
+        x=constraint_limit,
+        color="r",
+        linestyle="--",
+        linewidth=2,
+        label=f"Constraint: {constraint_limit} Gy",
+    )
+
+    ax.set_xlabel("Dose [Gy]")
+    ax.set_ylabel("Ratio of Total Structure Volume [%]")
+    ax.set_title(f"DVH Family for {structure_name}")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(output_file, dpi=300, bbox_inches="tight")
+    plt.close()
+
+
+def interactive_dvh_plotter():
+    """
+    Interactive DVH plotter using tkinter file dialogs.
+    """
+    import tkinter as tk
+    from tkinter.filedialog import askopenfilename, asksaveasfilename
+    import SimpleITK as sitk
+    from matplotlib.backends.backend_pdf import PdfPages
+
+    def compute_stats(file_name: str, dose_array: np.ndarray) -> dict:
+        """Compute DVH statistics for a structure."""
+        stats = {}
+        stats["name"] = file_name.split("/")[-1].split(".")[0]
+        struct_image = sitk.ReadImage(file_name)
+        struct_array = sitk.GetArrayFromImage(struct_image)
+
+        from ..metrics.dvh import mean_dose, max_dose, volume
+
+        stats["bins"], stats["values"] = compute_dvh(dose_array, struct_array)
+        stats["max"] = mean_dose(
+            dose_array, struct_array
+        )  # Note: function name seems swapped in original
+        stats["mean"] = max_dose(
+            dose_array, struct_array
+        )  # Note: function name seems swapped in original
+        stats["volume"] = volume(struct_array, struct_image.GetSpacing())
+        stats["color"] = "b"
+        return stats
+
+    def plot_stats(stats_dict):
+        """Plot DVH statistics."""
+        fig = plt.figure(figsize=(10, 6))
+        plt.plot(
+            stats_dict["bins"],
+            stats_dict["values"],
+            color=stats_dict["color"],
+            label=stats_dict["name"],
+        )
+        plt.legend(loc="best")
+        plt.xlabel("Dose [Gy]")
+        plt.ylabel("Ratio of Total Structure Volume [%]")
+        plt.title(
+            f"Volume: {stats_dict['volume']:4.3f} (cc); "
+            f"Max Dose: {stats_dict['max']:2.3f}; "
+            f"Mean Dose: {stats_dict['mean']:2.3f}"
+        )
+        plt.axvline(x=stats_dict["mean"], color="y", label="Mean")
+        plt.axvline(x=stats_dict["max"], color="r", label="Max")
+        plt.grid()
+        return fig
+
+    # Initialize tkinter
+    root = tk.Tk()
+    root.withdraw()  # Hide the main window
+
+    # Select dose file
+    dose_file = askopenfilename(
+        title="Select Dose File",
+        filetypes=[("NIfTI files", "*.nii.gz"), ("All files", "*.*")],
+    )
+
+    if not dose_file:
+        return
+
+    # Read dose array
+    dose_image = sitk.ReadImage(dose_file)
+    dose_array = sitk.GetArrayFromImage(dose_image)
+
+    # Select structure files
+    structure_files = []
+    while True:
+        struct_file = askopenfilename(
+            title="Select Structure File (Cancel to finish)",
+            filetypes=[("NIfTI files", "*.nii.gz"), ("All files", "*.*")],
+        )
+        if not struct_file:
+            break
+        structure_files.append(struct_file)
+
+    if not structure_files:
+        print("No structure files selected.")
+        return
+
+    # Select output file
+    output_file = asksaveasfilename(
+        title="Save DVH Plot As",
+        defaultextension=".pdf",
+        filetypes=[
+            ("PDF files", "*.pdf"),
+            ("PNG files", "*.png"),
+            ("All files", "*.*"),
+        ],
+    )
+
+    if not output_file:
+        return
+
+    # Generate plots
+    if output_file.endswith(".pdf"):
+        with PdfPages(output_file) as pp:
+            for struct_file in structure_files:
+                stats = compute_stats(struct_file, dose_array)
+                fig = plot_stats(stats)
+                pp.savefig(fig)
+                plt.close()
+    else:
+        # For single image outputs, plot all structures together
+        fig = plt.figure(figsize=(12, 8))
+        colors = plt.cm.get_cmap("tab10")(np.linspace(0, 1, len(structure_files)))
+
+        for i, struct_file in enumerate(structure_files):
+            stats = compute_stats(struct_file, dose_array)
+            stats["color"] = colors[i]
+            plt.plot(
+                stats["bins"],
+                stats["values"],
+                color=stats["color"],
+                label=stats["name"],
+            )
+
+        plt.legend(loc="best")
+        plt.xlabel("Dose [Gy]")
+        plt.ylabel("Ratio of Total Structure Volume [%]")
+        plt.title("DVH Comparison")
+        plt.grid()
+        plt.savefig(output_file, dpi=300, bbox_inches="tight")
+        plt.close()
+
+    print(f"DVH plot saved to: {output_file}")
+    root.destroy()

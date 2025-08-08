@@ -1,11 +1,11 @@
-import dosemetrics
-
 import os
 import glob
 import SimpleITK as sitk
 import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
+
+import dosemetrics
 
 plt.style.use("dark_background")
 

@@ -25,6 +25,11 @@ from .metrics import (
     dose_summary,
     dose_score,
     dvh_score,
+    compare_predicted_doses,
+    compare_quality_indices,
+    compute_geometric_metrics,
+    batch_dvh_analysis,
+    process_subject_folder,
 )
 
 # I/O utilities
@@ -45,6 +50,17 @@ from .utils import (
     from_dataframe,
     compare_dvh,
     plot_dvh,
+    plot_dose_differences,
+    plot_frequency_analysis,
+    generate_dvh_family_plot,
+    interactive_dvh_plotter,
+    get_structures_from_folder,
+    read_dose_and_mask_files_from_folder,
+    create_standard_contents_csv,
+    validate_folder_structure,
+    batch_folder_validation,
+    find_subject_folders,
+    setup_output_structure,
 )
 
 # Version information

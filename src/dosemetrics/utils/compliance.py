@@ -90,8 +90,8 @@ def check_compliance(df, constraint):
                     compliance_df.loc[structure, "Compliance"] = "❌ No"
                     compliance_df.loc[structure, "Reason"] = (
                         f"Max dose constraint: "
-                        f"{constraint.loc[structure, 'Level']},"
-                        f" exceeded: {df.loc[structure, 'Max Dose']:.2f}"
+                        f"{float(constraint.loc[structure, 'Level'])}, "
+                        f"exceeded: {float(df.loc[structure, 'Max Dose']):.2f}"
                     )
                 else:
                     compliance_df.loc[structure, "Compliance"] = "✅ Yes"

@@ -1,35 +1,28 @@
 import os
-import glob
-import numpy as np
-import SimpleITK as sitk
-import matplotlib.pyplot as plt
-import matplotlib.backends.backend_pdf as pdf
+import dosemetrics
 
 
 def plot_frequency(input_folder: str, output_folder: str):
-    
-    dose_image = sitk.ReadImage(os.path.join(input_folder, "Dose.nii.gz"))
-    dose_array = sitk.GetArrayFromImage(dose_image)
+    """
+    Plot frequency domain analysis using the new plot_frequency_analysis function.
 
-    prediction_image = sitk.ReadImage(os.path.join(input_folder, "Predicted_Dose.nii.gz"))
-    prediction_array = sitk.GetArrayFromImage(prediction_image)
+    This example demonstrates the new frequency analysis visualization.
+    """
+    # Read dose and predicted dose
+    dose_array = dosemetrics.read_from_nifti(os.path.join(input_folder, "Dose.nii.gz"))
+    predicted_array = dosemetrics.read_from_nifti(
+        os.path.join(input_folder, "Predicted_Dose.nii.gz")
+    )
 
-    dose_fs = np.fft.fftn(dose_array)
-    prediction_fs = np.fft.fftn(prediction_array)
+    # Use the new frequency analysis function
+    output_file = os.path.join(output_folder, "fft.pdf")
+    dosemetrics.plot_frequency_analysis(
+        dose_arrays=[dose_array, predicted_array],
+        output_file=output_file,
+        labels=["Ground Truth", "Predicted"],
+    )
 
-    pp = pdf.PdfPages(os.path.join(output_folder, "fft.pdf"))
-
-    for index in range(128):
-        slice_num = index
-        fig, axes = plt.subplots(1, 2)
-        im_gt = axes[0].imshow(np.abs(np.fft.fftshift(dose_fs[:, :, slice_num]))**2, vmax=1000000, vmin=0)
-        im_pred = axes[1].imshow(np.abs(np.fft.fftshift(prediction_fs[:, :, slice_num]))**2, vmax=1000000, vmin=0)
-        fig.colorbar(im_gt, ax=axes[0])
-        fig.colorbar(im_pred, ax=axes[1])
-        fig.suptitle(f"Slice: {slice_num}")
-        pp.savefig(fig)
-        plt.close()
-    pp.close()
+    print(f"Frequency analysis saved to: {output_file}")
 
 
 if __name__ == "__main__":

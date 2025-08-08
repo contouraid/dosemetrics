@@ -1,6 +1,5 @@
 import os
 import pandas as pd
-import SimpleITK as sitk
 import matplotlib.pyplot as plt
 
 plt.style.use("dark_background")
