@@ -2,7 +2,7 @@
 Core dose metrics and calculations.
 """
 
-from .exposure import Structure, OAR, Target
+from ..structures import Structure, OAR, Target, StructureType, AvoidanceStructure
 from .dvh import (
     mean_dose,
     max_dose,
@@ -25,6 +25,8 @@ __all__ = [
     "Structure",
     "OAR",
     "Target",
+    "StructureType",
+    "AvoidanceStructure",
     "mean_dose",
     "max_dose",
     "volume",

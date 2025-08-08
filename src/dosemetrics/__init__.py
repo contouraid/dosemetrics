@@ -11,11 +11,17 @@ This library provides tools for:
 Public API:
 """
 
-# Core metrics and calculations
-from .metrics import (
+# Core structure classes
+from .structures import (
     Structure,
     OAR,
     Target,
+    StructureType,
+    AvoidanceStructure,
+)
+
+# Core metrics and calculations
+from .metrics import (
     mean_dose,
     max_dose,
     volume,
@@ -70,10 +76,13 @@ __version__ = "0.2.0"
 __all__ = [
     # Version
     "__version__",
-    # Core metrics
+    # Structure
     "Structure",
     "OAR",
     "Target",
+    "StructureType",
+    "AvoidanceStructure",
+    # Core metrics
     "mean_dose",
     "max_dose",
     "volume",
