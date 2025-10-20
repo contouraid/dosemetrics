@@ -70,49 +70,294 @@ def compare_dvh(
     return fig
 
 
-def variability(dose_volume, structure_mask, constraint_limit, structure_of_interest):
-    fig = plt.figure()
-    n_lines = 100
-    n_est = 5
+def generate_dvh_variations(
+    dose_volume: np.ndarray,
+    structure_mask: np.ndarray,
+    n_variations: int = 100,
+    dice_range: tuple = (0.7, 1.0),
+    volume_variation: float = 0.2,
+    max_dose: float = 65,
+    step_size: float = 0.1,
+) -> tuple:
+    """
+    Generate DVH variations using non-rigid transformations.
 
-    max_dsc = 0.0
-    min_dsc = 1.0
+    Parameters:
+    -----------
+    dose_volume : np.ndarray
+        The dose volume array
+    structure_mask : np.ndarray
+        The original structure mask
+    n_variations : int
+        Number of variations to generate
+    dice_range : tuple
+        Target range of Dice coefficients (min_dice, max_dice)
+    volume_variation : float
+        Maximum relative volume change (e.g., 0.2 = ±20%)
+    max_dose : float
+        Maximum dose for DVH computation
+    step_size : float
+        Step size for DVH computation
 
-    cmap = mpl.colormaps["viridis"]
-    colors = cmap(np.linspace(0, 1, n_lines + 1))
-    sc = None  # Initialize sc to None
-    for x_range in range(-n_est, n_est + 1):
-        for y_range in range(-n_est, n_est + 1):
-            for z_range in range(-n_est, n_est + 1):
-                new_structure_mask = structure_mask.copy()
-                new_structure_mask = np.roll(new_structure_mask, x_range, axis=0)
-                new_structure_mask = np.roll(new_structure_mask, y_range, axis=1)
-                new_structure_mask = np.roll(new_structure_mask, z_range, axis=2)
-                bins, values = compute_dvh(dose_volume, new_structure_mask)
+    Returns:
+    --------
+    tuple: (dvh_data, dice_coefficients, original_dvh)
+        - dvh_data: list of (bins, values) tuples for each variation
+        - dice_coefficients: list of Dice coefficients
+        - original_dvh: (bins, values) tuple for the original structure
+    """
+    from scipy import ndimage
 
-                intersection = np.logical_and(structure_mask, new_structure_mask)
-                dice = (
-                    2
-                    * intersection.sum()
-                    / (structure_mask.sum() + new_structure_mask.sum())
+    dvh_data = []
+    dice_coefficients = []
+
+    # Compute original DVH
+    original_bins, original_values = compute_dvh(
+        dose_volume, structure_mask, max_dose=max_dose, step_size=step_size
+    )
+    original_volume = structure_mask.sum()
+
+    min_dice, max_dice = dice_range
+    target_dice_values = np.random.uniform(min_dice, max_dice, n_variations)
+
+    for target_dice in target_dice_values:
+        # Generate random transformation parameters
+        # Use multiple transformation types for realistic variations
+
+        # 1. Elastic deformation parameters
+        sigma = np.random.uniform(1, 5)  # Smoothness of deformation
+        alpha = np.random.uniform(5, 20)  # Magnitude of deformation
+
+        # 2. Scaling parameters (to vary volume)
+        scale_factor = 1.0 + np.random.uniform(-volume_variation, volume_variation)
+
+        # 3. Rotation parameters (small random rotations)
+        rotation_angles = np.random.uniform(-10, 10, 3)  # degrees
+
+        # Create transformed mask
+        transformed_mask = structure_mask.copy().astype(float)
+
+        # Apply scaling
+        if scale_factor != 1.0:
+            zoom_factors = [scale_factor] * 3
+            transformed_mask = ndimage.zoom(transformed_mask, zoom_factors, order=1)
+
+            # Crop or pad to match original shape
+            original_shape = structure_mask.shape
+            current_shape = transformed_mask.shape
+
+            if current_shape[0] > original_shape[0]:
+                # Crop
+                start = [
+                    (cs - os) // 2 for cs, os in zip(current_shape, original_shape)
+                ]
+                transformed_mask = transformed_mask[
+                    start[0] : start[0] + original_shape[0],
+                    start[1] : start[1] + original_shape[1],
+                    start[2] : start[2] + original_shape[2],
+                ]
+            else:
+                # Pad
+                pad_width = [
+                    (os - cs) // 2 for cs, os in zip(current_shape, original_shape)
+                ]
+                pad_width = [
+                    (p, os - cs - p)
+                    for p, cs, os in zip(pad_width, current_shape, original_shape)
+                ]
+                transformed_mask = np.pad(
+                    transformed_mask, pad_width, mode="constant", constant_values=0
                 )
-                if dice > max_dsc:
-                    max_dsc = dice
-                if dice < min_dsc:
-                    min_dsc = dice
-                color = colors[int(dice * n_lines)]
-                sc = plt.scatter(bins, values, s=0.5, c=color, alpha=0.25)
-    bins, values = compute_dvh(dose_volume, structure_mask)
-    plt.plot(bins, values, color="r", label=structure_of_interest)
-    plt.axvline(x=constraint_limit, color="g", label="Constraint Limit")
+
+        # Apply elastic deformation
+        # Create random displacement fields
+        shape = transformed_mask.shape
+        dx = ndimage.gaussian_filter(
+            (np.random.rand(*shape) - 0.5) * alpha, sigma, mode="constant", cval=0
+        )
+        dy = ndimage.gaussian_filter(
+            (np.random.rand(*shape) - 0.5) * alpha, sigma, mode="constant", cval=0
+        )
+        dz = ndimage.gaussian_filter(
+            (np.random.rand(*shape) - 0.5) * alpha, sigma, mode="constant", cval=0
+        )
+
+        # Create coordinate grids
+        x, y, z = np.meshgrid(
+            np.arange(shape[0]), np.arange(shape[1]), np.arange(shape[2]), indexing="ij"
+        )
+
+        # Apply displacement
+        indices = np.array(
+            [
+                np.clip(x + dx, 0, shape[0] - 1),
+                np.clip(y + dy, 0, shape[1] - 1),
+                np.clip(z + dz, 0, shape[2] - 1),
+            ]
+        )
+
+        transformed_mask = ndimage.map_coordinates(
+            transformed_mask, indices, order=1, mode="constant", cval=0
+        )
+
+        # Apply small rotation
+        for axis_idx, angle in enumerate(rotation_angles):
+            if abs(angle) > 0.1:
+                axes = [(axis_idx + 1) % 3, (axis_idx + 2) % 3]
+                transformed_mask = ndimage.rotate(
+                    transformed_mask, angle, axes=axes, reshape=False, order=1
+                )
+
+        # Threshold to binary mask
+        transformed_mask = (transformed_mask > 0.5).astype(np.uint8)
+
+        # Compute Dice coefficient
+        intersection = np.logical_and(structure_mask, transformed_mask)
+        dice = (
+            (2 * intersection.sum() / (structure_mask.sum() + transformed_mask.sum()))
+            if (structure_mask.sum() + transformed_mask.sum()) > 0
+            else 0
+        )
+
+        # Compute DVH for transformed mask
+        bins, values = compute_dvh(
+            dose_volume, transformed_mask, max_dose=max_dose, step_size=step_size
+        )
+
+        dvh_data.append((bins, values))
+        dice_coefficients.append(dice)
+
+    return dvh_data, dice_coefficients, (original_bins, original_values)
+
+
+def plot_dvh_variations(
+    dvh_data: list,
+    dice_coefficients: list,
+    original_dvh: tuple,
+    constraint_limit: float,
+    structure_name: str,
+) -> tuple:
+    """
+    Plot DVH variations with color-coded Dice coefficients.
+
+    Parameters:
+    -----------
+    dvh_data : list
+        List of (bins, values) tuples for each variation
+    dice_coefficients : list
+        List of Dice coefficients corresponding to each variation
+    original_dvh : tuple
+        (bins, values) tuple for the original structure DVH
+    constraint_limit : float
+        Dose constraint limit to display
+    structure_name : str
+        Name of the structure for plot labels
+
+    Returns:
+    --------
+    tuple: (fig, (min_dice, max_dice))
+        - fig: matplotlib figure object
+        - min_dice, max_dice: range of Dice coefficients in the data
+    """
+    fig = plt.figure(figsize=(10, 8))
+
+    if len(dice_coefficients) == 0:
+        # No variations, just plot original
+        original_bins, original_values = original_dvh
+        plt.plot(
+            original_bins, original_values, color="r", label=structure_name, linewidth=2
+        )
+        plt.axvline(
+            x=constraint_limit, color="g", label="Constraint Limit", linewidth=2
+        )
+        plt.xlabel("Dose [Gy]")
+        plt.ylabel("Ratio of Total Structure Volume [%]")
+        plt.title(f"DVH for {structure_name}")
+        plt.legend()
+        plt.grid()
+        return fig, (1.0, 1.0)
+
+    min_dice = min(dice_coefficients)
+    max_dice = max(dice_coefficients)
+
+    # Create colormap
+    n_colors = 100
+    cmap = mpl.colormaps["viridis"]
+    colors = cmap(np.linspace(0, 1, n_colors + 1))
+
+    # Normalize Dice coefficients to color indices
+    dice_range = max_dice - min_dice if max_dice > min_dice else 1.0
+
+    sc = None
+    for (bins, values), dice in zip(dvh_data, dice_coefficients):
+        # Map dice to color index
+        color_idx = int(((dice - min_dice) / dice_range) * n_colors)
+        color_idx = np.clip(color_idx, 0, n_colors)
+        color = colors[color_idx]
+        sc = plt.scatter(bins, values, s=0.5, c=[color], alpha=0.25)
+
+    # Plot original DVH
+    original_bins, original_values = original_dvh
+    plt.plot(
+        original_bins,
+        original_values,
+        color="r",
+        label=structure_name,
+        linewidth=2,
+        zorder=10,
+    )
+
+    # Add constraint line
+    plt.axvline(
+        x=constraint_limit,
+        color="g",
+        label="Constraint Limit",
+        linewidth=2,
+        linestyle="--",
+        zorder=10,
+    )
+
     plt.xlabel("Dose [Gy]")
     plt.ylabel("Ratio of Total Structure Volume [%]")
-    plt.title(f"DVH Family for {structure_of_interest}")
+    plt.title(f"DVH Family for {structure_name}")
+
+    # Add colorbar
     if sc is not None:
-        color_bar = plt.colorbar(sc)
+        color_bar = plt.colorbar(sc, label="Dice Coefficient")
         color_bar.set_alpha(1)
+        # Set colorbar ticks
+        color_bar.set_ticks([0, 0.5, 1.0])
+        color_bar.set_ticklabels(
+            [f"{min_dice:.2f}", f"{(min_dice+max_dice)/2:.2f}", f"{max_dice:.2f}"]
+        )
+
+    plt.legend()
     plt.grid()
-    return fig, (max_dsc, min_dsc)
+
+    return fig, (min_dice, max_dice)
+
+
+def variability(dose_volume, structure_mask, constraint_limit, structure_of_interest):
+    """
+    Legacy function for backward compatibility.
+    Generates DVH variations and plots them.
+
+    DEPRECATED: Use generate_dvh_variations() and plot_dvh_variations() separately.
+    """
+    # Use default parameters for backward compatibility
+    dvh_data, dice_coefficients, original_dvh = generate_dvh_variations(
+        dose_volume, structure_mask, n_variations=100, dice_range=(0.7, 1.0)
+    )
+
+    fig, (min_dice, max_dice) = plot_dvh_variations(
+        dvh_data,
+        dice_coefficients,
+        original_dvh,
+        constraint_limit,
+        structure_of_interest,
+    )
+
+    return fig, (max_dice, min_dice)
 
 
 def plot_dvh(dose_volume: np.ndarray, structure_masks: dict, output_file: str):

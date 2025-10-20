@@ -7,7 +7,7 @@ name = "dosemetrics"
 version = "0.2.0"
 description = "Measuring radiotherapy doses - plotting visualizations"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = {file = "LICENSE"}
 authors = [
     {name = "Amith Kamath", email = "amith.kamath@unibe.ch"}
@@ -46,6 +46,7 @@ dependencies = [
     "plotly~=5.23.0",
     "pydicom>=3.0.1",
     "pymia>=0.3.4",
+    "scipy>=1.11.0",
     "simpleitk>=2.4",
     "streamlit~=1.45.0",
 ]
