@@ -50,13 +50,21 @@ pip install --editable .
 
 ### Interactive Web Application
 
-Launch the interactive Streamlit application:
+Launch the interactive Streamlit application using the Makefile:
 
 ```bash
-cd src && streamlit run dosemetrics_app/app.py
+make app
+# or
+make run
 ```
 
-Or alternatively, from the root directory:
+Or use the shell script directly:
+
+```bash
+./run_streamlit_app.sh
+```
+
+Alternatively, run manually from the root directory:
 
 ```bash
 PYTHONPATH=src streamlit run src/dosemetrics_app/app.py
@@ -65,6 +73,22 @@ PYTHONPATH=src streamlit run src/dosemetrics_app/app.py
 **Note**: The application includes password authentication that is currently disabled for development/testing. If you need to enable authentication, uncomment the authentication check in `src/dosemetrics_app/app.py` and configure the `secrets.toml` file with user passwords.
 
 This provides a user-friendly interface for uploading NIfTI files, analyzing dose distributions, and generating reports.
+
+### Makefile Commands
+
+The project includes a Makefile for common operations:
+
+```bash
+make help       # Show all available commands
+make setup      # Initial setup and install dependencies
+make test       # Run all tests
+make run        # Run the Streamlit app locally
+make deploy     # Deploy to Hugging Face Space
+make clean      # Clean up cache and temporary files
+make info       # Show project information
+```
+
+See `make help` for a complete list of commands.
 
 ## Usage Examples
 

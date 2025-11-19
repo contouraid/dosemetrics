@@ -54,9 +54,7 @@ def generate_dvh_family(
     constraint_limit = constraints.loc[structure_of_interest, "Level"]
 
     # Generate DVH for the structure of interest
-    df = dvh_by_structure(
-        {structure_of_interest: dose_volume}, {structure_of_interest: structure_mask}
-    )
+    df = dvh_by_structure(dose_volume, {structure_of_interest: structure_mask})
 
     # Create a simple plot
     fig, ax = plt.subplots()

@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Git
+.git/
+.gitignore
+
+# Local development
+local/
+*.aux
+*.bbl
+*.fdb_latexmk
+*.fls
+*.log
+*.synctex.gz
+
+# Results and outputs
+results/
+*.csv
+*.png
+*.pdf
+*.txt
+
+# Documentation
+*.md
+!README.md
+
+# Scripts
+run_tests.sh
+run_streamlit_app.sh
+
+# Examples (optional - comment out if you want to include them)
+examples/
+
+# Notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Large data files
+*.nii
+*.nii.gz
+*.dcm
+*.nrrd
