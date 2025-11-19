@@ -34,9 +34,26 @@ echo "Using temporary directory: ${DEPLOY_DIR}"
 
 # Clone the Hugging Face Space repository
 echo "${GREEN}Cloning Hugging Face Space repository...${NC}"
-git clone "https://huggingface.co/spaces/${HF_SPACE}" "${DEPLOY_DIR}"
+# Skip LFS files during clone since we don't have large binary files
+GIT_LFS_SKIP_SMUDGE=1 git clone "https://huggingface.co/spaces/${HF_SPACE}" "${DEPLOY_DIR}"
 
 cd "${DEPLOY_DIR}"
+
+# Disable LFS for this repository since we don't need it
+git lfs uninstall 2>/dev/null || true
+git config --local filter.lfs.process ""
+git config --local filter.lfs.required false
+
+# Remove any LFS tracking from .gitattributes if it exists
+if [ -f ".gitattributes" ]; then
+    # Remove LFS-related lines
+    grep -v "filter=lfs" .gitattributes > .gitattributes.tmp 2>/dev/null || true
+    mv .gitattributes.tmp .gitattributes 2>/dev/null || true
+    # Remove the file if it's now empty
+    if [ ! -s ".gitattributes" ]; then
+        rm .gitattributes
+    fi
+fi
 
 # Copy necessary files from the current repository
 echo "${GREEN}Copying project files...${NC}"
@@ -49,18 +66,16 @@ fi
 
 # Copy test data (but not all data - respect .gitignore)
 if [ -d "${OLDPWD}/data" ]; then
-    # Only copy data/ if it exists, but exclude large datasets
+    # Only copy data/ if it exists, but exclude large datasets and binary files
     # This respects the .gitignore which ignores /data/
-    # For HF Space, we'll only include the test data structure
+    # For HF Space, we'll only include text data files, NOT binary medical imaging files
     mkdir -p data
     if [ -f "${OLDPWD}/data/test_subject.txt" ]; then
         cp "${OLDPWD}/data/test_subject.txt" data/
     fi
-    # Copy visualization data if needed for demos
-    if [ -d "${OLDPWD}/data/visualization" ]; then
-        cp -r "${OLDPWD}/data/visualization" data/ 2>/dev/null || true
-    fi
-    echo "  ✓ data/ (test files only)"
+    # Skip visualization data - it contains large binary .nii.gz files
+    # that HF Spaces doesn't allow without Git LFS/XET
+    echo "  ✓ data/ (test text files only - skipping binary medical imaging files)"
 fi
 
 # Copy configuration files
@@ -101,6 +116,13 @@ ENV/
 .pytest_cache/
 .coverage
 *.ipynb_checkpoints
+
+# Binary medical imaging files (not allowed on HF Spaces without XET)
+*.nii
+*.nii.gz
+*.dcm
+*.nrrd
+data/visualization/
 EOF
 echo "  ✓ .gitignore"
 

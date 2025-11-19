@@ -25,6 +25,8 @@ A Streamlit application for analyzing radiotherapy dose distributions and creati
 2. Upload your dose distribution (`.nii.gz` format) and structure masks
 3. View and download the analysis results
 
+**Note**: This app requires you to upload your own medical imaging data. No sample data files are included in the Space due to file size restrictions.
+
 ## Data Format
 
 The app expects:
