@@ -22,13 +22,21 @@ if [[ -z "$VIRTUAL_ENV" ]]; then
     # Install dependencies if pyproject.toml exists
     if [[ -f "pyproject.toml" ]]; then
         echo "Installing dependencies from pyproject.toml..."
-        pip install -r <(poetry export --without-hashes --format=requirements.txt)
+        if command -v poetry > /dev/null; then
+            pip install -r <(poetry export --without-hashes --format=requirements.txt)
+        else
+            echo "poetry not found, installing package in editable mode"
+            pip install -e .
+        fi
     fi
 else
     echo "Virtual environment already activated."
 fi
 
 # Discover and run all unittests
+
+# Ensure src/ is on PYTHONPATH so tests can import package
+export PYTHONPATH="$PWD/src"
 
 echo "Running unittests..."
 python3 -m unittest discover -s tests -p "test_*.py"
