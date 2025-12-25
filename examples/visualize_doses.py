@@ -10,9 +10,9 @@ plt.rcParams["figure.figsize"] = [30, 15]
 def visualize_doses(subject_path: str = None, output_file: str = None):
     pp = pdf.PdfPages(output_file)
 
-    target_volume_path = os.path.join(subject_path, "Target.nii.gz")
-    target_image = sitk.ReadImage(target_volume_path)
-    target_array = sitk.GetArrayFromImage(target_image)
+    ptv_volume_path = os.path.join(subject_path, "PTV.nii.gz")
+    ptv_image = sitk.ReadImage(ptv_volume_path)
+    ptv_array = sitk.GetArrayFromImage(ptv_image)
 
     onr_volume_path = os.path.join(subject_path, "OpticNerve_R.nii.gz")
     onr_image = sitk.ReadImage(onr_volume_path)
@@ -30,7 +30,7 @@ def visualize_doses(subject_path: str = None, output_file: str = None):
         slice_num = int((dose_array.shape[0] - 1) * index)
         fig, axes = plt.subplots(1, 1)
         axes.imshow(dose_array[slice_num, :, :], cmap="grey", vmin=0, vmax=70)
-        axes.imshow(target_array[slice_num, :, :], cmap='viridis', alpha=0.75)  # interpolation='none'
+        axes.imshow(ptv_array[slice_num, :, :], cmap='viridis', alpha=0.75)  # interpolation='none'
         axes.imshow(onr_array[slice_num, :, :], cmap='viridis', alpha=0.75)  # interpolation='none'
         fig.suptitle(f"Slice: {slice_num}")
         pp.savefig(fig)

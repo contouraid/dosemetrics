@@ -1,0 +1,167 @@
+site_name: DoseMetrics
+site_url: https://contouraid.github.io/dosemetrics/
+site_description: A Python library for measuring radiotherapy doses and creating interactive visualizations
+site_author: Amith Kamath
+repo_url: https://github.com/contouraid/dosemetrics
+repo_name: contouraid/dosemetrics
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - navigation.tracking
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+    - toc.follow
+  
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
+    view: material/eye
+
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_object_full_path: false
+            show_category_heading: true
+            show_signature_annotations: true
+            separate_signature: true
+            docstring_style: google
+            docstring_section_style: table
+            merge_init_into_class: true
+            show_if_no_docstring: false
+            inherited_members: false
+            members_order: source
+            group_by_category: true
+            show_submodules: false
+  - mkdocs-jupyter:
+      include_source: True
+      execute: False
+      allow_errors: false
+      ignore_h1_titles: True
+      show_input: True
+      theme: dark
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - tables
+  - footnotes
+  - attr_list
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - toc:
+      permalink: true
+      toc_depth: 3
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Your Own Data: notebooks/getting-started-own-data.ipynb
+    - File Formats: getting-started/file-formats.md
+  - User Guide:
+    - Overview: user-guide/overview.md
+    - DVH Analysis: user-guide/dvh-analysis.md
+    - Quality Metrics: user-guide/quality-metrics.md
+    - Compliance Checking: user-guide/compliance-checking.md
+    - Visualizations: user-guide/visualizations.md
+    - Geometric Analysis: user-guide/geometric-analysis.md
+  - Examples:
+    - Basic Usage: notebooks/basic-usage.ipynb
+    - I/O Operations: notebooks/io-operations.ipynb
+    - Computing Metrics: notebooks/computing-metrics.ipynb
+    - Exporting Results: notebooks/exporting-results.ipynb
+    - Comparing Plans: examples/comparing-plans.md
+    - Batch Processing: examples/batch-processing.md
+  - API Reference:
+    - Overview: api/index.md
+    - Metrics: api/metrics.md
+    - I/O: api/io.md
+    - Utils: api/utils.md
+    - Data Structures: api/data.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md
+  - License: license.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/contouraid/dosemetrics
+      name: GitHub Repository
+    - icon: fontawesome/solid/globe
+      link: https://huggingface.co/spaces/contouraid/dosemetrics
+      name: Live Demo on Hugging Face
+  version:
+    provider: mike
+  analytics:
+    feedback:
+      title: Was this page helpful?
+      ratings:
+        - icon: material/emoticon-happy-outline
+          name: This page was helpful
+          data: 1
+          note: >-
+            Thanks for your feedback!
+        - icon: material/emoticon-sad-outline
+          name: This page could be improved
+          data: 0
+          note: >-
+            Thanks for your feedback! Help us improve by
+            <a href="https://github.com/contouraid/dosemetrics/issues" target="_blank" rel="noopener">opening an issue</a>.
+
+copyright: Copyright &copy; 2024-2025 Amith Kamath. Licensed under CC BY-SA-NC 4.0

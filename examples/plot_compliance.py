@@ -24,11 +24,11 @@ def compute_dose_compliance(data_folder):
             oar_volume = dosemetrics.read_from_nifti(oar_file)
             structure_masks[oar] = oar_volume
 
-        target_list = contents[contents["Type"] == "Target"]["Structure"].values
-        for target in target_list:
-            target_file = os.path.join(data_folder, target + ".nii.gz")
-            target_volume = dosemetrics.read_from_nifti(target_file)
-            structure_masks[target] = target_volume
+        ptv_list = contents[contents["Type"] == "PTV"]["Structure"].values
+        for ptv in ptv_list:
+            ptv_file = os.path.join(data_folder, target + ".nii.gz")
+            ptv_volume = dosemetrics.read_from_nifti(ptv_file)
+            structure_masks[target] = ptv_volume
 
         constraints = dosemetrics.get_default_constraints()
         for structure in structure_masks.keys():

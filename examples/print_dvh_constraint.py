@@ -14,7 +14,7 @@ def print_dvh_constraint(input_folder: str, output_folder: str):
     contents = os.path.join(input_folder, "standard_contents.csv")
     df = pd.read_csv(contents)
     masks = list(df[df["Type"] == "OAR"]["Structure"])
-    masks += list(df[df["Type"] == "Target"]["Structure"])
+    masks += list(df[df["Type"] == "PTV"]["Structure"])
     dose_file = os.path.join(input_folder, "Dose.nii.gz")
     mask_files = [os.path.join(input_folder, f + ".nii.gz") for f in masks]
 

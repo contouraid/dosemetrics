@@ -31,5 +31,14 @@ if ! python -c "import SimpleITK" >/dev/null 2>&1; then
     python3 -m pip install --no-input SimpleITK || echo "Warning: failed to install SimpleITK; tests may fail"
 fi
 
-echo "Running unittests..."
+# Ensure testing dependencies are installed
+echo "Installing test dependencies..."
+python3 -m pip install --no-input pytest pytest-cov nbformat nbconvert ipykernel huggingface_hub || echo "Warning: some test dependencies may not be installed"
+
+echo "Running tests with pytest..."
+python3 -m pytest tests/ -v --tb=short
+
+# Also run unittest discovery for backward compatibility
+echo ""
+echo "Running additional unittest discovery..."
 python3 -m unittest discover -s tests -p "test_*.py"

@@ -9,7 +9,7 @@ import os
 from unittest.mock import patch, MagicMock
 
 import dosemetrics as dm
-from dosemetrics.data import (
+from dosemetrics.io import (
     StructureSet,
     create_structure_set_from_masks,
     StructureType,
@@ -266,7 +266,7 @@ class TestStructureSet(unittest.TestCase):
 class TestStructureSetIO(unittest.TestCase):
     """Test I/O functions for StructureSet."""
 
-    @patch("dosemetrics.data.structure_set.read_from_nifti")
+    @patch("dosemetrics.io.structure_set.read_from_nifti")
     @patch("os.path.exists")
     @patch("glob.glob")
     def test_create_structure_set_from_folder(

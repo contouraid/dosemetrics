@@ -74,7 +74,7 @@ if __name__ == "__main__":
         "Cochlea_R",
         "LacrimalGland_L",
         "LacrimalGland_R",
-        "Target",
+        "PTV",
     ]
 
     # For EORTC data

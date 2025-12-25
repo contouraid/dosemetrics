@@ -63,7 +63,7 @@ Large data files and development artifacts are automatically excluded.
 
 1. Clone your Hugging Face Space:
    ```bash
-   git clone https://huggingface.co/spaces/amithjkamath/dosemetrics
+   git clone https://huggingface.co/spaces/contouraid/dosemetrics
    cd dosemetrics
    ```
 
@@ -129,7 +129,7 @@ Following `.gitignore`, these are automatically excluded:
 
 After deployment:
 
-1. Visit your Space: https://huggingface.co/spaces/amithjkamath/dosemetrics
+1. Visit your Space: https://huggingface.co/spaces/contouraid/dosemetrics
 2. Wait for the Docker build to complete (may take 5-10 minutes)
 3. Test the app by uploading sample dose and mask files
 

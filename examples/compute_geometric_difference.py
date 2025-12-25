@@ -9,7 +9,7 @@ def get_structures(input_folder: str):
     contents = os.path.join(input_folder, "standard_contents.csv")
     df = pd.read_csv(contents)
     masks = list(df[df["Type"] == "OAR"]["Structure"])
-    masks += list(df[df["Type"] == "Target"]["Structure"])
+    masks += list(df[df["Type"] == "PTV"]["Structure"])
     mask_files = [os.path.join(input_folder, f + ".nii.gz") for f in masks]
     return mask_files
 

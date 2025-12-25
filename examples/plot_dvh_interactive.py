@@ -72,12 +72,12 @@ def main():
         fig = plot_stats(stats)
         pp.savefig(fig)
 
-    target_file_name = askopenfilename(
+    ptv_file_name = askopenfilename(
         initialdir=file_path,
         title="Choose Target file",
         filetypes=[("Image files", ".gz .nii")],
     )
-    stats = compute_stats(target_file_name, dose_array)
+    stats = compute_stats(ptv_file_name, dose_array)
     stats["color"] = "r"
     fig = plot_stats(stats)
 

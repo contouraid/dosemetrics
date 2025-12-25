@@ -23,7 +23,7 @@ def plot_dvh(data_root: str, output_file="dvh.png"):
 
             mask_files = []
             for i in range(info.shape[0]):
-                if info.loc[i, "Type"] == "Target":
+                if info.loc[i, "Type"] == "PTV":
                     mask_files.append(
                         os.path.join(data_root, info.loc[i, "Structure"] + ".nii.gz")
                     )

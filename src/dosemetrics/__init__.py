@@ -12,7 +12,7 @@ Public API:
 """
 
 # Core structure classes
-from .data import (
+from .io import (
     Structure,
     OAR,
     Target,
@@ -21,7 +21,7 @@ from .data import (
 )
 
 # Structure set management
-from .data import (
+from .io import (
     StructureSet,
     create_structure_set_from_folder,
     create_structure_set_from_masks,
@@ -46,7 +46,7 @@ from .metrics import (
 )
 
 # I/O utilities
-from .data import (
+from .io import (
     read_file,
     read_byte_data,
     read_from_eclipse,

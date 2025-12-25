@@ -2,11 +2,14 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://python.org)
 [![PyPI version](https://badge.fury.io/py/dosemetrics.svg)](https://badge.fury.io/py/dosemetrics)
-[![Tests](https://github.com/amithjkamath/dosemetrics/actions/workflows/tests.yml/badge.svg)](https://github.com/amithjkamath/dosemetrics/actions/workflows/tests.yml)
+[![Tests](https://github.com/contouraid/dosemetrics/actions/workflows/tests.yml/badge.svg)](https://github.com/contouraid/dosemetrics/actions/workflows/tests.yml)
+[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://contouraid.github.io/dosemetrics/)
 [![License](https://img.shields.io/badge/license-CC%20BY--SA--NC%204.0-green.svg)](LICENSE)
-[![Development Status](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/amithjkamath/dosemetrics)
+[![Development Status](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/contouraid/dosemetrics)
 
 A Python library for measuring radiotherapy doses and creating interactive visualizations for radiation therapy treatment planning and analysis.
+
+**📚 [Documentation](https://contouraid.github.io/dosemetrics/) | 🚀 [Try Live Demo](https://huggingface.co/spaces/contouraid/dosemetrics) | 💻 [GitHub](https://github.com/contouraid/dosemetrics)**
 
 ## Overview
 
@@ -43,7 +46,7 @@ pip install dosemetrics
 **For development**, clone the repository and run `make setup` (uses `uv` when available to install dependencies and prepare a virtual environment):
 
 ```bash
-git clone https://github.com/amithjkamath/dosemetrics.git
+git clone https://github.com/contouraid/dosemetrics.git
 cd dosemetrics
 make setup
 # or manually if you prefer:
@@ -85,12 +88,34 @@ make help       # Show all available commands
 make setup      # Initial setup and install dependencies
 make test       # Run all tests
 make run        # Run the Streamlit app locally
+make docs       # Serve documentation locally
 make deploy     # Deploy to Hugging Face Space
 make clean      # Clean up cache and temporary files
 make info       # Show project information
 ```
 
 See `make help` for a complete list of commands.
+
+## Documentation
+
+Comprehensive documentation is available at **[contouraid.github.io/dosemetrics](https://contouraid.github.io/dosemetrics/)**
+
+- [Getting Started Guide](https://contouraid.github.io/dosemetrics/getting-started/quickstart/)
+- [Using Your Own Data](https://contouraid.github.io/dosemetrics/notebooks/getting-started-own-data/)
+- [API Reference](https://contouraid.github.io/dosemetrics/api/)
+- [User Guide](https://contouraid.github.io/dosemetrics/user-guide/overview/)
+
+### Building Documentation Locally
+
+```bash
+# Install documentation dependencies
+pip install -e ".[docs]"
+
+# Serve with live-reload
+make docs
+# or
+mkdocs serve
+```
 
 ## Usage Examples
 
@@ -224,7 +249,7 @@ We welcome contributions! Please see our contributing guidelines:
 
 ## Documentation
 
-For detailed API documentation and tutorials, visit our [documentation site](https://github.com/amithjkamath/dosemetrics) (coming soon).
+For detailed API documentation and tutorials, visit our [documentation site](https://github.com/contouraid/dosemetrics) (coming soon).
 
 ## Citation
 
@@ -234,7 +259,7 @@ If you use DoseMetrics in your research, please cite:
 @software{dosemetrics2024,
   author = {Kamath, Amith},
   title = {DoseMetrics: A Python Library for Radiotherapy Dose Analysis},
-  url = {https://github.com/amithjkamath/dosemetrics},
+  url = {https://github.com/contouraid/dosemetrics},
   version = {0.2.0},
   year = {2024}
 }
@@ -260,5 +285,5 @@ For commercial licensing inquiries, please contact the folks at contouraid.
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/amithjkamath/dosemetrics/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/amithjkamath/dosemetrics/discussions)
+- **Issues**: [GitHub Issues](https://github.com/contouraid/dosemetrics/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/contouraid/dosemetrics/discussions)

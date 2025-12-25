@@ -83,7 +83,7 @@ if __name__ == "__main__":
         "Cochlea_R",
         "LacrimalGland_L",
         "LacrimalGland_R",
-        "Target",
+        "PTV",
     ]
     constraints = dosemetrics.get_default_constraints()
 

@@ -4,14 +4,16 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
+from io import BytesIO
 
-from dosemetrics.data import read_byte_data, read_dose, read_masks
+from dosemetrics.io import read_byte_data, read_dose, read_masks, read_from_nifti
 from dosemetrics.metrics import dvh_by_structure, dvh_by_dose, dose_summary
 from dosemetrics.utils import (
     get_default_constraints,
     get_custom_constraints,
     compute_mirage_compliance,
 )
+from dosemetrics_app.utils import get_example_datasets, load_example_files
 
 
 def display_summary(doses, structure_mask):
@@ -86,37 +88,86 @@ def panel():
 
     with tab1:
         st.markdown(f"## Step 1: Upload dose distribution volume and mask files")
-
-        st.markdown("Upload the dose volume:")
-        dose_file = st.file_uploader(
-            f"Upload dose volume: (in .nii.gz)", type=["nii", "gz"], key=0
+        
+        # Add option to use example data
+        data_source = st.radio(
+            "Data source:",
+            ["Upload your own files", "Use example data"],
+            horizontal=True
         )
+        
+        dose_file = None
+        mask_files = None
+        
+        if data_source == "Upload your own files":
+            st.markdown("Upload the dose volume:")
+            dose_file = st.file_uploader(
+                f"Upload dose volume: (in .nii.gz)", type=["nii", "gz"], key=0
+            )
 
-        st.markdown("Upload the contour masks:")
-        mask_files = st.file_uploader(
-            "Upload mask volumes (in .nii.gz)",
-            accept_multiple_files=True,
-            type=["nii", "gz"],
-            key=1,
-        )
+            st.markdown("Upload the contour masks:")
+            mask_files = st.file_uploader(
+                "Upload mask volumes (in .nii.gz)",
+                accept_multiple_files=True,
+                type=["nii", "gz"],
+                key=1,
+            )
+        else:
+            # Load example data
+            example_datasets = get_example_datasets()
+            if example_datasets:
+                # Get list of dataset names with test_subject first
+                dataset_names = list(example_datasets.keys())
+                default_index = dataset_names.index("test_subject") if "test_subject" in dataset_names else 0
+                
+                selected_dataset = st.selectbox(
+                    "Select example dataset:",
+                    options=dataset_names,
+                    index=default_index
+                )
+                
+                if selected_dataset:
+                    dataset_path = example_datasets[selected_dataset]
+                    with st.spinner("Loading example data..."):
+                        dose_path, mask_paths = load_example_files(dataset_path)
+                        
+                        if dose_path:
+                            # Read files and create BytesIO objects for compatibility
+                            with open(dose_path, 'rb') as f:
+                                dose_bytes = BytesIO(f.read())
+                                dose_bytes.name = dose_path.name
+                                dose_file = dose_bytes
+                            
+                            mask_files = []
+                            for mask_path in mask_paths:
+                                with open(mask_path, 'rb') as f:
+                                    mask_bytes = BytesIO(f.read())
+                                    mask_bytes.name = mask_path.name
+                                    mask_files.append(mask_bytes)
+                            
+                            st.success(f"✓ Loaded {len(mask_files)} structures from {selected_dataset}")
+            else:
+                st.warning("Example data not available. Please upload your own files.")
+                data_source = "Upload your own files"
 
         files_uploaded = (dose_file is not None) and (len(mask_files) > 0)
 
         if files_uploaded:
-            st.markdown(
-                f"Both dose and mask files are uploaded. Click the toggle button below to proceed."
-            )
-            step_1_complete = st.toggle("Compute")
-
-            dose, _ = read_dose(dose_file)
-            structure_mask = read_masks(mask_files)
+            with st.spinner("Processing dose and structure data..."):
+                dose, _ = read_dose(dose_file)
+                structure_mask = read_masks(mask_files)
+                st.success(f"✓ Data loaded successfully! View results in the tabs below.")
+            step_1_complete = True
+        else:
+            st.info("Upload files or select example data to proceed.")
 
         st.divider()
 
     with tab2:
         st.markdown(f"## Step 2: Dose Metrics")
-        st.markdown(f"Complete Step 1 to view metrics.")
-        if step_1_complete:
+        if not step_1_complete:
+            st.info("Complete Step 1 to view metrics.")
+        else:
             st.markdown(f"Dose Metrics: contours, dose distribution.")
             dose_summary_df = display_summary(dose, structure_mask)
             csv = dose_summary_df.to_csv(index=False)
@@ -133,8 +184,9 @@ def panel():
 
     with tab3:
         st.markdown(f"## Step 3: Display Compliance")
-        st.markdown(f"Complete Step 2 to proceed.")
-        if step_2_complete:
+        if not step_2_complete:
+            st.info("Complete Step 2 to proceed.")
+        else:
             st.markdown(f"Clinical Compliance: contours, dose distribution.")
             compliance_results = compute_mirage_compliance(dose, structure_mask)
             st.table(compliance_results)
@@ -152,8 +204,9 @@ def panel():
 
     with tab4:
         st.markdown(f"## Step 4: Check Contour Error Impact")
-        st.markdown(f"Complete Step 3 to proceed.")
-        if step_3_complete:
+        if not step_3_complete:
+            st.info("Complete Step 3 to proceed.")
+        else:
             st.markdown(f"Contour quality check: dice versus dose distribution.")
             constraints = get_custom_constraints()
 

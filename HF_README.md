@@ -43,7 +43,7 @@ DoseMetrics provides tools for medical physicists and radiation oncologists to a
 - Geometric analysis of structures
 - Interactive visualizations
 
-For more information, visit the [GitHub repository](https://github.com/amithjkamath/dosemetrics).
+For more information, visit the [GitHub repository](https://github.com/contouraid/dosemetrics).
 
 ## Citation
 
@@ -54,7 +54,7 @@ If you use DoseMetrics in your research, please cite:
   author = {Kamath, Amith},
   title = {DoseMetrics: Tools for Radiotherapy Dose Analysis},
   year = {2024},
-  url = {https://github.com/amithjkamath/dosemetrics}
+  url = {https://github.com/contouraid/dosemetrics}
 }
 ```
 

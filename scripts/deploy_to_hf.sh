@@ -10,7 +10,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Configuration
-HF_SPACE="amithjkamath/dosemetrics"
+HF_SPACE="contouraid/dosemetrics"
 HF_SPACE_URL="https://huggingface.co/spaces/${HF_SPACE}"
 
 echo "${GREEN}=== Deploying dosemetrics to Hugging Face Space ===${NC}"
