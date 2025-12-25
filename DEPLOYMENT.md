@@ -175,7 +175,7 @@ Settings are configured in the Dockerfile:
 To update your deployment:
 
 1. Make changes to your local code
-2. Run tests: `./scripts/run_tests.sh`
+2. Run tests: `./scripts/run_tests.sh` (run `make setup` first if you haven't installed dependencies; `make setup` prefers `uv` when available)
 3. Re-run deployment: `./scripts/deploy_to_hf.sh`
 
 ## Data Considerations

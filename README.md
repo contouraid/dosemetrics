@@ -40,12 +40,14 @@ Install it easily using pip:
 pip install dosemetrics
 ```
 
-**For development**, clone the repository and install in editable mode:
+**For development**, clone the repository and run `make setup` (uses `uv` when available to install dependencies and prepare a virtual environment):
 
 ```bash
 git clone https://github.com/amithjkamath/dosemetrics.git
 cd dosemetrics
-pip install --editable .
+make setup
+# or manually if you prefer:
+# ./scripts/setup_repo.sh
 ```
 
 ### Interactive Web Application
