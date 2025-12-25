@@ -85,8 +85,8 @@ echo "  ✓ pyproject.toml"
 cp "${OLDPWD}/LICENSE" .
 echo "  ✓ LICENSE"
 
-if [ -f "${OLDPWD}/setup_repo.sh" ]; then
-    cp "${OLDPWD}/setup_repo.sh" .
+if [ -f "${OLDPWD}/scripts/setup_repo.sh" ]; then
+    cp "${OLDPWD}/scripts/setup_repo.sh" .
     echo "  ✓ setup_repo.sh"
 fi
 

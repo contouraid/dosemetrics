@@ -61,7 +61,7 @@ make run
 Or use the shell script directly:
 
 ```bash
-./run_streamlit_app.sh
+./scripts/run_streamlit_app.sh
 ```
 
 Alternatively, run manually from the root directory:

@@ -4,7 +4,8 @@
 set -e
 
 # Ensure the repository is set up by running the setup script
-./setup_repo.sh
+DIR="$(cd "$(dirname "$0")" && pwd)"
+"$DIR/setup_repo.sh"
 
 # Activate the virtual environment
 source .venv/bin/activate

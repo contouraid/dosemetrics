@@ -18,8 +18,8 @@ help: ## Show this help message
 
 setup: ## Initial setup - install dependencies and configure environment
 	@echo "$(BLUE)🔧 Running setup...$(NC)"
-	@chmod +x setup_repo.sh
-	@./setup_repo.sh
+	@chmod +x scripts/setup_repo.sh
+	@./scripts/setup_repo.sh
 	@echo "$(GREEN)✅ Setup complete$(NC)"
 
 install: ## Install/update dependencies
@@ -35,18 +35,18 @@ run: app ## Run the Streamlit app locally
 
 app: ## Run the Streamlit app locally
 	@echo "$(BLUE)🚀 Starting Streamlit app...$(NC)"
-	@chmod +x run_streamlit_app.sh
-	@./run_streamlit_app.sh
+	@chmod +x scripts/run_streamlit_app.sh
+	@./scripts/run_streamlit_app.sh
 
 test: ## Run all tests
 	@echo "$(BLUE)🧪 Running tests...$(NC)"
-	@chmod +x run_tests.sh
-	@./run_tests.sh
+	@chmod +x scripts/run_tests.sh
+	@./scripts/run_tests.sh
 
 deploy: ## Deploy to Hugging Face Space
 	@echo "$(BLUE)🚀 Deploying to Hugging Face Space...$(NC)"
-	@chmod +x deploy_to_hf.sh
-	@./deploy_to_hf.sh
+	@chmod +x scripts/deploy_to_hf.sh
+	@./scripts/deploy_to_hf.sh
 
 clean: ## Clean up cache and temporary files
 	@echo "$(BLUE)🧹 Cleaning up...$(NC)"

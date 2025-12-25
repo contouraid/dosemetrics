@@ -21,7 +21,7 @@ This guide explains how to deploy the DoseMetrics Streamlit app to Hugging Face 
 1. **Dockerfile**: Defines the Docker container configuration for running the Streamlit app
 2. **HF_README.md**: README with Hugging Face metadata (YAML frontmatter) and app description
 3. **.dockerignore**: Specifies files to exclude from Docker build context
-4. **deploy_to_hf.sh**: Automated deployment script
+4. **scripts/deploy_to_hf.sh**: Automated deployment script
 
 ## Deployment Steps
 
@@ -42,7 +42,7 @@ Run the deployment script:
 ```bash
 make deploy
 # or directly:
-./deploy_to_hf.sh
+./scripts/deploy_to_hf.sh
 ```
 
 The script will:
@@ -75,7 +75,7 @@ Large data files and development artifacts are automatically excluded.
    cp /path/to/dosemetrics/HF_README.md README.md
    cp /path/to/dosemetrics/pyproject.toml .
    cp /path/to/dosemetrics/LICENSE .
-   cp /path/to/dosemetrics/setup_repo.sh .
+   cp /path/to/dosemetrics/scripts/setup_repo.sh .
    ```
 
 3. Commit and push:
@@ -175,8 +175,8 @@ Settings are configured in the Dockerfile:
 To update your deployment:
 
 1. Make changes to your local code
-2. Run tests: `./run_tests.sh`
-3. Re-run deployment: `./deploy_to_hf.sh`
+2. Run tests: `./scripts/run_tests.sh`
+3. Re-run deployment: `./scripts/deploy_to_hf.sh`
 
 ## Data Considerations
 
