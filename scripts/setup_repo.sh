@@ -30,15 +30,15 @@ else
 
     # Upgrade pip and setuptools in the venv to reduce editable install issues
     echo "Upgrading pip, setuptools, and wheel in the virtual environment..."
-    python -m pip install --upgrade pip setuptools wheel
+    python3 -m pip install --upgrade pip setuptools wheel
 
     # Try installing the package into the venv (non-fatal if it fails)
     echo "Installing the package into the virtual environment..."
-    if python -m pip install -e .; then
+    if python3 -m pip install -e .; then
         echo "Installed package in editable mode."
     else
         echo "Editable install failed, attempting standard install..."
-        python -m pip install . || true
+        python3 -m pip install . || true
     fi
 fi
 
