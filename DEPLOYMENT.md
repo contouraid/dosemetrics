@@ -110,7 +110,7 @@ make status     # Show git status
 The deployment script respects your `.gitignore` file and only copies:
 - Source code (`src/dosemetrics*`)
 - Small test data files (`data/test_subject.txt`, `data/visualization/`)
-- Configuration (`pyproject.toml`, `LICENSE`, `setup_repo.sh`)
+- Configuration (`pyproject.toml`, `LICENSE`, `scripts/setup_repo.sh`)
 - Docker setup (`Dockerfile`)
 - README (`HF_README.md` → `README.md`)
 

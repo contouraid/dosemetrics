@@ -53,6 +53,8 @@ results/
 # Scripts
 scripts/run_tests.sh
 scripts/run_streamlit_app.sh
+scripts/setup_repo.sh
+scripts/deploy_to_hf.sh
 
 # Examples (optional - comment out if you want to include them)
 examples/
