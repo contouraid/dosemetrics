@@ -20,7 +20,8 @@ source "$VENV_DIR/bin/activate"
 # Prefer using uv (universe) when available, otherwise fall back to pip
 if command -v uv > /dev/null 2>&1 && [[ -f "uv.lock" ]]; then
     echo "Found uv and uv.lock, syncing dependencies with uv..."
-    uv sync --no-build-isolation || uv sync || true
+    # Use --active to target the currently activated venv, fall back to plain sync
+    uv sync --active --no-build-isolation || uv sync --active || uv sync || true
 else
     if ! command -v uv > /dev/null 2>&1; then
         echo "uv not found; falling back to pip-based install in the venv"
@@ -41,6 +42,15 @@ else
         python3 -m pip install . || true
     fi
 fi
+
+# Post-install: ensure a couple of common runtime packages are present (SimpleITK, nibabel)
+for PKG in SimpleITK nibabel; do
+    # nix module name is the same as the package name for these
+    if ! python3 -c "import ${PKG}" >/dev/null 2>&1; then
+        echo "${PKG} not found in environment; attempting to install via pip..."
+        python3 -m pip install --no-input ${PKG} || echo "Warning: failed to install ${PKG}"
+    fi
+done
 
 # Print success message
 echo "Repository setup complete. Virtual environment is ready."
