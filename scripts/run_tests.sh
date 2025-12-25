@@ -25,5 +25,11 @@ fi
 # Ensure src/ is on PYTHONPATH so tests can import package
 export PYTHONPATH="$PWD/src"
 
+# Ensure SimpleITK is available (required by data I/O)
+if ! python -c "import SimpleITK" >/dev/null 2>&1; then
+    echo "SimpleITK not found in environment, attempting to install via pip..."
+    python -m pip install --no-input SimpleITK || echo "Warning: failed to install SimpleITK; tests may fail"
+fi
+
 echo "Running unittests..."
 python3 -m unittest discover -s tests -p "test_*.py"
