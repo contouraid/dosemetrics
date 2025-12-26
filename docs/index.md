@@ -10,8 +10,8 @@
 **A Python library for measuring radiotherapy doses and creating interactive visualizations for radiation therapy treatment planning and analysis.**
 
 [Get Started](getting-started/installation.md){ .md-button .md-button--primary }
-[Try Live Demo :material-rocket-launch:](https://huggingface.co/spaces/contouraid/dosemetrics){ .md-button target="_blank" }
-[View on GitHub :fontawesome-brands-github:](https://github.com/contouraid/dosemetrics){ .md-button }
+[Try Live Demo](https://huggingface.co/spaces/contouraid/dosemetrics){ .md-button .md-button--secondary }
+[View on GitHub](https://github.com/contouraid/dosemetrics){ .md-button .md-button--secondary }
 
 </div>
 

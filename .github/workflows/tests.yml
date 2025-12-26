@@ -26,8 +26,8 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 pytest
-        pip install -e . # install parent package in editable mode. This is needed for tests.
+        pip install flake8 pytest pytest-cov
+        pip install -e ".[test]" # install parent package with test dependencies
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with flake8
       run: |
