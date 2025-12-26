@@ -26,9 +26,9 @@ def compute_dose_compliance(data_folder):
 
         ptv_list = contents[contents["Type"] == "PTV"]["Structure"].values
         for ptv in ptv_list:
-            ptv_file = os.path.join(data_folder, target + ".nii.gz")
+            ptv_file = os.path.join(data_folder, ptv + ".nii.gz")
             ptv_volume = dosemetrics.read_from_nifti(ptv_file)
-            structure_masks[target] = ptv_volume
+            structure_masks[ptv] = ptv_volume
 
         constraints = dosemetrics.get_default_constraints()
         for structure in structure_masks.keys():
