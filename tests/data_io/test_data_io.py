@@ -40,11 +40,13 @@ class TestDataIO(unittest.TestCase):
 
     def test_import_functions_exist(self):
         """Test that expected I/O functions are available."""
-        # Test that key I/O functions are accessible
-        self.assertTrue(hasattr(dosemetrics, 'read_file'))
-        self.assertTrue(hasattr(dosemetrics, 'read_from_nifti'))
-        self.assertTrue(hasattr(dosemetrics, 'read_dose_and_mask_files'))
-        self.assertTrue(hasattr(dosemetrics, 'find_all_files'))
+        # Test that key I/O functions are accessible from dosemetrics.io
+        from dosemetrics.io import load_from_folder, load_structure_set, load_volume, detect_folder_format
+        
+        # Test top-level dosemetrics exports
+        self.assertTrue(hasattr(dosemetrics, 'Dose'))
+        self.assertTrue(hasattr(dosemetrics, 'StructureSet'))
+        self.assertTrue(hasattr(dosemetrics, 'Structure'))
 
 
 if __name__ == "__main__":

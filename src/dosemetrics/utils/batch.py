@@ -10,7 +10,7 @@ import glob
 from typing import Dict, List, Optional
 import pandas as pd
 import SimpleITK as sitk
-from ..io import read_from_nifti
+from ..io.nifti_io import read_from_nifti
 
 
 def get_structures_from_folder(

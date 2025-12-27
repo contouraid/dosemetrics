@@ -1,46 +1,118 @@
 """
 Core dose metrics and calculations.
+
+This package provides metrics for radiotherapy dose analysis, including:
+- DVH computation and analysis
+- Dose statistics  
+- Conformity indices
+- Homogeneity indices
+- Geometric metrics for structure comparison
+- Gamma analysis (future)
+- Advanced DVH metrics (future)
+- Dose comparison metrics (future)
 """
 
-from ..io import Structure, OAR, Target, StructureType, AvoidanceStructure
+# Import all metrics modules
+from . import dvh
+from . import statistics
+from . import conformity
+from . import homogeneity
+from . import geometric
+
+# Future feature modules (stubs with NotImplementedError)
+from . import gamma
+from . import advanced_dvh
+from . import dose_comparison
+
+# Import commonly used functions
 from .dvh import (
-    mean_dose,
-    max_dose,
-    volume,
     compute_dvh,
-    dvh_by_structure,
-    dvh_by_dose,
-    get_volumes,
+    compute_volume_at_dose,
+    compute_dose_at_volume,
+    compute_dose_at_volume_cc,
+    compute_equivalent_uniform_dose,
+    create_dvh_table,
+    extract_dvh_metrics,
 )
-from .scores import dose_summary, dose_score, dvh_score, compute_geometric_scores
-from .comparison import (
-    compare_predicted_doses,
-    compare_quality_indices,
-    compute_geometric_metrics,
-    batch_dvh_analysis,
-    process_subject_folder,
+
+from .statistics import (
+    compute_dose_statistics,
+    compute_mean_dose,
+    compute_max_dose,
+    compute_min_dose,
+    compute_median_dose,
+    compute_dose_percentile,
+)
+
+from .conformity import (
+    compute_conformity_index,
+    compute_conformity_number,
+    compute_paddick_conformity_index,
+    compute_coverage,
+    compute_spillage,
+)
+
+from .homogeneity import (
+    compute_homogeneity_index,
+    compute_gradient_index,
+    compute_dose_homogeneity,
+    compute_uniformity_index,
+)
+
+from .geometric import (
+    compute_dice_coefficient,
+    compute_jaccard_index,
+    compute_volume_difference,
+    compute_volume_ratio,
+    compute_sensitivity,
+    compute_specificity,
+    compare_structure_sets,
 )
 
 __all__ = [
-    "Structure",
-    "OAR",
-    "Target",
-    "StructureType",
-    "AvoidanceStructure",
-    "mean_dose",
-    "max_dose",
-    "volume",
+    # Submodules
+    "dvh",
+    "statistics",
+    "conformity",
+    "homogeneity",
+    "geometric",
+    # Future feature modules
+    "gamma",
+    "advanced_dvh",
+    "dose_comparison",
+    # DVH functions
     "compute_dvh",
-    "dvh_by_structure",
-    "dvh_by_dose",
-    "get_volumes",
-    "dose_summary",
-    "dose_score",
-    "dvh_score",
-    "compute_geometric_scores",
-    "compare_predicted_doses",
-    "compare_quality_indices",
-    "compute_geometric_metrics",
-    "batch_dvh_analysis",
-    "process_subject_folder",
+    "compute_volume_at_dose",
+    "compute_dose_at_volume",
+    "compute_dose_at_volume_cc",
+    "compute_equivalent_uniform_dose",
+    "create_dvh_table",
+    "extract_dvh_metrics",
+    # Statistics functions
+    "compute_dose_statistics",
+    "compute_mean_dose",
+    "compute_max_dose",
+    "compute_min_dose",
+    "compute_median_dose",
+    "compute_dose_percentile",
+    # Conformity functions
+    "compute_conformity_index",
+    "compute_conformity_number",
+    "compute_paddick_conformity_index",
+    "compute_coverage",
+    "compute_spillage",
+    # Homogeneity functions
+    "compute_homogeneity_index",
+    "compute_gradient_index",
+    "compute_dose_homogeneity",
+    "compute_uniformity_index",
+    # Geometric functions
+    "compute_dice_coefficient",
+    "compute_jaccard_index",
+    "compute_volume_difference",
+    "compute_volume_ratio",
+    "compute_sensitivity",
+    "compute_specificity",
+    "compare_structure_sets",
 ]
+

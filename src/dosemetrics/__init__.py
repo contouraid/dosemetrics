@@ -1,88 +1,109 @@
 """
-Dosemetrics: A library for measuring and analyzing radiotherapy doses.
+Dosemetrics: A library for radiotherapy dose analysis.
 
 This library provides tools for:
-- Reading dose and mask data from various formats
-- Computing dose-volume histograms (DVH)
-- Calculating dose metrics and scores
-- Compliance checking against dose constraints
+- Dose distribution analysis
+- Structure set management  
+- DVH computation and analysis
+- Quality metrics (conformity, homogeneity)
+- Geometric comparison
+- Compliance checking
 - Visualization utilities
 
-Public API:
+Architecture:
+- dosemetrics.dose: Dose data container
+- dosemetrics.structures: Structure/OAR/Target classes
+- dosemetrics.structure_set: StructureSet management
+- dosemetrics.metrics: All computational metrics
+  - dvh: DVH computation and queries
+  - statistics: Dose statistics
+  - conformity: Conformity indices
+  - homogeneity: Homogeneity indices
+  - geometric: Geometric comparisons
+- dosemetrics.io: Data loading/saving
+- dosemetrics.utils: Utilities (plotting, compliance, batch processing)
 """
 
-# Core structure classes
-from .io import (
+# Core data classes
+from .dose import Dose
+from .structures import (
     Structure,
     OAR,
     Target,
     StructureType,
     AvoidanceStructure,
 )
-
-# Structure set management
-from .io import (
-    StructureSet,
-    create_structure_set_from_folder,
-    create_structure_set_from_masks,
+from .structure_set import StructureSet
+from .metrics.scores import dose_score, dvh_score
+from .utils.compliance import quality_index, get_default_constraints, check_compliance
+from .utils.plot import (
+    compare_dvh,
+    from_dataframe,
+    generate_dvh_variations,
+    plot_dvh,
+    plot_dvh_variations,
+    variability,
 )
+import numpy as np
 
-# Core metrics and calculations
-from .metrics import (
-    mean_dose,
-    max_dose,
-    volume,
-    compute_dvh,
-    dvh_by_structure,
-    dvh_by_dose,
-    dose_summary,
-    dose_score,
-    dvh_score,
-    compare_predicted_doses,
-    compare_quality_indices,
-    compute_geometric_metrics,
-    batch_dvh_analysis,
-    process_subject_folder,
-)
+# Metrics subpackage (use: from dosemetrics.metrics import dvh, statistics, etc.)
+from . import metrics
 
 # I/O utilities
 from .io import (
-    read_file,
-    read_byte_data,
-    read_from_eclipse,
-    read_dose_and_mask_files,
-    read_from_nifti,
-    find_all_files,
-    read_dose_and_mask_files_as_structure_set,
-    get_dose_and_structures_as_structure_set,
-    create_structure_set_from_existing_data,
-    get_dose,
-    get_structures,
+    load_from_folder,
+    load_structure_set,
+    load_volume,
+    load_structure,
+    detect_folder_format,
+    # Format-specific modules
+    dicom_io,
+    nifti_io,
 )
 
-# Utility functions
-from .utils import (
-    get_default_constraints,
-    check_compliance,
-    quality_index,
-    from_dataframe,
-    compare_dvh,
-    variability,
-    generate_dvh_variations,
-    plot_dvh_variations,
-    plot_dvh,
-    plot_dose_differences,
-    plot_frequency_analysis,
-    generate_dvh_family_plot,
-    interactive_dvh_plotter,
-    get_structures_from_folder,
-    read_dose_and_mask_files_from_folder,
-    create_standard_contents_csv,
-    validate_folder_structure,
-    batch_folder_validation,
-    find_subject_folders,
-    setup_output_structure,
-)
+# Utilities (plotting, compliance, batch)
+from . import utils
+
+
+def create_structure_set_from_masks(
+    structure_masks: dict,
+    spacing: tuple = (1.0, 1.0, 1.0),
+    origin: tuple = (0.0, 0.0, 0.0),
+    structure_types: dict = None,
+    dose_volume: np.ndarray = None,
+    name: str = "StructureSet",
+):
+    """Create a StructureSet from mask dictionaries.
+    
+    Args:
+        structure_masks: Dict mapping structure names to binary masks
+        spacing: Voxel spacing in mm (x, y, z)
+        origin: Origin coordinates in mm
+        structure_types: Optional dict mapping structure names to StructureType
+        dose_volume: Optional dose array to attach
+        name: Name for the structure set
+        
+    Returns:
+        StructureSet with the structures and optionally dose attached
+    """
+    ss = StructureSet(spacing=spacing, origin=origin, name=name)
+    for struct_name, mask in structure_masks.items():
+        stype = None
+        if structure_types:
+            stype = structure_types.get(struct_name)
+            if isinstance(stype, str):
+                stype = StructureType(stype.lower()) if stype.lower() in StructureType._value2member_map_ else StructureType.OAR
+        if stype is None:
+            stype = StructureType.OAR
+        ss.add_structure(struct_name, mask, stype)
+    if dose_volume is not None:
+        ss.set_dose_data(dose_volume)
+    return ss
+
+
+def create_structure_set_from_existing_data(**kwargs):
+    """Alias for create_structure_set_from_masks for backward compatibility."""
+    return create_structure_set_from_masks(**kwargs)
 
 # Version information
 __version__ = "0.2.0"
@@ -91,57 +112,40 @@ __version__ = "0.2.0"
 __all__ = [
     # Version
     "__version__",
-    # Structure classes
+    # Core data classes
+    "Dose",
     "Structure",
     "OAR",
     "Target",
     "StructureType",
     "AvoidanceStructure",
-    # Structure set management
     "StructureSet",
-    "create_structure_set_from_folder",
+    # Helper functions
     "create_structure_set_from_masks",
-    # Core metrics
-    "mean_dose",
-    "max_dose",
-    "volume",
-    "compute_dvh",
-    "dvh_by_structure",
-    "dvh_by_dose",
-    "dose_summary",
+    "create_structure_set_from_existing_data",
+    # Metrics subpackage (access via metrics.dvh, metrics.statistics, etc.)
+    "metrics",
+    # I/O subpackage
+    "load_from_folder",
+    "load_structure_set",
+    "load_volume",
+    "load_structure",
+    "detect_folder_format",
+    "dicom_io",
+    "nifti_io",
+    # Utils subpackage (access via utils.compliance, utils.plot, etc.)
+    "utils",
+    # Convenience exports from utils
+    "check_compliance",
+    "from_dataframe",
+    "quality_index",
+    "get_default_constraints",
+    "compare_dvh",
+    "generate_dvh_variations",
+    "plot_dvh",
+    "plot_dvh_variations",
+    "variability",
     "dose_score",
     "dvh_score",
-    # I/O functions
-    "read_file",
-    "read_byte_data",
-    "read_from_eclipse",
-    "read_dose_and_mask_files",
-    "read_from_nifti",
-    "read_dose_and_mask_files_as_structure_set",
-    "get_dose_and_structures_as_structure_set",
-    "create_structure_set_from_existing_data",
-    "find_all_files",
-    "get_dose",
-    "get_structures",
-    # Utilities
-    "get_default_constraints",
-    "check_compliance",
-    "quality_index",
-    "from_dataframe",
-    "compare_dvh",
-    "variability",
-    "generate_dvh_variations",
-    "plot_dvh_variations",
-    "plot_dvh",
-    "plot_dose_differences",
-    "plot_frequency_analysis",
-    "generate_dvh_family_plot",
-    "interactive_dvh_plotter",
-    "get_structures_from_folder",
-    "read_dose_and_mask_files_from_folder",
-    "create_standard_contents_csv",
-    "validate_folder_structure",
-    "batch_folder_validation",
-    "find_subject_folders",
-    "setup_output_structure",
 ]
+

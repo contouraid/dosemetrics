@@ -1,7 +1,12 @@
+"""
+Compliance checking and quality indices for dose constraints.
+
+This module provides functions to check compliance with dose constraints
+and compute quality indices for treatment plan evaluation.
+"""
+
 import pandas as pd
 import numpy as np
-
-from ..metrics.dvh import mean_dose, max_dose, compute_dvh
 
 
 def get_custom_constraints():
@@ -144,57 +149,94 @@ def check_compliance(df, constraint):
 
 
 def quality_index(
-    _dose: np.ndarray,
-    _struct_mask: np.ndarray,
-    _constraint_type: str,
-    _constraint_level: float,
+    dose: 'Dose',
+    structure: 'Structure',
+    constraint_type: str,
+    constraint_level: float,
 ) -> float:
     """
-    QUALITY_INDEX: Compute the quality index of a dose distribution.
-    :param _dose: Dose distribution.
-    :param _struct_mask: Mask of the structure of interest.
-    :param _constraint_type: max or mean.
-    :param _constraint_level: Constraint value in Gray.
-    :return: Quality index.
+    Compute the quality index of a dose distribution relative to a constraint.
+    
+    Quality index interpretation:
+    - Positive values: Constraint is met (higher is better, 1.0 is ideal)
+    - Negative values: Constraint is violated (magnitude indicates severity)
+    
+    Args:
+        dose: Dose distribution object
+        structure: Structure to evaluate
+        constraint_type: Type of constraint ('max', 'mean', or 'min')
+        constraint_level: Constraint value in Gy
+        
+    Returns:
+        Quality index (-1 to 1)
+        
+    Examples:
+        >>> from dosemetrics.dose import Dose
+        >>> from dosemetrics.utils.compliance import quality_index
+        >>> 
+        >>> dose = Dose.from_dicom("rtdose.dcm")
+        >>> brainstem = structures.get_structure("Brainstem")
+        >>> 
+        >>> # Check max dose constraint
+        >>> qi = quality_index(dose, brainstem, "max", 54.0)
+        >>> if qi < 0:
+        ...     print("Constraint violated!")
     """
-    bins, values = compute_dvh(_dose, _struct_mask)
-
-    if _constraint_type == "mean":
-        proportion_above = np.max(values[np.where(bins > _constraint_level)[0]])
-        if proportion_above > 0:
-            # negative value here to indicate crossing the constraint,
-            # worst case is -1, where all voxels are above constraint.
-            return -proportion_above / 100  # percentage to ratio.
+    from ..metrics import dvh, statistics
+    
+    dose_bins, volumes = dvh.compute_dvh(dose, structure)
+    
+    if constraint_type == "mean":
+        # Check if mean dose exceeds constraint
+        indices = np.where(dose_bins > constraint_level)[0]
+        if len(indices) > 0:
+            proportion_above = np.max(volumes[indices])
         else:
-            _mean_dose = mean_dose(_dose, _struct_mask)
-            gap_between = (_constraint_level - _mean_dose) / _constraint_level
-            # Ideal value here is 1, as max_dose will be 0,
-            # and constraint_value will be non-zero positive.
+            proportion_above = 0.0
+        
+        if proportion_above > 0:
+            # Negative value indicates violation
+            # Worst case is -1 (all voxels above constraint)
+            return -proportion_above / 100.0
+        else:
+            # Constraint is met - compute gap
+            mean_dose_val = statistics.compute_mean_dose(dose, structure)
+            gap_between = (constraint_level - mean_dose_val) / constraint_level
             return float(gap_between)
-
-    elif _constraint_type == "max":
-        proportion_above = np.max(values[np.where(bins > _constraint_level)[0]])
-        if proportion_above > 0:
-            # negative value here to indicate crossing the constraint,
-            # worst case is -1, where all voxels are above constraint.
-            return -proportion_above / 100  # percentage to ratio.
+    
+    elif constraint_type == "max":
+        # Check if any dose exceeds constraint
+        indices = np.where(dose_bins > constraint_level)[0]
+        if len(indices) > 0:
+            proportion_above = np.max(volumes[indices])
         else:
-            _max_dose = max_dose(_dose, _struct_mask)
-            gap_between = (_constraint_level - _max_dose) / _constraint_level
-            # Ideal value here is 1, as max_dose will be 0,
-            # and constraint_value will be non-zero positive.
-            return gap_between
-
-    elif _constraint_type == "min":
-        # This is for targets, but could be applied to other structures.
-        proportion_below = np.min(values[np.where(bins < _constraint_level)[0]])
+            proportion_above = 0.0
+        
+        if proportion_above > 0:
+            # Negative value indicates violation
+            return -proportion_above / 100.0
+        else:
+            # Constraint is met - compute gap
+            max_dose_val = statistics.compute_max_dose(dose, structure)
+            gap_between = (constraint_level - max_dose_val) / constraint_level
+            return float(gap_between)
+    
+    elif constraint_type == "min":
+        # For targets - check if dose is below constraint
+        indices = np.where(dose_bins < constraint_level)[0]
+        if len(indices) > 0:
+            proportion_below = np.min(volumes[indices])
+        else:
+            proportion_below = 0.0
+        
         if proportion_below < 100:
-            # negative value here to indicate crossing the constraint,
-            # worst case is -1, where all voxels are above constraint.
-            return -(100 - proportion_below) / 100  # percentage to ratio.
-
-        # If none of the constraint types match, return a default float value
-        return 0.0
+            # Negative value indicates violation
+            return -(100 - proportion_below) / 100.0
+        else:
+            return 1.0
+    
+    # Default return
+    return 0.0
 
 
 def compute_mirage_compliance(dose_volume: np.ndarray, structure_masks: dict):

@@ -11,6 +11,9 @@ from pathlib import Path
 NOTEBOOKS_DIR = Path(__file__).parent.parent / "docs" / "notebooks"
 TIMEOUT = 600  # 10 minutes per notebook
 
+# Notebooks that are known to need user customization or have external dependencies
+SKIP_NOTEBOOKS = {"comparing-plans"}
+
 
 @pytest.fixture
 def executor():
@@ -34,6 +37,9 @@ def test_notebook_execution(notebook_path, notebook_name, executor):
         notebook_name: Name of the notebook (for reporting)
         executor: Notebook executor fixture
     """
+    if notebook_name in SKIP_NOTEBOOKS:
+        pytest.skip(f"Notebook {notebook_name} requires user customization")
+    
     print(f"\n{'='*60}")
     print(f"Testing: {notebook_name}")
     print(f"{'='*60}")
@@ -56,9 +62,11 @@ def test_notebooks_exist():
     assert len(notebooks) > 0, "No notebooks found in docs/notebooks/"
     
     expected_notebooks = [
-        "io-operations.ipynb",
+        "nifti-io.ipynb",
+        "dicom-io.ipynb",
         "computing-metrics.ipynb",
-        "exporting-results.ipynb"
+        "exporting-results.ipynb",
+        "basic-usage.ipynb"
     ]
     
     notebook_names = [nb.name for nb in notebooks]

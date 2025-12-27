@@ -1,297 +1,288 @@
+"""
+Unified I/O module for radiotherapy data.
+
+This module provides high-level functions for loading radiotherapy data from
+various sources (DICOM, NIfTI) with automatic format detection and intelligent
+structure organization.
+
+The API is organized in layers:
+1. Low-level: Format-specific readers (dicom_io, nifti_io)
+2. Mid-level: Type-specific loaders (load_volume, load_structure, etc.)
+3. High-level: Auto-detecting folder loaders (load_from_folder, load_structure_set)
+"""
+
 import os
 import numpy as np
-import pandas as pd
-from glob import glob
-from gzip import GzipFile
-import SimpleITK as sitk
-from nibabel.fileholders import FileHolder
-from nibabel.nifti1 import Nifti1Image
-from typing import Tuple, Dict, Optional, List
+from typing import Dict, List, Optional, Tuple, Union, TYPE_CHECKING
+from pathlib import Path
+
+if TYPE_CHECKING:
+    from ..structures import Structure, StructureType
+    from ..structure_set import StructureSet
+
+from . import dicom_io
+from . import nifti_io
 
 
-def find_all_files(name, path):
-    result = []
-    for root, dirs, files in os.walk(path):
-        if name in files:
-            result.append(os.path.join(root, name))
-    result = sorted(result)
-    return result
-
-
-def read_file(byte_file):
+def detect_folder_format(folder_path: Union[str, Path]) -> str:
     """
-    READ_FILE: Read the file from the byte data.
-    This is exclusively meant for what st.file_uploader returns.
-    :param byte_file:
-    :return: arr, img.header - numpy array and header information.
-    """
-    # See https://stackoverflow.com/questions/62579425/simpleitk-read-io-byteio
-    fh = FileHolder(fileobj=GzipFile(fileobj=byte_file))
-    img = Nifti1Image.from_file_map({"header": fh, "image": fh})
-    arr = np.array(img.dataobj)
-    return arr, img.header
-
-
-def read_dose(dose_file):
-    dose_volume, dose_header = read_file(dose_file)
-    return dose_volume, dose_header
-
-
-def read_masks(mask_files):
-    structure_masks = {}
-    for mask_file in mask_files:
-        mask_volume, mask_header = read_file(mask_file)
-        struct_name = mask_file.name.split(".")[0]
-        structure_masks[struct_name] = mask_volume
-    return structure_masks
-
-
-def read_byte_data(dose_file, mask_files):
-    """
-    READ_BYTE_DATA: Read the dose and mask files from the byte data.
-    This is exclusively meant for what st.file_uploader returns.
-    Do not use it for reading files from the filesystem.
-
-    :param dose_file: byte array for dose data.
-    :param mask_files: byte array for multiple masks.
-    :return: dose_volume, structure_masks - numpy array and dictionary of numpy arrays.
-    """
-    dose_volume, _ = read_file(dose_file)
-
-    structure_masks = {}
-    struct_identifiers = []
-    for mask_file in mask_files:
-        mask_volume, mask_header = read_file(mask_file)
-        struct_name = mask_file.name.split(".")[0]
-        struct_identifiers.append(struct_name)
-        structure_masks[struct_name] = mask_volume
-    return dose_volume, structure_masks
-
-
-def read_from_eclipse(file_name):
-    df = pd.DataFrame()
-    f = open(file_name, "r")
-    for line in f:
-        if "Structure:" in line:
-            name = line.split(" ")[-1]
-            for line in f:
-                if "Relative dose [%]" in line:
-                    row_cnt = 0
-                    for line in f:
-                        if len(line.split()) > 2:
-                            df.loc[row_cnt, name + "_dose"] = (
-                                float(line.split()[1]) / 100.0
-                            )
-                            df.loc[row_cnt, name + "_vol"] = float(line.split()[2])
-                            row_cnt += 1
-                        else:
-                            break
-                    break
-    f.close()
-    return df
-
-
-def read_from_nifti(nifti_filename):
-    """
-    READ_FROM_NIFTI: Read the nifti file and return the numpy array.
-    :param nifti_filename: file name of the nifti file.
-    :return: numpy array.
-    """
-    img = sitk.ReadImage(nifti_filename)
-    return sitk.GetArrayFromImage(img)
-
-
-def read_dose_and_mask_files(dose_file, mask_files):
-    dose_volume = read_from_nifti(dose_file)
-    structure_masks = {}
-    for mask_file in mask_files:
-        mask_volume = read_from_nifti(mask_file)
-        struct_name = mask_file.split("/")[-1].split(".")[0]
-        structure_masks[struct_name] = mask_volume
-    return dose_volume, structure_masks
-
-
-def get_dose(data_path: str):
-    """
-    GET_DOSE:
-    Read the dose volume from the specified data root directory.
-    :param data_root: Path to the directory containing the dose file.
-    :return: Dose volume as a numpy array.
-    """
-    dose_file = os.path.join(data_path, "Dose.nii.gz")
-    dose_volume = read_from_nifti(dose_file)
-    return dose_volume
-
-
-def get_structures(data_path: str):
-    """
-    GET_STRUCTURES:
-    Read the structure masks from the specified data root directory.
-    :param data_root: Path to the directory containing the structure files.
-    :return: A dictionary of structure masks and a list of mask files.
-    """
-    contents_file = glob(os.path.join(data_path, "*.csv"))
-
-    mask_structures = {}
-    mask_files = []
-    if len(contents_file) == 1:
-        cf = pd.read_csv(contents_file[0])
-        info = cf[["Structure", "Type"]].copy()
-
-        for i in range(info.shape[0]):
-            if info.loc[i, "Type"] == "Target" or info.loc[i, "Type"] == "OAR":
-                mask_file = os.path.join(
-                    data_path, str(info.loc[i, "Structure"]) + ".nii.gz"
-                )
-                mask_structures[info.loc[i, "Structure"]] = read_from_nifti(mask_file)
-                mask_files.append(mask_file)
-    return mask_structures, mask_files
-
-
-def read_dose_and_mask_files_as_structure_set(
-    dose_file: str,
-    mask_files: List[str],
-    spacing: Tuple[float, float, float] = (1.0, 1.0, 1.0),
-    origin: Tuple[float, float, float] = (0.0, 0.0, 0.0),
-    structure_types: Optional[Dict[str, str]] = None,
-    name: str = "StructureSet",
-):
-    """
-    Read dose and mask files and return as a StructureSet object.
+    Detect the data format in a folder (DICOM or NIfTI).
 
     Args:
-        dose_file: Path to dose NIfTI file
-        mask_files: List of paths to mask NIfTI files
-        spacing: Voxel spacing in (x, y, z) mm
-        origin: Origin coordinates in mm
-        structure_types: Optional mapping of structure names to types ("OAR", "Target", "Avoidance")
-        name: Name for the structure set
+        folder_path: Path to folder to inspect
 
     Returns:
-        StructureSet object with loaded dose and structures
+        'dicom' if DICOM files found, 'nifti' if NIfTI files found, 'unknown' otherwise
     """
-    from .structure_set import create_structure_set_from_masks, StructureType
-
-    # Read dose volume
-    dose_volume = read_from_nifti(dose_file)
-
-    # Read structure masks
-    structure_masks = {}
-    for mask_file in mask_files:
-        mask_volume = read_from_nifti(mask_file)
-        struct_name = mask_file.split("/")[-1].split(".")[0]
-        structure_masks[struct_name] = mask_volume
-
-    # Convert string types to StructureType enum if provided
-    structure_type_mapping = None
-    if structure_types:
-        structure_type_mapping = {}
-        for name, type_str in structure_types.items():
-            if type_str.lower() == "target":
-                structure_type_mapping[name] = StructureType.TARGET
-            elif type_str.lower() == "oar":
-                structure_type_mapping[name] = StructureType.OAR
-            elif type_str.lower() == "avoidance":
-                structure_type_mapping[name] = StructureType.AVOIDANCE
-
-    # Create and return StructureSet
-    return create_structure_set_from_masks(
-        structure_masks=structure_masks,
-        dose_volume=dose_volume,
-        spacing=spacing,
-        origin=origin,
-        structure_types=structure_type_mapping,
-        name=name,
-    )
+    folder_path = Path(folder_path)
+    
+    if not folder_path.exists():
+        return 'unknown'
+    
+    # Check for DICOM files directly
+    if list(folder_path.rglob('*.dcm')):
+        return 'dicom'
+    
+    # Check for NIfTI files
+    if list(folder_path.rglob('*.nii.gz')) or list(folder_path.rglob('*.nii')):
+        return 'nifti'
+    
+    return 'unknown'
 
 
-def get_dose_and_structures_as_structure_set(
-    data_path: str,
-    dose_filename: str = "Dose.nii.gz",
-    contents_filename: Optional[str] = None,
-    spacing: Tuple[float, float, float] = (1.0, 1.0, 1.0),
-    origin: Tuple[float, float, float] = (0.0, 0.0, 0.0),
+def load_from_folder(
+    folder_path: Union[str, Path],
+    format: Optional[str] = None,
+    **kwargs
+) -> Dict[str, Union[np.ndarray, Dict, Tuple]]:
+    """
+    Load radiotherapy data from a folder, auto-detecting format.
+
+    This is the highest-level function for loading data. It automatically detects
+    whether the folder contains DICOM or NIfTI data and loads accordingly.
+
+    Args:
+        folder_path: Path to folder containing data
+        format: Force specific format ('dicom' or 'nifti'). If None, auto-detects.
+        **kwargs: Additional arguments passed to format-specific loaders
+
+    Returns:
+        Dictionary with loaded data. Keys depend on format:
+            For DICOM: 'ct_volume', 'dose_volumes', 'structures', 'spacing', 'origin'
+            For NIfTI: 'dose_volume', 'structure_masks', 'image_volumes', 'spacing', 'origin'
+
+    Raises:
+        FileNotFoundError: If folder doesn't exist
+        ValueError: If format cannot be determined
+    """
+    folder_path = Path(folder_path)
+    
+    if not folder_path.exists():
+        raise FileNotFoundError(f"Folder not found: {folder_path}")
+    
+    # Auto-detect format if not specified
+    if format is None:
+        format = detect_folder_format(folder_path)
+    
+    if format == 'dicom':
+        return dicom_io.load_dicom_folder(folder_path, **kwargs)
+    elif format == 'nifti':
+        return nifti_io.load_nifti_folder(folder_path, **kwargs)
+    else:
+        raise ValueError(
+            f"Unknown format in {folder_path}. "
+            f"Folder should contain either DICOM files or NIfTI files."
+        )
+
+
+def load_structure_set(
+    folder_path: Union[str, Path],
+    format: Optional[str] = None,
     name: Optional[str] = None,
-):
+    structure_type_mapping: Optional[Dict[str, "StructureType"]] = None,
+    **kwargs
+) -> "StructureSet":
     """
-    Read dose and structures from a directory and return as a StructureSet.
+    Load a complete StructureSet from a folder, auto-detecting format.
 
-    Enhanced version of get_dose() and get_structures() that returns a unified StructureSet object.
+    This is the primary high-level function for loading radiotherapy data as a
+    unified StructureSet object. It handles both DICOM and NIfTI formats.
 
     Args:
-        data_path: Path to directory containing dose and structure files
-        dose_filename: Name of the dose file (default: "Dose.nii.gz")
-        contents_filename: Optional name of CSV file with structure type information
-        spacing: Voxel spacing in (x, y, z) mm
-        origin: Origin coordinates in mm
-        name: Name for the structure set (defaults to directory name)
+        folder_path: Path to folder containing data
+        format: Force specific format ('dicom' or 'nifti'). If None, auto-detects.
+        name: Name for the structure set. If None, uses folder name.
+        structure_type_mapping: Optional dict mapping structure names to StructureType
+        **kwargs: Additional arguments passed to format-specific loaders
+                 For NIfTI: dose_filename (default: "Dose.nii.gz")
+                 For DICOM: dose_file_name (specific dose file to use)
 
     Returns:
-        StructureSet object with loaded dose and structures
-    """
-    from .structure_set import create_structure_set_from_folder
+        StructureSet object with loaded structures and dose
 
+    Raises:
+        FileNotFoundError: If folder doesn't exist
+        ValueError: If format cannot be determined or no structures found
+
+    Examples:
+        >>> # Load from DICOM folder
+        >>> structure_set = load_structure_set('path/to/dicom_folder')
+        
+        >>> # Load from NIfTI folder with custom dose filename
+        >>> structure_set = load_structure_set('path/to/nifti_folder', 
+        ...                                     dose_filename='dose_distribution.nii.gz')
+        
+        >>> # Force format and provide structure types
+        >>> type_mapping = {'Liver': StructureType.OAR, 'PTV': StructureType.TARGET}
+        >>> structure_set = load_structure_set('path/to/folder',
+        ...                                     format='nifti',
+        ...                                     structure_type_mapping=type_mapping)
+    """
+    from ..structure_set import StructureSet  # Import here to avoid circular dependency
+    
+    folder_path = Path(folder_path)
+    
+    if not folder_path.exists():
+        raise FileNotFoundError(f"Folder not found: {folder_path}")
+    
+    # Auto-detect format if not specified
+    if format is None:
+        format = detect_folder_format(folder_path)
+    
+    # Use folder name as default name
     if name is None:
-        name = os.path.basename(os.path.normpath(data_path))
+        name = folder_path.name
+    
+    # Load based on format
+    if format == 'dicom':
+        return dicom_io.create_structure_set_from_dicom(
+            folder_path=folder_path,
+            name=name,
+            structure_type_mapping=structure_type_mapping,
+            **kwargs
+        )
+    elif format == 'nifti':
+        return nifti_io.create_structure_set_from_nifti_folder(
+            folder_path=folder_path,
+            name=name,
+            structure_type_mapping=structure_type_mapping,
+            **kwargs
+        )
+    else:
+        raise ValueError(
+            f"Unknown format in {folder_path}. "
+            f"Folder should contain either DICOM files or NIfTI files."
+        )
 
-    contents_file_path = None
-    if contents_filename:
-        contents_file_path = os.path.join(data_path, contents_filename)
 
-    return create_structure_set_from_folder(
-        data_path=data_path,
-        dose_file=dose_filename,
-        contents_file=contents_file_path,
-        spacing=spacing,
-        origin=origin,
-        name=name,
-    )
-
-
-def create_structure_set_from_existing_data(
-    dose_volume: np.ndarray,
-    structure_masks: Dict[str, np.ndarray],
-    spacing: Tuple[float, float, float] = (1.0, 1.0, 1.0),
-    origin: Tuple[float, float, float] = (0.0, 0.0, 0.0),
-    structure_types: Optional[Dict[str, str]] = None,
-    name: str = "StructureSet",
-):
+def load_volume(
+    file_path: Union[str, Path],
+    format: Optional[str] = None,
+) -> Tuple[np.ndarray, Tuple[float, float, float], Tuple[float, float, float]]:
     """
-    Create a StructureSet from existing dose and mask data arrays.
-
-    Utility function to convert existing data (from read_dose_and_mask_files)
-    into a StructureSet object.
+    Load a single volume file (DICOM RTDOSE or NIfTI).
 
     Args:
-        dose_volume: 3D dose array
-        structure_masks: Dictionary mapping structure names to 3D mask arrays
-        spacing: Voxel spacing in (x, y, z) mm
-        origin: Origin coordinates in mm
-        structure_types: Optional mapping of structure names to types ("OAR", "Target", "Avoidance")
-        name: Name for the structure set
+        file_path: Path to file or folder (for DICOM CT series)
+        format: Force specific format ('dicom' or 'nifti'). If None, auto-detects.
 
     Returns:
-        StructureSet object
+        Tuple of (volume, spacing, origin)
+
+    Raises:
+        FileNotFoundError: If file doesn't exist
+        ValueError: If format cannot be determined
     """
-    from .structure_set import create_structure_set_from_masks, StructureType
+    file_path = Path(file_path)
+    
+    if not file_path.exists():
+        raise FileNotFoundError(f"File not found: {file_path}")
+    
+    # Auto-detect format if not specified
+    if format is None:
+        if file_path.is_dir():
+            format = 'dicom'  # Assume directory is DICOM CT series
+        elif file_path.suffix in ['.nii', '.gz']:
+            format = 'nifti'
+        elif file_path.suffix == '.dcm':
+            format = 'dicom'
+        else:
+            raise ValueError(f"Cannot determine format for: {file_path}")
+    
+    # Load based on format
+    if format == 'dicom':
+        if file_path.is_dir():
+            # CT series
+            volume, spacing, origin = dicom_io.read_dicom_ct_volume(file_path)
+            return volume, spacing, origin
+        else:
+            # Single RTDOSE file
+            volume, spacing, origin, _ = dicom_io.read_dicom_rtdose(file_path)
+            return volume, spacing, origin
+    elif format == 'nifti':
+        return nifti_io.read_nifti_volume(file_path)
+    else:
+        raise ValueError(f"Unknown format: {format}")
 
-    # Convert string types to StructureType enum if provided
-    structure_type_mapping = None
-    if structure_types:
-        structure_type_mapping = {}
-        for struct_name, type_str in structure_types.items():
-            if type_str.lower() == "target":
-                structure_type_mapping[struct_name] = StructureType.TARGET
-            elif type_str.lower() == "oar":
-                structure_type_mapping[struct_name] = StructureType.OAR
-            elif type_str.lower() == "avoidance":
-                structure_type_mapping[struct_name] = StructureType.AVOIDANCE
 
-    return create_structure_set_from_masks(
-        structure_masks=structure_masks,
-        dose_volume=dose_volume,
-        spacing=spacing,
-        origin=origin,
-        structure_types=structure_type_mapping,
-        name=name,
-    )
+def load_structure(
+    file_path: Union[str, Path],
+    name: Optional[str] = None,
+    structure_type: "StructureType" = None,
+    format: Optional[str] = None,
+    **kwargs
+) -> "Structure":
+    """
+    Load a single structure from a file.
+
+    Args:
+        file_path: Path to NIfTI file containing structure mask
+        name: Name for the structure. If None, uses filename.
+        structure_type: Type of structure (OAR, TARGET, etc.)
+        format: Force specific format ('nifti'). If None, auto-detects.
+        **kwargs: Additional arguments (e.g., threshold for binarization)
+
+    Returns:
+        Structure object
+
+    Raises:
+        FileNotFoundError: If file doesn't exist
+        ValueError: If format is not supported (currently only NIfTI single files)
+
+    Note:
+        For DICOM RTSTRUCT files, use load_structure_set() instead as they
+        typically contain multiple structures.
+    """
+    from ..structures import StructureType  # Import here to avoid circular dependency
+    
+    if structure_type is None:
+        structure_type = StructureType.OAR
+    
+    file_path = Path(file_path)
+    
+    if not file_path.exists():
+        raise FileNotFoundError(f"File not found: {file_path}")
+    
+    # Auto-detect format if not specified
+    if format is None:
+        if file_path.suffix in ['.nii', '.gz']:
+            format = 'nifti'
+        else:
+            raise ValueError(
+                f"Cannot determine format for: {file_path}. "
+                f"For DICOM RTSTRUCT files, use load_structure_set() instead."
+            )
+    
+    # Currently only NIfTI single-file structures supported
+    if format == 'nifti':
+        return nifti_io.read_nifti_structure(
+            file_path,
+            name=name,
+            structure_type=structure_type,
+            **kwargs
+        )
+    else:
+        raise ValueError(
+            f"Format '{format}' not supported for single structure loading. "
+            f"Use load_structure_set() for DICOM RTSTRUCT files."
+        )

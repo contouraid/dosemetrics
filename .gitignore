@@ -1,4 +1,5 @@
 local/*
+notebooks/*
 
 # Environment files
 uv.lock

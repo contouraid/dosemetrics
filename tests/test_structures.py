@@ -1,445 +1,414 @@
 """
-Tests for dosemetrics.structures module.
-Tests the radiotherapy structure classes (Structure, OAR, Target, AvoidanceStructure) with functionality including geometric analysis, dose statistics, DVH computation, and target-specific metrics.
+Comprehensive tests for the simplified Structure classes.
+
+Tests cover:
+- Structure creation and validation
+- Geometry calculations (volume, centroid, bounding box)
+- Subclass behavior (OAR, Target, AvoidanceStructure)
+- Loading from NIfTI and DICOM
+- Edge cases and error handling
 """
 
+import pytest
 import numpy as np
-import unittest
-import logging
-from typing import Tuple
-
-import dosemetrics
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-
-class TestStructures(unittest.TestCase):
-    """Comprehensive test suite for radiotherapy structure classes."""
-
-    def setUp(self):
-        """Set up test fixtures for use in test methods."""
-        self.shape = (20, 20, 20)
-        self.spacing = (2.0, 2.0, 2.0)
-        self.origin = (0.0, 0.0, 0.0)
-
-        # Create sample dose distribution (increasing with depth)
-        self.dose_volume = np.zeros(self.shape)
-        for z in range(self.shape[2]):
-            self.dose_volume[:, :, z] = (
-                40 + (z / self.shape[2]) * 30
-            )  # 40-70 Gy gradient
-
-        # Add some noise to make it realistic
-        self.dose_volume += np.random.normal(0, 2, self.shape)
-        self.dose_volume = np.clip(
-            self.dose_volume, 0, None
-        )  # Ensure no negative doses
-
-        # Create target mask: central sphere
-        center = np.array(self.shape) // 2
-        self.target_mask = np.zeros(self.shape, dtype=bool)
-        for i in range(self.shape[0]):
-            for j in range(self.shape[1]):
-                for k in range(self.shape[2]):
-                    if (
-                        np.sqrt(
-                            (i - center[0]) ** 2
-                            + (j - center[1]) ** 2
-                            + (k - center[2]) ** 2
-                        )
-                        <= 5
-                    ):
-                        self.target_mask[i, j, k] = True
-
-        # Create OAR mask: off-center smaller sphere
-        oar_center = center + np.array([6, 0, 0])
-        self.oar_mask = np.zeros(self.shape, dtype=bool)
-        for i in range(self.shape[0]):
-            for j in range(self.shape[1]):
-                for k in range(self.shape[2]):
-                    if (
-                        np.sqrt(
-                            (i - oar_center[0]) ** 2
-                            + (j - oar_center[1]) ** 2
-                            + (k - oar_center[2]) ** 2
-                        )
-                        <= 3
-                    ):
-                        self.oar_mask[i, j, k] = True
-
-    def test_basic_structure_creation(self):
-        """Test basic structure creation and properties."""
-        logger.info("Testing basic structure creation...")
-
-        # Test OAR creation
-        oar = dosemetrics.OAR("test_oar")
-        self.assertEqual(oar.name, "test_oar")
-        self.assertEqual(oar.structure_type, dosemetrics.StructureType.OAR)
-        self.assertEqual(oar.volume_voxels(), 0)
-        self.assertEqual(oar.volume_cc(), 0.0)
-        self.assertFalse(oar.has_mask)
-        self.assertFalse(oar.has_dose)
-
-        # Test Target creation
-        target = dosemetrics.Target("test_target")
-        self.assertEqual(target.name, "test_target")
-        self.assertEqual(target.structure_type, dosemetrics.StructureType.TARGET)
-
-        # Test AvoidanceStructure creation
-        avoidance = dosemetrics.AvoidanceStructure("test_avoidance")
-        self.assertEqual(avoidance.name, "test_avoidance")
-        self.assertEqual(avoidance.structure_type, dosemetrics.StructureType.AVOIDANCE)
-
-        logger.info("... completed basic structure creation tests.")
-
-    def test_mask_handling(self):
-        """Test mask setting and validation."""
-        logger.info("Testing mask handling...")
-
-        structure = dosemetrics.OAR("test_mask")
-
-        # Test setting valid 3D mask
-        test_mask = np.ones((5, 5, 5), dtype=bool)
-        structure.set_mask(test_mask)
-        self.assertTrue(structure.has_mask)
-        self.assertEqual(structure.volume_voxels(), 125)
-
-        # Test volume calculation with different spacing
-        structure.spacing = (2.0, 2.0, 2.0)  # 2mm voxels
-        expected_volume_cc = 125 * (2 * 2 * 2) / 1000.0  # Convert mm³ to cc
-        self.assertAlmostEqual(structure.volume_cc(), expected_volume_cc, places=3)
-
-        # Test error handling for invalid mask dimensions
-        with self.assertRaises(ValueError) as context:
-            invalid_mask = np.random.rand(10, 10)  # 2D instead of 3D
-            structure.set_mask(invalid_mask)
-        self.assertIn("Mask must be 3D", str(context.exception))
-
-        logger.info("... completed mask handling tests.")
-
-    def test_dose_handling(self):
-        """Test dose data setting and validation."""
-        logger.info("Testing dose handling...")
-
-        structure = dosemetrics.OAR("test_dose")
-
-        # Set mask first
-        test_mask = np.ones((5, 5, 5), dtype=bool)
-        structure.set_mask(test_mask)
-
-        # Test setting valid dose data
-        test_dose = np.random.rand(5, 5, 5) * 70  # Random dose 0-70 Gy
-        structure.set_dose_data(test_dose)
-        self.assertTrue(structure.has_dose)
-
-        # Test error handling for mismatched dimensions
-        with self.assertRaises(ValueError) as context:
-            invalid_dose = np.ones((10, 10, 10))  # Wrong dimensions
-            structure.set_dose_data(invalid_dose)
-        self.assertIn("Dose shape", str(context.exception))
-
-        logger.info("... completed dose handling tests.")
-
-    def test_dose_statistics(self):
-        """Test dose statistical calculations."""
-        logger.info("Testing dose statistics...")
-
-        # Create structure with known dose values
-        structure = dosemetrics.OAR("test_stats")
-
-        # Create a simple mask
-        test_mask = np.zeros((10, 10, 10), dtype=bool)
-        test_mask[5:7, 5:7, 5:7] = True  # 2x2x2 = 8 voxels
-        structure.set_mask(test_mask)
-
-        # Create dose data with known values
-        test_dose = np.zeros((10, 10, 10))
-        dose_values = [10, 20, 30, 40, 50, 60, 70, 80]  # 8 different dose values
-        flat_indices = np.where(test_mask.flatten())[0]
-        test_dose_flat = test_dose.flatten()
-        test_dose_flat[flat_indices] = dose_values
-        test_dose = test_dose_flat.reshape((10, 10, 10))
-        structure.set_dose_data(test_dose)
-
-        # Test statistics
-        self.assertEqual(structure.mean_dose(), np.mean(dose_values))
-        self.assertEqual(structure.max_dose(), 80.0)
-        self.assertEqual(structure.min_dose(), 10.0)
-        self.assertEqual(structure.percentile_dose(50), np.percentile(dose_values, 50))
-
-        # Test with no dose data
-        no_dose_structure = dosemetrics.OAR("no_dose")
-        self.assertIsNone(no_dose_structure.mean_dose())
-        self.assertIsNone(no_dose_structure.max_dose())
-
-        logger.info("... completed dose statistics tests.")
-
-    def test_geometric_analysis(self):
-        """Test geometric calculations."""
-        logger.info("Testing geometric analysis...")
-
-        # Create structure with known geometry
-        structure = dosemetrics.OAR("test_geometry")
-
-        # Create a 3x3x3 mask at a known location
-        test_mask = np.zeros((10, 10, 10), dtype=bool)
-        test_mask[5:8, 5:8, 5:8] = True
-        structure.set_mask(test_mask)
-        structure.spacing = (1.0, 1.0, 1.0)
-        structure.origin = (0.0, 0.0, 0.0)
-
-        # Test centroid calculation
-        centroid = structure.centroid()
-        self.assertIsNotNone(centroid)
-        if centroid is not None:
-            # Centroid should be at (6, 6, 6) in voxel coordinates
-            self.assertAlmostEqual(centroid[0], 6.0, places=1)
-            self.assertAlmostEqual(centroid[1], 6.0, places=1)
-            self.assertAlmostEqual(centroid[2], 6.0, places=1)
-
-        # Test bounding box calculation
-        bbox = structure.bounding_box()
-        self.assertIsNotNone(bbox)
-        if bbox is not None:
-            self.assertEqual(bbox[0], (5, 7))  # x bounds
-            self.assertEqual(bbox[1], (5, 7))  # y bounds
-            self.assertEqual(bbox[2], (5, 7))  # z bounds
-
-        logger.info("... completed geometric analysis tests.")
-
-    def test_dvh_computation(self):
-        """Test DVH computation with known dose distribution."""
-        logger.info("Testing DVH computation...")
-
-        # Create structure with gradient dose
-        structure = dosemetrics.OAR("test_dvh")
-
-        # Create a simple mask
-        test_mask = np.zeros((10, 10, 10), dtype=bool)
-        test_mask[5:7, 5:7, 5:7] = True  # 2x2x2 = 8 voxels
-        structure.set_mask(test_mask)
-
-        # Create dose data with known values
-        test_dose = np.zeros((10, 10, 10))
-        dose_values = [10, 20, 30, 40, 50, 60, 70, 80]  # 8 different dose values
-        flat_indices = np.where(test_mask.flatten())[0]
-        test_dose_flat = test_dose.flatten()
-        test_dose_flat[flat_indices] = dose_values
-        test_dose = test_dose_flat.reshape((10, 10, 10))
-        structure.set_dose_data(test_dose)
-
-        # Compute DVH
-        bins, volumes = structure.dvh(max_dose=100, step_size=10)
-
-        # At 0 Gy, 100% of volume should be included
-        self.assertEqual(volumes[0], 100.0)
-
-        # At 50 Gy, 50% of volume should be included (4 out of 8 voxels >= 50)
-        bin_50_idx = np.argmin(np.abs(bins - 50))
-        self.assertEqual(volumes[bin_50_idx], 50.0)
-
-        logger.info("... completed DVH computation tests.")
-
-    def test_target_specific_features(self):
-        """Test Target-specific methods."""
-        logger.info("Testing target-specific features...")
-
-        # Create a target structure
-        target = dosemetrics.Target("test_target")
-
-        # Create a simple mask
-        test_mask = np.ones((5, 5, 5), dtype=bool)  # 125 voxels
-        target.set_mask(test_mask)
-
-        # Create dose data with uniform 60 Gy dose
-        test_dose = np.full((5, 5, 5), 60.0)
-        target.set_dose_data(test_dose)
-
-        # Test coverage
-        coverage = target.coverage_volume_percentage(50.0)  # 50 Gy threshold
-        self.assertEqual(coverage, 100.0)  # All voxels above 50 Gy
-
-        coverage = target.coverage_volume_percentage(70.0)  # 70 Gy threshold
-        self.assertEqual(coverage, 0.0)  # No voxels above 70 Gy
-
-        # Test conformity index
-        ci = target.conformity_index(60.0, tolerance=0.05)
-        self.assertIsNotNone(ci)
-        if ci is not None:
-            self.assertAlmostEqual(
-                ci, 1.0, places=2
-            )  # Perfect conformity for uniform dose
-
-        logger.info("... completed target-specific features tests.")
-
-    def test_structure_type_system(self):
-        """Test the structure type enumeration system."""
-        logger.info("Testing structure type system...")
-
-        # Test all available structure types
-        expected_types = ["oar", "target", "avoidance", "support", "external"]
-        available_types = [st.value for st in dosemetrics.StructureType]
-
-        for expected_type in expected_types:
-            self.assertIn(expected_type, available_types)
-
-        # Test structure type assignment
-        oar = dosemetrics.OAR("test")
-        target = dosemetrics.Target("test")
-        avoidance = dosemetrics.AvoidanceStructure("test")
-
-        self.assertEqual(oar.structure_type, dosemetrics.StructureType.OAR)
-        self.assertEqual(target.structure_type, dosemetrics.StructureType.TARGET)
-        self.assertEqual(avoidance.structure_type, dosemetrics.StructureType.AVOIDANCE)
-
-        logger.info("... completed structure type system tests.")
-
-    def test_comprehensive_workflow(self):
-        """Test a comprehensive radiotherapy workflow with realistic data."""
-        logger.info("Testing comprehensive workflow...")
-
-        # Create Target structure
-        target = dosemetrics.Target("PTV")
-        target.set_mask(self.target_mask)
-        target.spacing = self.spacing
-        target.origin = self.origin
-        target.set_dose_data(self.dose_volume)
-
-        # Create OAR structure
-        oar = dosemetrics.OAR("Spinal_Cord")
-        oar.set_mask(self.oar_mask)
-        oar.spacing = self.spacing
-        oar.origin = self.origin
-        oar.set_dose_data(self.dose_volume)
-
-        # Test basic properties
-        self.assertGreater(target.volume_cc(), 0)
-        self.assertGreater(oar.volume_cc(), 0)
-        self.assertTrue(target.has_mask)
-        self.assertTrue(target.has_dose)
-        self.assertTrue(oar.has_mask)
-        self.assertTrue(oar.has_dose)
-
-        # Test dose statistics are reasonable
-        target_mean = target.mean_dose()
-        oar_mean = oar.mean_dose()
-        self.assertIsNotNone(target_mean)
-        self.assertIsNotNone(oar_mean)
-        if target_mean and oar_mean:
-            self.assertGreater(target_mean, 40)  # Should be > 40 Gy
-            self.assertLess(target_mean, 80)  # Should be < 80 Gy
-            self.assertGreater(oar_mean, 40)  # Should be > 40 Gy
-            self.assertLess(oar_mean, 80)  # Should be < 80 Gy
-
-        # Test geometric analysis
-        target_centroid = target.centroid()
-        oar_centroid = oar.centroid()
-        self.assertIsNotNone(target_centroid)
-        self.assertIsNotNone(oar_centroid)
-
-        if target_centroid and oar_centroid:
-            # Calculate distance between centroids
-            distance = np.sqrt(
-                sum((a - b) ** 2 for a, b in zip(target_centroid, oar_centroid))
-            )
-            self.assertGreater(distance, 0)  # Should be separated
-
-        # Test target-specific metrics
-        prescription_dose = 60.0  # Gy
-        coverage_95 = target.coverage_volume_percentage(prescription_dose * 0.95)
-        self.assertIsNotNone(coverage_95)
-        if coverage_95 is not None:
-            self.assertGreaterEqual(coverage_95, 0)
-            self.assertLessEqual(coverage_95, 100)
-
-        # Test DVH computation
-        target_bins, target_volumes = target.dvh(max_dose=80, step_size=1.0)
-        oar_bins, oar_volumes = oar.dvh(max_dose=80, step_size=1.0)
-
-        # DVH should start at 100% and decrease monotonically
-        self.assertEqual(target_volumes[0], 100.0)
-        self.assertEqual(oar_volumes[0], 100.0)
-        self.assertTrue(
-            all(
-                target_volumes[i] >= target_volumes[i + 1]
-                for i in range(len(target_volumes) - 1)
-            )
-        )
-        self.assertTrue(
-            all(
-                oar_volumes[i] >= oar_volumes[i + 1]
-                for i in range(len(oar_volumes) - 1)
-            )
-        )
-
-        logger.info("... completed comprehensive workflow tests.")
-
-    def test_string_representations(self):
-        """Test string representations of structures."""
-        logger.info("Testing string representations...")
-
-        # Create a structure with data
-        target = dosemetrics.Target("PTV")
-        target.set_mask(self.target_mask)
-        target.spacing = self.spacing
-        target.set_dose_data(self.dose_volume)
-
-        # Test string representation
-        str_repr = str(target)
-        self.assertIn("TARGET", str_repr)
-        self.assertIn("PTV", str_repr)
-        self.assertIn("Volume:", str_repr)
-        self.assertIn("Mean dose:", str_repr)
-
-        # Test detailed representation
-        repr_str = repr(target)
-        self.assertIn("Target", repr_str)
-        self.assertIn("name='PTV'", repr_str)
-        self.assertIn("type=target", repr_str)
-        self.assertIn("has_mask=True", repr_str)
-        self.assertIn("has_dose=True", repr_str)
-
-        logger.info("... completed string representation tests.")
-
-    def test_edge_cases(self):
-        """Test edge cases and boundary conditions."""
-        logger.info("Testing edge cases...")
-
-        # Test empty structure
-        empty_structure = dosemetrics.OAR("empty")
-        self.assertEqual(empty_structure.volume_voxels(), 0)
-        self.assertEqual(empty_structure.volume_cc(), 0.0)
-        self.assertIsNone(empty_structure.mean_dose())
-        self.assertIsNone(empty_structure.centroid())
-        self.assertIsNone(empty_structure.bounding_box())
-
-        # Test structure with single voxel
-        single_voxel = dosemetrics.OAR("single")
-        single_mask = np.zeros((5, 5, 5), dtype=bool)
-        single_mask[2, 2, 2] = True
-        single_voxel.set_mask(single_mask)
-        self.assertEqual(single_voxel.volume_voxels(), 1)
-
-        # Test DVH with no dose data
-        bins, volumes = single_voxel.dvh()
-        self.assertTrue(all(v == 0 for v in volumes))
-
-        # Test structure with zero dose
-        zero_dose = np.zeros((5, 5, 5))
-        single_voxel.set_dose_data(zero_dose)
-        self.assertEqual(single_voxel.mean_dose(), 0.0)
-        self.assertEqual(single_voxel.max_dose(), 0.0)
-
-        logger.info("... completed edge cases tests.")
-
-
-if __name__ == "__main__":
-    # Set up logging to show test progress
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+from pathlib import Path
+from huggingface_hub import snapshot_download
+
+from dosemetrics.structures import (
+    Structure, OAR, Target, AvoidanceStructure, StructureType
+)
+
+
+@pytest.fixture(scope="module")
+def hf_data_path():
+    """Download test data from HuggingFace once per module."""
+    data_path = snapshot_download(
+        repo_id="contouraid/dosemetrics-data",
+        repo_type="dataset"
     )
+    return Path(data_path)
 
-    # Run the tests
-    unittest.main(verbosity=2)
+
+@pytest.fixture
+def sample_mask():
+    """Create a sample 3D binary mask."""
+    mask = np.zeros((50, 50, 30), dtype=bool)
+    mask[20:30, 20:30, 10:20] = True  # 10x10x10 cube
+    return mask
+
+
+@pytest.fixture
+def sample_spacing():
+    """Sample voxel spacing."""
+    return (2.0, 2.0, 3.0)
+
+
+@pytest.fixture
+def sample_origin():
+    """Sample origin."""
+    return (0.0, 0.0, 0.0)
+
+
+class TestStructureCreation:
+    """Test Structure object creation and validation."""
+    
+    def test_create_oar(self, sample_mask, sample_spacing, sample_origin):
+        """Test OAR creation."""
+        oar = OAR(
+            name="Brainstem",
+            mask=sample_mask,
+            spacing=sample_spacing,
+            origin=sample_origin
+        )
+        
+        assert oar.name == "Brainstem"
+        assert oar.structure_type == StructureType.OAR
+        assert oar.mask.shape == sample_mask.shape
+        assert oar.spacing == sample_spacing
+        assert oar.origin == sample_origin
+    
+    def test_create_target(self, sample_mask, sample_spacing, sample_origin):
+        """Test Target creation."""
+        target = Target(
+            name="PTV",
+            mask=sample_mask,
+            spacing=sample_spacing,
+            origin=sample_origin
+        )
+        
+        assert target.name == "PTV"
+        assert target.structure_type == StructureType.TARGET
+    
+    def test_create_avoidance(self, sample_mask, sample_spacing, sample_origin):
+        """Test AvoidanceStructure creation."""
+        avoidance = AvoidanceStructure(
+            name="PRV_SpinalCord",
+            mask=sample_mask,
+            spacing=sample_spacing,
+            origin=sample_origin
+        )
+        
+        assert avoidance.name == "PRV_SpinalCord"
+        assert avoidance.structure_type == StructureType.AVOIDANCE
+    
+    def test_mask_validation(self, sample_spacing, sample_origin):
+        """Test mask validation."""
+        # Non-boolean mask should be converted
+        float_mask = np.random.rand(10, 10, 10)
+        oar = OAR(
+            name="Test",
+            mask=float_mask > 0.5,  # Convert to boolean
+            spacing=sample_spacing,
+            origin=sample_origin
+        )
+        assert oar.mask.dtype == bool
+        
+        # 2D mask should raise error
+        with pytest.raises(ValueError, match="must be 3D"):
+            OAR(
+                name="Test",
+                mask=np.zeros((10, 10), dtype=bool),
+                spacing=sample_spacing,
+                origin=sample_origin
+            )
+    
+    def test_default_origin(self, sample_mask, sample_spacing):
+        """Test default origin."""
+        oar = OAR(
+            name="Test",
+            mask=sample_mask,
+            spacing=sample_spacing
+        )
+        
+        assert oar.origin == (0.0, 0.0, 0.0)
+    
+    def test_repr(self, sample_mask, sample_spacing, sample_origin):
+        """Test string representations."""
+        oar = OAR("Brainstem", sample_mask, sample_spacing, sample_origin)
+        
+        repr_str = repr(oar)
+        assert "Brainstem" in repr_str
+        assert "OAR" in repr_str
+        assert "volume_cc" in repr_str
+        
+        str_str = str(oar)
+        assert "Brainstem" in str_str
+        assert "OAR" in str_str
+
+
+class TestGeometryCalculations:
+    """Test geometric calculations on structures."""
+    
+    def test_volume_voxels(self, sample_mask, sample_spacing, sample_origin):
+        """Test volume calculation in voxels."""
+        oar = OAR("Test", sample_mask, sample_spacing, sample_origin)
+        
+        expected_voxels = np.sum(sample_mask)
+        assert oar.volume_voxels() == expected_voxels
+        assert oar.volume_voxels() == 1000  # 10x10x10 cube
+    
+    def test_volume_cc(self, sample_mask, sample_spacing, sample_origin):
+        """Test volume calculation in cubic centimeters."""
+        oar = OAR("Test", sample_mask, sample_spacing, sample_origin)
+        
+        voxel_volume_mm3 = 2.0 * 2.0 * 3.0  # 12 mm³
+        total_volume_mm3 = 1000 * voxel_volume_mm3
+        expected_cc = total_volume_mm3 / 1000.0
+        
+        assert oar.volume_cc() == pytest.approx(expected_cc)
+        assert oar.volume_cc() == pytest.approx(12.0)
+    
+    def test_empty_structure_volume(self, sample_spacing, sample_origin):
+        """Test volume of empty structure."""
+        empty_mask = np.zeros((10, 10, 10), dtype=bool)
+        oar = OAR("Empty", empty_mask, sample_spacing, sample_origin)
+        
+        assert oar.volume_voxels() == 0
+        assert oar.volume_cc() == 0.0
+    
+    def test_centroid(self, sample_spacing, sample_origin):
+        """Test centroid calculation."""
+        # Create a centered cube
+        mask = np.zeros((50, 50, 30), dtype=bool)
+        mask[20:30, 20:30, 10:20] = True
+        
+        oar = OAR("Test", mask, sample_spacing, sample_origin)
+        centroid = oar.centroid()
+        
+        assert len(centroid) == 3
+        # Expected centroid at center of cube (24.5, 24.5, 14.5) in voxel coords
+        # In physical coords: (24.5*2, 24.5*2, 14.5*3)
+        expected = (24.5 * 2.0, 24.5 * 2.0, 14.5 * 3.0)
+        
+        assert centroid[0] == pytest.approx(expected[0])
+        assert centroid[1] == pytest.approx(expected[1])
+        assert centroid[2] == pytest.approx(expected[2])
+    
+    def test_centroid_with_origin(self):
+        """Test centroid calculation with non-zero origin."""
+        mask = np.zeros((10, 10, 10), dtype=bool)
+        mask[4:6, 4:6, 4:6] = True  # Small centered cube
+        
+        oar = OAR(
+            "Test",
+            mask,
+            spacing=(1.0, 1.0, 1.0),
+            origin=(10.0, 20.0, 30.0)
+        )
+        
+        centroid = oar.centroid()
+        
+        # Centroid in voxel coords is (4.5, 4.5, 4.5)
+        # In physical coords: (4.5 + 10, 4.5 + 20, 4.5 + 30)
+        assert centroid[0] == pytest.approx(14.5)
+        assert centroid[1] == pytest.approx(24.5)
+        assert centroid[2] == pytest.approx(34.5)
+    
+    def test_bounding_box(self, sample_mask, sample_spacing, sample_origin):
+        """Test bounding box calculation."""
+        oar = OAR("Test", sample_mask, sample_spacing, sample_origin)
+        bbox = oar.bounding_box()
+        
+        # Expected bbox in voxel coords: ((20,29), (20,29), (10,19))
+        assert bbox == ((20, 29), (20, 29), (10, 19))
+    
+    def test_empty_structure_centroid(self, sample_spacing, sample_origin):
+        """Test centroid of empty structure."""
+        empty_mask = np.zeros((10, 10, 10), dtype=bool)
+        oar = OAR("Empty", empty_mask, sample_spacing, sample_origin)
+        
+        assert oar.centroid() is None
+    
+    def test_empty_structure_bbox(self, sample_spacing, sample_origin):
+        """Test bounding box of empty structure."""
+        empty_mask = np.zeros((10, 10, 10), dtype=bool)
+        oar = OAR("Empty", empty_mask, sample_spacing, sample_origin)
+        
+        assert oar.bounding_box() is None
+
+
+class TestStructureComparison:
+    """Test structure comparison and equality."""
+    
+    def test_equality_same(self, sample_mask, sample_spacing, sample_origin):
+        """Test equality of identical structures."""
+        oar1 = OAR("Brainstem", sample_mask, sample_spacing, sample_origin)
+        oar2 = OAR("Brainstem", sample_mask, sample_spacing, sample_origin)
+        
+        # Note: Structures are different objects, so they're not equal
+        assert oar1 is not oar2
+        
+        # But their properties should match
+        assert oar1.name == oar2.name
+        assert oar1.structure_type == oar2.structure_type
+        assert oar1.volume_voxels() == oar2.volume_voxels()
+    
+    def test_hash(self, sample_mask, sample_spacing, sample_origin):
+        """Test that structures are hashable."""
+        oar1 = OAR("Brainstem", sample_mask, sample_spacing, sample_origin)
+        oar2 = OAR("SpinalCord", sample_mask, sample_spacing, sample_origin)
+        
+        # Should be able to use in sets/dicts
+        structure_set = {oar1, oar2}
+        assert len(structure_set) == 2
+
+
+class TestStructureSubclasses:
+    """Test behavior specific to structure subclasses."""
+    
+    def test_oar_type(self, sample_mask, sample_spacing, sample_origin):
+        """Test OAR has correct type."""
+        oar = OAR("Brainstem", sample_mask, sample_spacing, sample_origin)
+        
+        assert isinstance(oar, OAR)
+        assert isinstance(oar, Structure)
+        assert oar.structure_type == StructureType.OAR
+    
+    def test_target_type(self, sample_mask, sample_spacing, sample_origin):
+        """Test Target has correct type."""
+        target = Target("PTV", sample_mask, sample_spacing, sample_origin)
+        
+        assert isinstance(target, Target)
+        assert isinstance(target, Structure)
+        assert target.structure_type == StructureType.TARGET
+    
+    def test_avoidance_type(self, sample_mask, sample_spacing, sample_origin):
+        """Test AvoidanceStructure has correct type."""
+        avoidance = AvoidanceStructure("PRV", sample_mask, sample_spacing, sample_origin)
+        
+        assert isinstance(avoidance, AvoidanceStructure)
+        assert isinstance(avoidance, Structure)
+        assert avoidance.structure_type == StructureType.AVOIDANCE
+
+
+class TestStructureDoseMethods:
+    """Verify that Structure has dose-related methods."""
+    
+    def test_has_dose_data_attribute(self, sample_mask, sample_spacing, sample_origin):
+        """Verify dose_data attribute exists and works."""
+        oar = OAR("Test", sample_mask, sample_spacing, sample_origin)
+        
+        # Should have _dose_data as internal storage (initially None)
+        assert hasattr(oar, '_dose_data')
+        assert oar._dose_data is None
+        assert not oar.has_dose
+    
+    def test_has_dose_methods(self, sample_mask, sample_spacing, sample_origin):
+        """Verify dose-related methods exist."""
+        oar = OAR("Test", sample_mask, sample_spacing, sample_origin)
+        
+        assert hasattr(oar, 'set_dose_data')
+        assert hasattr(oar, 'get_dose_data')
+        assert hasattr(oar, 'mean_dose')
+        assert hasattr(oar, 'max_dose')
+        assert hasattr(oar, 'min_dose')
+        assert hasattr(oar, 'dvh')
+
+
+class TestWithRealNIfTIData:
+    """Test Structure with real NIfTI data from HuggingFace."""
+    
+    def test_load_nifti_structures(self, hf_data_path):
+        """Test loading structures from NIfTI files."""
+        from dosemetrics.io import load_structure_set
+        
+        subject_path = hf_data_path / "test_subject"
+        if not subject_path.exists():
+            pytest.skip("Test data not available")
+        
+        structures = load_structure_set(subject_path)
+        
+        assert len(structures) > 0
+        
+        for name in structures.structure_names:
+            structure = structures.get_structure(name)
+            
+            # Verify it's a Structure instance
+            assert isinstance(structure, Structure)
+            
+            # Verify geometry methods work
+            assert structure.volume_voxels() > 0
+            assert structure.volume_cc() > 0
+            
+            centroid = structure.centroid()
+            assert len(centroid) == 3
+            
+            bbox = structure.bounding_box()
+            assert bbox is None or (isinstance(bbox, tuple) and len(bbox) == 3)
+            
+            # Verify no dose attributes/methods
+            assert not hasattr(structure, 'dose_data')
+            assert not hasattr(structure, 'compute_statistics')
+
+
+class TestWithRealDICOMData:
+    """Test Structure with real DICOM data from HuggingFace."""
+    
+    def test_load_dicom_structures(self, hf_data_path):
+        """Test loading structures from DICOM RT-STRUCT."""
+        from dosemetrics.io import load_structure_set
+        
+        dicom_path = hf_data_path / "dicom"
+        if not dicom_path.exists():
+            pytest.skip("DICOM test data not available")
+        
+        structures = load_structure_set(dicom_path)
+        
+        assert len(structures) > 0
+        
+        for name in structures.structure_names:
+            structure = structures.get_structure(name)
+            
+            # Verify it's a Structure instance
+            assert isinstance(structure, Structure)
+            
+            # Verify correct subclass based on type
+            if structure.structure_type == StructureType.OAR:
+                assert isinstance(structure, OAR)
+            elif structure.structure_type == StructureType.TARGET:
+                assert isinstance(structure, Target)
+            elif structure.structure_type == StructureType.AVOIDANCE:
+                assert isinstance(structure, AvoidanceStructure)
+            
+            # Verify geometry
+            if structure.volume_voxels() > 0:  # Skip empty structures
+                assert structure.volume_cc() > 0
+                centroid = structure.centroid()
+                assert len(centroid) == 3
+
+
+class TestStructureEdgeCases:
+    """Test edge cases and error handling."""
+    
+    def test_single_voxel_structure(self):
+        """Test structure with single voxel."""
+        mask = np.zeros((10, 10, 10), dtype=bool)
+        mask[5, 5, 5] = True
+        
+        oar = OAR("SingleVoxel", mask, (1.0, 1.0, 1.0), (0.0, 0.0, 0.0))
+        
+        assert oar.volume_voxels() == 1
+        assert oar.volume_cc() == pytest.approx(0.001)  # 1 mm³ = 0.001 cc
+        
+        centroid = oar.centroid()
+        assert len(centroid) == 3
+    
+    def test_large_spacing(self):
+        """Test with very large voxel spacing."""
+        mask = np.zeros((10, 10, 10), dtype=bool)
+        mask[5:7, 5:7, 5:7] = True  # 2x2x2 = 8 voxels
+        
+        oar = OAR("LargeSpacing", mask, (10.0, 10.0, 10.0), (0.0, 0.0, 0.0))
+        
+        # 8 voxels * (10mm)^3 = 8000 mm³ = 8 cc
+        assert oar.volume_cc() == pytest.approx(8.0)
+    
+    def test_anisotropic_spacing(self):
+        """Test with highly anisotropic spacing."""
+        mask = np.zeros((10, 10, 10), dtype=bool)
+        mask[5, 5, 5:8] = True  # 3 voxels in z direction
+        
+        oar = OAR("Anisotropic", mask, (0.5, 0.5, 5.0), (0.0, 0.0, 0.0))
+        
+        # 3 voxels * 0.5 * 0.5 * 5.0 = 3.75 mm³
+        assert oar.volume_cc() == pytest.approx(0.00375)

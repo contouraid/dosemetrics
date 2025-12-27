@@ -3,8 +3,25 @@ import matplotlib as mpl
 import pandas as pd
 import numpy as np
 from typing import Optional
-from ..metrics.dvh import dvh_by_structure, compute_dvh
+# TODO: Update plot.py to use new Dose/Structure API
+# For now, use legacy array-based functions
+from ..metrics.dvh import _compute_dvh_arrays as compute_dvh
 from matplotlib.transforms import Bbox
+
+
+def dvh_by_structure(dose_volume: np.ndarray, structure_masks: dict) -> pd.DataFrame:
+    """
+    Legacy function for creating DVH DataFrame (deprecated).
+    
+    TODO: Update to use new compute_dvh API with Dose/Structure objects.
+    """
+    # Placeholder implementation
+    results = []
+    for struct_name, mask in structure_masks.items():
+        bins, volumes = compute_dvh(dose_volume, mask)
+        for b, v in zip(bins, volumes):
+            results.append({'Dose': b, 'Volume': v, 'Structure': struct_name})
+    return pd.DataFrame(results)
 
 
 def _get_cmap(n, name="gist_ncar"):
