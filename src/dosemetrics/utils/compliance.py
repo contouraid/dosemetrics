@@ -151,8 +151,8 @@ def check_compliance(df, constraint):
 
 
 def quality_index(
-    dose: 'Dose',
-    structure: 'Structure',
+    dose: Dose,
+    structure: Structure,
     constraint_type: str,
     constraint_level: float,
 ) -> float:

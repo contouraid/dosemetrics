@@ -100,7 +100,7 @@ class Dose:
         """Minimum dose in the distribution (Gy)."""
         return float(np.min(self.dose_array))
     
-    def is_compatible_with_structure(self, structure: 'Structure') -> bool:
+    def is_compatible_with_structure(self, structure: Structure) -> bool:
         """
         Check if this dose is spatially compatible with a structure.
         
@@ -119,7 +119,7 @@ class Dose:
             and np.allclose(self.origin, structure.origin, rtol=1e-5)
         )
     
-    def get_dose_in_structure(self, structure: 'Structure') -> np.ndarray:
+    def get_dose_in_structure(self, structure: Structure) -> np.ndarray:
         """
         Extract dose values within a structure mask.
         
@@ -146,7 +146,7 @@ class Dose:
         cls, 
         file_path: Union[str, Path], 
         name: Optional[str] = None
-    ) -> 'Dose':
+    ) -> Dose:
         """
         Load dose distribution from a NIfTI file.
         
@@ -176,7 +176,7 @@ class Dose:
         cls, 
         file_path: Union[str, Path], 
         name: Optional[str] = None
-    ) -> 'Dose':
+    ) -> Dose:
         """
         Load dose distribution from a DICOM RT-DOSE file.
         

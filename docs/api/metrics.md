@@ -9,16 +9,30 @@ This module contains core functions for dose analysis, DVH computation, quality 
       show_source: true
       heading_level: 3
 
-## Scores Module
+## Statistics Module
 
-::: dosemetrics.metrics.scores
+::: dosemetrics.metrics.statistics
     options:
       show_source: true
       heading_level: 3
 
-## Comparison Module
+## Conformity Module
 
-::: dosemetrics.metrics.comparison
+::: dosemetrics.metrics.conformity
+    options:
+      show_source: true
+      heading_level: 3
+
+## Homogeneity Module
+
+::: dosemetrics.metrics.homogeneity
+    options:
+      show_source: true
+      heading_level: 3
+
+## Geometric Module
+
+::: dosemetrics.metrics.geometric
     options:
       show_source: true
       heading_level: 3
@@ -28,81 +42,60 @@ This module contains core functions for dose analysis, DVH computation, quality 
 ### Computing a Basic DVH
 
 ```python
-from dosemetrics.io import load_dose, load_mask
+from dosemetrics import Dose, Structure
 from dosemetrics.metrics.dvh import compute_dvh
 
-dose = load_dose("dose.nii.gz")
-mask = load_mask("ptv.nii.gz")
+dose = Dose.from_nifti("dose.nii.gz")
+structure = Structure.from_nifti("ptv.nii.gz", name="PTV")
 
 dvh = compute_dvh(
     dose=dose,
-    mask=mask,
-    organ_name="PTV",
-    bins=1000,
-    dose_unit="Gy"
+    structure=structure,
+    bins=1000
 )
 ```
 
 ### Calculating Quality Metrics
 
 ```python
-from dosemetrics.metrics.scores import (
-    compute_conformity_index,
-    compute_homogeneity_index,
-    compute_gradient_index
-)
+from dosemetrics import Dose, Structure
+from dosemetrics.metrics.conformity import compute_conformity_index
+from dosemetrics.metrics.homogeneity import compute_homogeneity_index
+from dosemetrics.metrics.statistics import compute_dose_statistics
 
 # Conformity Index
 ci = compute_conformity_index(
     dose=dose,
-    target_mask=ptv_mask,
+    target=ptv,
     prescription_dose=60.0
 )
 
 # Homogeneity Index
 hi = compute_homogeneity_index(
     dose=dose,
-    target_mask=ptv_mask
+    target=ptv
 )
 
-# Gradient Index
-gi = compute_gradient_index(
+# Dose Statistics
+stats = compute_dose_statistics(
     dose=dose,
-    target_mask=ptv_mask,
-    prescription_dose=60.0
+    structure=ptv
 )
 ```
 
-### Comparing Plans
+### Comparing Dose Distributions
 
 ```python
-from dosemetrics.metrics.comparison import (
-    compute_dose_difference,
-    compute_gamma_index,
-    compute_dvh_difference
-)
+from dosemetrics import Dose, StructureSet
+from dosemetrics.utils.comparison import compare_dose_distributions
 
-# Absolute dose difference
-diff = compute_dose_difference(
+# Compare dose distributions across multiple structures
+comparison_df = compare_dose_distributions(
     dose1=dose_tps,
     dose2=dose_predicted,
-    method="absolute"
-)
-
-# Gamma analysis
-gamma = compute_gamma_index(
-    reference_dose=dose_tps,
-    evaluated_dose=dose_predicted,
-    dose_threshold=3.0,  # 3% dose difference
-    distance_threshold=3.0,  # 3mm distance
-    dose_cutoff=0.1  # Ignore below 10% of max dose
-)
-
-# DVH comparison
-dvh_diff = compute_dvh_difference(
-    dvh1=dvh_tps,
-    dvh2=dvh_predicted,
-    dose_points=[50, 95, 100]  # Compare at specific dose levels
+    structure_set=structures,
+    structure_names=["PTV", "Heart", "Lung_L"],
+    output_file="comparison.pdf"
 )
 ```
 

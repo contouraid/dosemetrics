@@ -69,7 +69,7 @@ from dosemetrics.io import read_from_nifti, StructureSet
 **Creating Plots:**
 
 ```python
-from dosemetrics.utils.plotting import plot_dvh, plot_multiple_dvhs
+from dosemetrics.utils.plot import plot_dvh, compare_dvh
 ```
 
 [See utils documentation →](utils.md)
@@ -77,7 +77,7 @@ from dosemetrics.utils.plotting import plot_dvh, plot_multiple_dvhs
 **Checking Compliance:**
 
 ```python
-from dosemetrics.utils.compliance import check_constraint
+from dosemetrics.utils.compliance import check_compliance, quality_index
 ```
 
 [See utils documentation →](utils.md)
@@ -88,16 +88,21 @@ from dosemetrics.utils.compliance import check_constraint
 dosemetrics/
 ├── metrics/          # Core calculation functions
 │   ├── dvh.py       # DVH computation
-│   ├── scores.py    # Quality metrics
-│   └── comparison.py # Plan comparison
-├── io/              # Data structures and I/O
-│   ├── structures.py # Structure classes
-│   ├── structure_set.py # StructureSet class
-│   └── data_io.py   # File I/O functions
+│   ├── statistics.py # Dose statistics
+│   ├── conformity.py # Conformity indices
+│   ├── homogeneity.py # Homogeneity indices
+│   └── geometric.py # Geometric metrics
+├── io/              # Data I/O
+│   ├── dicom_io.py  # DICOM reading
+│   └── nifti_io.py  # NIfTI I/O
+├── dose.py          # Dose class
+├── structures.py    # Structure classes
+├── structure_set.py # StructureSet class
 └── utils/           # Utilities
-    ├── plotting.py  # Visualization
+    ├── plot.py      # Visualization
     ├── compliance.py # Constraint checking
-    └── dose_utils.py # Data processing
+    ├── comparison.py # Dose comparison
+    └── batch.py     # Batch processing
 ```
 
 ## Usage Examples
@@ -105,32 +110,35 @@ dosemetrics/
 ### Basic Analysis Workflow
 
 ```python
-from dosemetrics import read_dose_and_mask_files, compute_dvh
-from dosemetrics.utils.plotting import plot_dvh
+from dosemetrics import Dose, Structure
+from dosemetrics.metrics.dvh import compute_dvh
+from dosemetrics.utils.plot import plot_dvh
 
 # Load data
-dose, structures = read_dose_and_mask_files("path/to/data")
-mask = structures.get_structure_mask("PTV")
+dose = Dose.from_nifti("dose.nii.gz")
+ptv = Structure.from_nifti("ptv.nii.gz", name="PTV")
 
 # Compute DVH
-dvh = compute_dvh(dose, mask, organ_name="PTV")
+dvh = compute_dvh(dose, ptv)
 
 # Visualize
-plot_dvh(dvh, title="PTV Coverage")
+fig = plot_dvh(dvh, title="PTV Coverage")
+fig.show()
 ```
 
 ### Working with Structure Sets
 
 ```python
-from dosemetrics import StructureSet, compute_dvh, dvh_by_structure
-from dosemetrics.io import read_from_nifti
+from dosemetrics import Dose, StructureSet
+from dosemetrics.io import load_structure_set
+from dosemetrics.metrics.dvh import compute_dvh, create_dvh_table
 
 # Load data
-dose = read_from_nifti("dose.nii.gz")
-structures = StructureSet.from_folder("structures/")
+dose = Dose.from_nifti("dose.nii.gz")
+structures = load_structure_set("structures/")
 
 # Compute DVH for all structures
-dvh_results = dvh_by_structure(dose, structures)
+dvh_table = create_dvh_table(dose, structures)
 ```
 
 ## Type Hints and Return Values
@@ -139,20 +147,16 @@ All functions include comprehensive type hints for better IDE support and type c
 
 ```python
 def compute_dvh(
-    dose: np.ndarray,
-    mask: np.ndarray,
-    organ_name: str = "Structure",
-    bins: int = 1000,
-    dose_unit: str = "Gy"
+    dose: Dose,
+    structure: Structure,
+    bins: int = 1000
 ) -> pd.DataFrame:
     """Compute dose-volume histogram.
     
     Args:
-        dose: 3D dose distribution array
-        mask: Binary mask for structure
-        organ_name: Name of the structure
+        dose: Dose distribution object
+        structure: Structure object with mask
         bins: Number of bins for histogram
-        dose_unit: Unit of dose values
         
     Returns:
         DataFrame with 'dose' and 'volume' columns

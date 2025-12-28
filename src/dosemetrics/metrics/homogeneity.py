@@ -12,8 +12,8 @@ import numpy as np
 
 
 def compute_homogeneity_index(
-    dose: 'Dose',
-    target: 'Structure',
+    dose: Dose,
+    target: Structure,
     d2_percentile: float = 2.0,
     d98_percentile: float = 98.0
 ) -> float:
@@ -68,8 +68,8 @@ def compute_homogeneity_index(
 
 
 def compute_gradient_index(
-    dose: 'Dose',
-    target: 'Structure',
+    dose: Dose,
+    target: Structure,
     prescription_dose: float,
     half_prescription_volume_method: bool = True
 ) -> float:
@@ -114,8 +114,8 @@ def compute_gradient_index(
 
 
 def compute_dose_homogeneity(
-    dose: 'Dose',
-    target: 'Structure'
+    dose: Dose,
+    target: Structure
 ) -> float:
     """
     Compute coefficient of variation (CV) of dose within target.
@@ -150,8 +150,8 @@ def compute_dose_homogeneity(
 
 
 def compute_uniformity_index(
-    dose: 'Dose',
-    target: 'Structure'
+    dose: Dose,
+    target: Structure
 ) -> float:
     """
     Compute uniformity index.

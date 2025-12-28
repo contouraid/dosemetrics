@@ -12,8 +12,8 @@ import numpy as np
 
 
 def compute_conformity_index(
-    dose: 'Dose', 
-    target: 'Structure', 
+    dose: Dose, 
+    target: Structure, 
     prescription_dose: float
 ) -> float:
     """
@@ -57,8 +57,8 @@ def compute_conformity_index(
 
 
 def compute_conformity_number(
-    dose: 'Dose',
-    target: 'Structure',
+    dose: Dose,
+    target: Structure,
     prescription_dose: float
 ) -> float:
     """
@@ -106,8 +106,8 @@ def compute_conformity_number(
 
 
 def compute_paddick_conformity_index(
-    dose: 'Dose',
-    target: 'Structure',
+    dose: Dose,
+    target: Structure,
     prescription_dose: float
 ) -> float:
     """
@@ -150,8 +150,8 @@ def compute_paddick_conformity_index(
 
 
 def compute_coverage(
-    dose: 'Dose',
-    target: 'Structure',
+    dose: Dose,
+    target: Structure,
     prescription_dose: float
 ) -> float:
     """
@@ -185,8 +185,8 @@ def compute_coverage(
 
 
 def compute_spillage(
-    dose: 'Dose',
-    target: 'Structure',
+    dose: Dose,
+    target: Structure,
     prescription_dose: float
 ) -> float:
     """

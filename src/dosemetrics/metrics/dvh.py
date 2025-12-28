@@ -13,8 +13,8 @@ import pandas as pd
 
 
 def compute_dvh(
-    dose: 'Dose',
-    structure: 'Structure',
+    dose: Dose,
+    structure: Structure,
     max_dose: Optional[float] = None,
     step_size: float = 0.1,
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -70,8 +70,8 @@ def compute_dvh(
 
 
 def compute_volume_at_dose(
-    dose: 'Dose',
-    structure: 'Structure',
+    dose: Dose,
+    structure: Structure,
     dose_threshold: float
 ) -> float:
     """
@@ -104,8 +104,8 @@ def compute_volume_at_dose(
 
 
 def compute_dose_at_volume(
-    dose: 'Dose',
-    structure: 'Structure',
+    dose: Dose,
+    structure: Structure,
     volume_percent: float
 ) -> float:
     """
@@ -148,8 +148,8 @@ def compute_dose_at_volume(
 
 
 def compute_dose_at_volume_cc(
-    dose: 'Dose',
-    structure: 'Structure',
+    dose: Dose,
+    structure: Structure,
     volume_cc: float
 ) -> float:
     """
@@ -192,8 +192,8 @@ def compute_dose_at_volume_cc(
 
 
 def compute_equivalent_uniform_dose(
-    dose: 'Dose',
-    structure: 'Structure',
+    dose: Dose,
+    structure: Structure,
     a_parameter: float
 ) -> float:
     """
@@ -240,8 +240,8 @@ def compute_equivalent_uniform_dose(
 
 
 def create_dvh_table(
-    dose: 'Dose',
-    structure_set: 'StructureSet',
+    dose: Dose,
+    structure_set: StructureSet,
     structure_names: Optional[list] = None,
     max_dose: Optional[float] = None,
     step_size: float = 0.1
@@ -288,8 +288,8 @@ def create_dvh_table(
 
 
 def extract_dvh_metrics(
-    dose: 'Dose',
-    structure: 'Structure',
+    dose: Dose,
+    structure: Structure,
     dose_thresholds: Optional[list] = None,
     volume_percentages: Optional[list] = None
 ) -> Dict[str, float]:

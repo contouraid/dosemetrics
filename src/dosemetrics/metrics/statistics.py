@@ -11,7 +11,7 @@ from typing import Dict
 import numpy as np
 
 
-def compute_dose_statistics(dose: 'Dose', structure: 'Structure') -> Dict[str, float]:
+def compute_dose_statistics(dose: Dose, structure: Structure) -> Dict[str, float]:
     """
     Compute comprehensive dose statistics for a structure.
     
@@ -67,7 +67,7 @@ def compute_dose_statistics(dose: 'Dose', structure: 'Structure') -> Dict[str, f
     }
 
 
-def compute_mean_dose(dose: 'Dose', structure: 'Structure') -> float:
+def compute_mean_dose(dose: Dose, structure: Structure) -> float:
     """
     Compute mean dose in structure.
     
@@ -82,7 +82,7 @@ def compute_mean_dose(dose: 'Dose', structure: 'Structure') -> float:
     return float(np.mean(dose_values)) if len(dose_values) > 0 else 0.0
 
 
-def compute_max_dose(dose: 'Dose', structure: 'Structure') -> float:
+def compute_max_dose(dose: Dose, structure: Structure) -> float:
     """
     Compute maximum dose in structure.
     
@@ -97,7 +97,7 @@ def compute_max_dose(dose: 'Dose', structure: 'Structure') -> float:
     return float(np.max(dose_values)) if len(dose_values) > 0 else 0.0
 
 
-def compute_min_dose(dose: 'Dose', structure: 'Structure') -> float:
+def compute_min_dose(dose: Dose, structure: Structure) -> float:
     """
     Compute minimum dose in structure.
     
@@ -112,7 +112,7 @@ def compute_min_dose(dose: 'Dose', structure: 'Structure') -> float:
     return float(np.min(dose_values)) if len(dose_values) > 0 else 0.0
 
 
-def compute_median_dose(dose: 'Dose', structure: 'Structure') -> float:
+def compute_median_dose(dose: Dose, structure: Structure) -> float:
     """
     Compute median dose in structure.
     
@@ -128,8 +128,8 @@ def compute_median_dose(dose: 'Dose', structure: 'Structure') -> float:
 
 
 def compute_dose_percentile(
-    dose: 'Dose', 
-    structure: 'Structure', 
+    dose: Dose, 
+    structure: Structure, 
     percentile: float
 ) -> float:
     """

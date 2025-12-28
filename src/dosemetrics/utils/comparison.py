@@ -16,9 +16,9 @@ import matplotlib.pyplot as plt
 
 
 def compare_dose_distributions(
-    dose1: 'Dose',
-    dose2: 'Dose',
-    structure_set: 'StructureSet',
+    dose1: Dose,
+    dose2: Dose,
+    structure_set: StructureSet,
     structure_names: Optional[List[str]] = None,
     output_file: Optional[str] = None,
 ) -> pd.DataFrame:
@@ -110,8 +110,8 @@ def compare_dose_distributions(
 
 
 def compare_quality_indices(
-    doses: List['Dose'],
-    structure_set: 'StructureSet',
+    doses: List[Dose],
+    structure_set: StructureSet,
     constraints: Optional[pd.DataFrame] = None,
     labels: Optional[List[str]] = None,
 ) -> pd.DataFrame:
@@ -240,8 +240,8 @@ def compare_treatment_plans(
 
 
 def dose_difference_analysis(
-    dose1: 'Dose',
-    dose2: 'Dose',
+    dose1: Dose,
+    dose2: Dose,
     output_folder: str,
     threshold_gy: float = 3.0,
 ) -> Dict[str, any]:

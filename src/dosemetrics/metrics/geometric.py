@@ -12,7 +12,7 @@ from typing import Dict, Optional
 import pandas as pd
 
 
-def compute_dice_coefficient(structure1: 'Structure', structure2: 'Structure') -> float:
+def compute_dice_coefficient(structure1: Structure, structure2: Structure) -> float:
     """
     Compute Dice coefficient (Sørensen-Dice index).
     
@@ -48,7 +48,7 @@ def compute_dice_coefficient(structure1: 'Structure', structure2: 'Structure') -
     return float(2.0 * np.sum(intersection) / sum_volumes)
 
 
-def compute_jaccard_index(structure1: 'Structure', structure2: 'Structure') -> float:
+def compute_jaccard_index(structure1: Structure, structure2: Structure) -> float:
     """
     Compute Jaccard index (Intersection over Union, IoU).
     
@@ -84,7 +84,7 @@ def compute_jaccard_index(structure1: 'Structure', structure2: 'Structure') -> f
     return float(np.sum(intersection) / union_sum)
 
 
-def compute_volume_difference(structure1: 'Structure', structure2: 'Structure') -> float:
+def compute_volume_difference(structure1: Structure, structure2: Structure) -> float:
     """
     Compute absolute volume difference.
     
@@ -102,7 +102,7 @@ def compute_volume_difference(structure1: 'Structure', structure2: 'Structure') 
     return abs(structure1.volume_cc() - structure2.volume_cc())
 
 
-def compute_volume_ratio(structure1: 'Structure', structure2: 'Structure') -> float:
+def compute_volume_ratio(structure1: Structure, structure2: Structure) -> float:
     """
     Compute volume ratio V1/V2.
     
@@ -124,7 +124,7 @@ def compute_volume_ratio(structure1: 'Structure', structure2: 'Structure') -> fl
     return structure1.volume_cc() / v2
 
 
-def compute_sensitivity(structure1: 'Structure', structure2: 'Structure') -> float:
+def compute_sensitivity(structure1: Structure, structure2: Structure) -> float:
     """
     Compute sensitivity (recall, true positive rate).
     
@@ -156,8 +156,8 @@ def compute_sensitivity(structure1: 'Structure', structure2: 'Structure') -> flo
 
 
 def compute_specificity(
-    structure1: 'Structure', 
-    structure2: 'Structure',
+    structure1: Structure, 
+    structure2: Structure,
     background_mask: Optional[np.ndarray] = None
 ) -> float:
     """
@@ -200,8 +200,8 @@ def compute_specificity(
 
 
 def compute_hausdorff_distance(
-    structure1: 'Structure',
-    structure2: 'Structure',
+    structure1: Structure,
+    structure2: Structure,
     percentile: Optional[float] = None
 ) -> float:
     """
@@ -232,8 +232,8 @@ def compute_hausdorff_distance(
 
 
 def compute_mean_surface_distance(
-    structure1: 'Structure',
-    structure2: 'Structure'
+    structure1: Structure,
+    structure2: Structure
 ) -> float:
     """
     Compute mean surface distance between two structures.
@@ -257,8 +257,8 @@ def compute_mean_surface_distance(
 
 
 def compare_structure_sets(
-    structure_set1: 'StructureSet',
-    structure_set2: 'StructureSet',
+    structure_set1: StructureSet,
+    structure_set2: StructureSet,
     structure_names: Optional[list] = None
 ) -> pd.DataFrame:
     """
