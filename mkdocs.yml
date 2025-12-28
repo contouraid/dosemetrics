@@ -123,10 +123,11 @@ nav:
     - Geometric Analysis: user-guide/geometric-analysis.md
   - Examples:
     - Basic Usage: notebooks/basic-usage.ipynb
-    - I/O Operations: notebooks/io-operations.ipynb
     - Computing Metrics: notebooks/computing-metrics.ipynb
     - Exporting Results: notebooks/exporting-results.ipynb
-    - Comparing Plans: examples/comparing-plans.md
+    - DICOM I/O: notebooks/dicom-io.ipynb
+    - NIfTI I/O: notebooks/nifti-io.ipynb
+    - Comparing Plans: notebooks/comparing-plans.ipynb
     - Batch Processing: examples/batch-processing.md
   - API Reference:
     - Overview: api/index.md

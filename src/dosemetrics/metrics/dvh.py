@@ -5,6 +5,8 @@ This module provides functions for computing DVHs and extracting DVH-based
 metrics such as volume at dose (VX) and dose at volume (DX).
 """
 
+from __future__ import annotations
+
 from typing import Tuple, Optional, Dict
 import numpy as np
 import pandas as pd

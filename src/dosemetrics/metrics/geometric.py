@@ -5,6 +5,8 @@ This module provides metrics to compare two structure sets, typically used
 for evaluating auto-segmentation algorithms or inter-observer variability.
 """
 
+from __future__ import annotations
+
 import numpy as np
 from typing import Dict, Optional
 import pandas as pd

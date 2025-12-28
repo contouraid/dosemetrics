@@ -5,6 +5,8 @@ This module provides convenient functions for comparing dose distributions,
 quality indices, and generating comparison visualizations.
 """
 
+from __future__ import annotations
+
 import os
 import numpy as np
 import pandas as pd

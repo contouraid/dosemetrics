@@ -2,26 +2,6 @@
 
 This module provides data structures and I/O functions for reading and writing dose distributions, structure masks, and other radiotherapy data.
 
-## Data Structures
-
-::: dosemetrics.io.structures
-    options:
-      show_source: true
-      heading_level: 3
-      members:
-        - Structure
-        - OAR
-        - Target
-        - AvoidanceStructure
-        - StructureType
-
-::: dosemetrics.io.structure_set
-    options:
-      show_source: true
-      heading_level: 3
-      members:
-        - StructureSet
-
 ## I/O Functions
 
 ::: dosemetrics.io.data_io

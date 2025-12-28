@@ -6,6 +6,8 @@ within target volumes. More homogeneous dose distributions are generally
 preferred for tumor control.
 """
 
+from __future__ import annotations
+
 import numpy as np
 
 

@@ -6,6 +6,8 @@ from RT-DOSE DICOM files or NIfTI files. The Dose class is a pure data
 container - dose metrics are computed using functions in the metrics subpackage.
 """
 
+from __future__ import annotations
+
 import numpy as np
 from pathlib import Path
 from typing import Dict, Optional, Tuple, Union

@@ -6,6 +6,8 @@ the prescription isodose conforms to the target volume. These metrics are
 critical for assessing treatment plan quality.
 """
 
+from __future__ import annotations
+
 import numpy as np
 
 

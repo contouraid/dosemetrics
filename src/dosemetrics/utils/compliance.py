@@ -5,6 +5,8 @@ This module provides functions to check compliance with dose constraints
 and compute quality indices for treatment plan evaluation.
 """
 
+from __future__ import annotations
+
 import pandas as pd
 import numpy as np
 

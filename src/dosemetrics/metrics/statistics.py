@@ -5,6 +5,8 @@ This module provides functions to compute dose statistics for structures,
 including mean, max, min, median, standard deviation, and dose percentiles.
 """
 
+from __future__ import annotations
+
 from typing import Dict
 import numpy as np
 
