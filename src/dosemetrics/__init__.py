@@ -3,7 +3,7 @@ Dosemetrics: A library for radiotherapy dose analysis.
 
 This library provides tools for:
 - Dose distribution analysis
-- Structure set management  
+- Structure set management
 - DVH computation and analysis
 - Quality metrics (conformity, homogeneity)
 - Geometric comparison
@@ -65,7 +65,7 @@ def create_structure_set_from_masks(
     name: str = "StructureSet",
 ):
     """Create a StructureSet from mask dictionaries.
-    
+
     Args:
         structure_masks: Dict mapping structure names to binary masks
         spacing: Voxel spacing in mm (x, y, z)
@@ -73,7 +73,7 @@ def create_structure_set_from_masks(
         structure_types: Optional dict mapping structure names to StructureType
         dose_volume: Optional dose array to attach
         name: Name for the structure set
-        
+
     Returns:
         StructureSet with the structures and optionally dose attached
     """
@@ -83,15 +83,20 @@ def create_structure_set_from_masks(
         if structure_types:
             stype = structure_types.get(struct_name)
             if isinstance(stype, str):
-                stype = StructureType(stype.lower()) if stype.lower() in StructureType._value2member_map_ else StructureType.OAR
+                stype = (
+                    StructureType(stype.lower())
+                    if stype.lower() in StructureType._value2member_map_
+                    else StructureType.OAR
+                )
         if stype is None:
             stype = StructureType.OAR
         ss.add_structure(struct_name, mask, stype)
     # Note: dose_volume parameter is ignored - use Dose objects for dose analysis
     return ss
 
+
 # Version information
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 # Public API
 __all__ = [
@@ -130,4 +135,3 @@ __all__ = [
     "plot_dvh_variations",
     "variability",
 ]
-
