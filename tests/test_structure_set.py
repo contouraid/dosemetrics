@@ -345,19 +345,17 @@ class TestGeometricSummary:
 
 
 class TestStructureSetDoseMethods:
-    """Verify that StructureSet has dose-related methods."""
+    """Verify that StructureSet doesn't have legacy dose-related methods."""
     
-    def test_has_dose_methods(self, empty_structure_set):
-        """Verify dose-related methods exist."""
-        assert hasattr(empty_structure_set, 'set_dose_data')
-        assert hasattr(empty_structure_set, 'has_dose')
-        assert hasattr(empty_structure_set, 'compute_bulk_dvh')
-        assert hasattr(empty_structure_set, 'dose_statistics_summary')
-        assert hasattr(empty_structure_set, 'compliance_check')
-        assert hasattr(empty_structure_set, '_dose_data')
-        
-        # Initially no dose attached
-        assert not empty_structure_set.has_dose
+    def test_no_legacy_dose_methods(self, empty_structure_set):
+        """Verify legacy dose-related methods don't exist."""
+        assert not hasattr(empty_structure_set, 'set_dose_data')
+        assert not hasattr(empty_structure_set, 'has_dose')
+        assert not hasattr(empty_structure_set, 'compute_bulk_dvh')
+        assert hasattr(empty_structure_set, 'geometric_summary')
+        assert not hasattr(empty_structure_set, 'dose_statistics_summary')
+        assert not hasattr(empty_structure_set, 'compliance_check')
+        assert not hasattr(empty_structure_set, '_dose_data')
 
 
 class TestWithRealNIfTIData:

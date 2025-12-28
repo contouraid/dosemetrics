@@ -96,14 +96,8 @@ def create_structure_set_from_masks(
         if stype is None:
             stype = StructureType.OAR
         ss.add_structure(struct_name, mask, stype)
-    if dose_volume is not None:
-        ss.set_dose_data(dose_volume)
+    # Note: dose_volume parameter is ignored - use Dose objects for dose analysis
     return ss
-
-
-def create_structure_set_from_existing_data(**kwargs):
-    """Alias for create_structure_set_from_masks for backward compatibility."""
-    return create_structure_set_from_masks(**kwargs)
 
 # Version information
 __version__ = "0.2.0"
@@ -122,7 +116,6 @@ __all__ = [
     "StructureSet",
     # Helper functions
     "create_structure_set_from_masks",
-    "create_structure_set_from_existing_data",
     # Metrics subpackage (access via metrics.dvh, metrics.statistics, etc.)
     "metrics",
     # I/O subpackage

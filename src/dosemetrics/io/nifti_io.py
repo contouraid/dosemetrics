@@ -503,12 +503,4 @@ def write_structure_set_as_nifti(
             output_file = output_folder / f"{struct_name}.nii.gz"
             write_structure_as_nifti(structure, output_file)
     
-    # Write dose if available and requested
-    if write_dose and structure_set.dose_data is not None:
-        dose_file = output_folder / dose_filename
-        write_nifti_volume(
-            volume=structure_set.dose_data,
-            output_file=dose_file,
-            spacing=structure_set.spacing,
-            origin=structure_set.origin,
-        )
+    # Note: Dose writing removed - use Dose objects separately

@@ -16,7 +16,6 @@ from dosemetrics import (
     StructureSet,
     StructureType,
     create_structure_set_from_masks,
-    create_structure_set_from_existing_data,
 )
 
 
@@ -66,13 +65,11 @@ class TestStructureSet(unittest.TestCase):
         self.assertEqual(structure_set.spacing, self.spacing)
         self.assertEqual(structure_set.origin, self.origin)
         self.assertEqual(len(structure_set), 0)
-        self.assertFalse(structure_set.has_dose)
 
     def test_create_structure_set_from_masks(self):
         """Test creating StructureSet from mask dictionaries."""
         structure_set = create_structure_set_from_masks(
             structure_masks=self.structure_masks,
-            dose_volume=self.dose_volume,
             spacing=self.spacing,
             origin=self.origin,
             structure_types=self.structure_types,
@@ -81,7 +78,6 @@ class TestStructureSet(unittest.TestCase):
 
         self.assertEqual(structure_set.name, "TestCase")
         self.assertEqual(len(structure_set), 2)
-        self.assertTrue(structure_set.has_dose)
         self.assertIn("PTV", structure_set)
         self.assertIn("OAR1", structure_set)
 
@@ -90,10 +86,6 @@ class TestStructureSet(unittest.TestCase):
         oar = structure_set["OAR1"]
         self.assertEqual(ptv.structure_type, StructureType.TARGET)
         self.assertEqual(oar.structure_type, StructureType.OAR)
-
-        # Check dose data propagation
-        self.assertTrue(ptv.has_dose)
-        self.assertTrue(oar.has_dose)
 
     def test_add_remove_structures(self):
         """Test adding and removing structures."""
@@ -121,28 +113,6 @@ class TestStructureSet(unittest.TestCase):
         with self.assertRaises(ValueError):
             structure_set.remove_structure("NonExistent")
 
-    def test_set_dose_data(self):
-        """Test setting dose data for all structures."""
-        structure_set = create_structure_set_from_masks(
-            structure_masks=self.structure_masks,
-            spacing=self.spacing,
-            origin=self.origin,
-            structure_types=self.structure_types,
-        )
-
-        # Initially no dose
-        self.assertFalse(structure_set.has_dose)
-        for structure in structure_set.structures.values():
-            self.assertFalse(structure.has_dose)
-
-        # Set dose data
-        structure_set.set_dose_data(self.dose_volume)
-
-        # Check dose propagation
-        self.assertTrue(structure_set.has_dose)
-        for structure in structure_set.structures.values():
-            self.assertTrue(structure.has_dose)
-
     def test_structure_filtering(self):
         """Test filtering structures by type."""
         structure_set = create_structure_set_from_masks(
@@ -160,59 +130,6 @@ class TestStructureSet(unittest.TestCase):
         # Test name lists
         self.assertEqual(structure_set.oar_names, ["OAR1"])
         self.assertEqual(structure_set.target_names, ["PTV"])
-
-    def test_dose_statistics_summary(self):
-        """Test dose statistics summary generation."""
-        structure_set = create_structure_set_from_masks(
-            structure_masks=self.structure_masks,
-            dose_volume=self.dose_volume,
-            structure_types=self.structure_types,
-        )
-
-        stats_df = structure_set.dose_statistics_summary()
-
-        self.assertEqual(len(stats_df), 2)
-        self.assertIn("Structure", stats_df.columns)
-        self.assertIn("Type", stats_df.columns)
-        self.assertIn("Volume_cc", stats_df.columns)
-        self.assertIn("Mean_Dose_Gy", stats_df.columns)
-        self.assertIn("Max_Dose_Gy", stats_df.columns)
-
-        # Check that all structures are included
-        structures = set(stats_df["Structure"])
-        self.assertEqual(structures, {"PTV", "OAR1"})
-
-    def test_bulk_dvh_computation(self):
-        """Test bulk DVH computation."""
-        structure_set = create_structure_set_from_masks(
-            structure_masks=self.structure_masks,
-            dose_volume=self.dose_volume,
-            structure_types=self.structure_types,
-        )
-
-        dvh_df = structure_set.compute_bulk_dvh(max_dose=70, step_size=1.0)
-
-        self.assertIn("Dose", dvh_df.columns)
-        self.assertIn("PTV", dvh_df.columns)
-        self.assertIn("OAR1", dvh_df.columns)
-        self.assertEqual(len(dvh_df), 71)  # 0 to 70 Gy with 1 Gy steps
-
-    def test_compliance_checking(self):
-        """Test dose constraint compliance checking."""
-        structure_set = create_structure_set_from_masks(
-            structure_masks=self.structure_masks,
-            dose_volume=self.dose_volume,
-            structure_types=self.structure_types,
-        )
-
-        constraints = {"PTV": {"mean_dose": 50}, "OAR1": {"max_dose": 30}}
-
-        compliance_df = structure_set.compliance_check(constraints)
-
-        self.assertEqual(len(compliance_df), 2)
-        self.assertIn("Structure", compliance_df.columns)
-        self.assertIn("Constraint_Type", compliance_df.columns)
-        self.assertIn("Compliant", compliance_df.columns)
 
     def test_geometric_summary(self):
         """Test geometric summary generation."""
@@ -254,9 +171,8 @@ class TestStructureSet(unittest.TestCase):
 
     def test_io_functions(self):
         """Test the new I/O functions."""
-        # Test create_structure_set_from_existing_data
-        structure_set = dm.create_structure_set_from_existing_data(
-            dose_volume=self.dose_volume,
+        # Test create_structure_set_from_masks
+        structure_set = dm.create_structure_set_from_masks(
             structure_masks=self.structure_masks,
             structure_types={"PTV": "Target", "OAR1": "OAR"},
             name="IOTest",
@@ -264,7 +180,6 @@ class TestStructureSet(unittest.TestCase):
 
         self.assertEqual(structure_set.name, "IOTest")
         self.assertEqual(len(structure_set), 2)
-        self.assertTrue(structure_set.has_dose)
 
 
 if __name__ == "__main__":

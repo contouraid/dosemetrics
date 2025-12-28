@@ -70,7 +70,6 @@ class StructureSet:
         self.spacing = tuple(spacing)
         self.origin = tuple(origin)
         self.name = name
-        self._dose_data: Optional[np.ndarray] = None
 
     def add_structure(
         self,
@@ -120,21 +119,6 @@ class StructureSet:
 
         self.structures[name] = structure
         return structure
-
-    @property
-    def has_dose(self) -> bool:
-        """Compatibility flag indicating dose data attached to set."""
-        return self._dose_data is not None
-
-    def set_dose_data(self, dose_array: np.ndarray) -> None:
-        """Attach dose to the structure set and propagate to members."""
-        self._dose_data = np.asarray(dose_array)
-        for struct in self.structures.values():
-            struct.set_dose_data(self._dose_data)
-
-    @property
-    def dose_data(self) -> Optional[np.ndarray]:
-        return self._dose_data
 
     def remove_structure(self, name: str) -> None:
         """
@@ -254,56 +238,6 @@ class StructureSet:
             Sum of all structure volumes in cubic centimeters
         """
         return sum(struct.volume_cc() for struct in self.structures.values())
-
-    # ------------------------------------------------------------------
-    # Legacy dose-related helpers (array-based)
-    # ------------------------------------------------------------------
-    def _ensure_dose(self) -> Dose:
-        if self._dose_data is None:
-            raise ValueError("No dose data attached to StructureSet")
-        return Dose(self._dose_data, self.spacing, self.origin)
-
-    def compute_bulk_dvh(self, max_dose: float = 70.0, step_size: float = 1.0):
-        dose = self._ensure_dose()
-        df = dvh_metrics.create_dvh_table(dose, self, max_dose=max_dose, step_size=step_size)
-        # Pivot to wide format to satisfy legacy expectations
-        pivot = df.pivot(index="Dose", columns="Structure", values="Volume").reset_index()
-        pivot = pivot.rename_axis(None, axis=1)
-        return pivot
-
-    def dose_statistics_summary(self) -> pd.DataFrame:
-        dose = self._ensure_dose()
-        rows = []
-        for name in self.structure_names:
-            struct = self.get_structure(name)
-            stats = statistics.compute_dose_statistics(dose, struct)
-            rows.append({
-                "Structure": name,
-                "Type": struct.structure_type.value.upper(),
-                "Volume_cc": struct.volume_cc(),
-                "Mean_Dose_Gy": stats.get("mean_dose"),
-                "Max_Dose_Gy": stats.get("max_dose"),
-                "Min_Dose_Gy": stats.get("min_dose"),
-            })
-        return pd.DataFrame(rows)
-
-    def compliance_check(self, constraints: dict) -> pd.DataFrame:
-        dose = self._ensure_dose()
-        records = []
-        for name, rules in constraints.items():
-            if name not in self.structures:
-                continue
-            struct = self.get_structure(name)
-            stats = statistics.compute_dose_statistics(dose, struct)
-            if "mean_dose" in rules:
-                val = stats.get("mean_dose")
-                compliant = val is not None and val <= rules["mean_dose"]
-                records.append({"Structure": name, "Constraint_Type": "mean_dose", "Compliant": compliant})
-            if "max_dose" in rules:
-                val = stats.get("max_dose")
-                compliant = val is not None and val <= rules["max_dose"]
-                records.append({"Structure": name, "Constraint_Type": "max_dose", "Compliant": compliant})
-        return pd.DataFrame(records)
 
     def geometric_summary(self) -> pd.DataFrame:
         """

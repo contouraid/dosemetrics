@@ -3,17 +3,13 @@ import matplotlib as mpl
 import pandas as pd
 import numpy as np
 from typing import Optional
-# TODO: Update plot.py to use new Dose/Structure API
-# For now, use legacy array-based functions
 from ..metrics.dvh import _compute_dvh_arrays as compute_dvh
 from matplotlib.transforms import Bbox
 
 
 def dvh_by_structure(dose_volume: np.ndarray, structure_masks: dict) -> pd.DataFrame:
     """
-    Legacy function for creating DVH DataFrame (deprecated).
-    
-    TODO: Update to use new compute_dvh API with Dose/Structure objects.
+    Create DVH DataFrame from dose volume and structure masks.
     """
     # Placeholder implementation
     results = []

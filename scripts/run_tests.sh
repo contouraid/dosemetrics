@@ -37,8 +37,3 @@ python3 -m pip install --no-input pytest pytest-cov nbformat nbconvert ipykernel
 
 echo "Running tests with pytest..."
 python3 -m pytest tests/ -v --tb=short
-
-# Also run unittest discovery for backward compatibility
-echo ""
-echo "Running additional unittest discovery..."
-python3 -m unittest discover -s tests -p "test_*.py"

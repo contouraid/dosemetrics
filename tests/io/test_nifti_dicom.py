@@ -157,7 +157,7 @@ class TestNIfTIIO:
     
     def test_write_structure_as_nifti(self):
         """Test writing structure to NIfTI file."""
-        from dosemetrics.io import OAR
+        from dosemetrics import OAR
         
         # Create a structure
         mask = np.random.randint(0, 2, (10, 20, 20)).astype(bool)
@@ -198,9 +198,6 @@ class TestNIfTIIO:
             StructureType.TARGET
         )
         
-        # Add dose
-        structure_set.set_dose_data(np.random.rand(10, 20, 20) * 50.0)
-        
         # Write to folder
         output_folder = self.temp_dir / "output"
         nifti_io.write_structure_set_as_nifti(structure_set, output_folder)
@@ -208,7 +205,7 @@ class TestNIfTIIO:
         # Verify files exist
         assert (output_folder / "Liver.nii.gz").exists()
         assert (output_folder / "PTV.nii.gz").exists()
-        assert (output_folder / "Dose.nii.gz").exists()
+        # Note: Dose file is not written anymore - use Dose objects separately
 
 
 class TestHighLevelAPI:
@@ -339,7 +336,7 @@ class TestErrorHandling:
     
     def test_invalid_mask_dimension(self):
         """Test that invalid mask dimensions are caught."""
-        from dosemetrics.io import OAR
+        from dosemetrics import OAR
         
         invalid_mask = np.random.rand(10, 20)  # 2D instead of 3D
         

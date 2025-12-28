@@ -18,9 +18,6 @@ from .data_io import (
 from . import dicom_io
 from . import nifti_io
 
-# Legacy class re-exports
-from ..structures import OAR, Target, AvoidanceStructure, StructureType
-
 __all__ = [
     # High-level I/O
     "load_from_folder",

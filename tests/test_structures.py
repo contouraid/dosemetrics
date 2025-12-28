@@ -288,21 +288,20 @@ class TestStructureDoseMethods:
         """Verify dose_data attribute exists and works."""
         oar = OAR("Test", sample_mask, sample_spacing, sample_origin)
         
-        # Should have _dose_data as internal storage (initially None)
-        assert hasattr(oar, '_dose_data')
-        assert oar._dose_data is None
-        assert not oar.has_dose
+        # Structure should not have dose-related attributes
+        assert not hasattr(oar, '_dose_data')
+        assert not hasattr(oar, 'has_dose')
     
-    def test_has_dose_methods(self, sample_mask, sample_spacing, sample_origin):
-        """Verify dose-related methods exist."""
+    def test_no_legacy_dose_methods(self, sample_mask, sample_spacing, sample_origin):
+        """Verify legacy dose-related methods don't exist."""
         oar = OAR("Test", sample_mask, sample_spacing, sample_origin)
         
-        assert hasattr(oar, 'set_dose_data')
-        assert hasattr(oar, 'get_dose_data')
-        assert hasattr(oar, 'mean_dose')
-        assert hasattr(oar, 'max_dose')
-        assert hasattr(oar, 'min_dose')
-        assert hasattr(oar, 'dvh')
+        assert not hasattr(oar, 'set_dose_data')
+        assert not hasattr(oar, 'get_dose_data')
+        assert not hasattr(oar, 'mean_dose')
+        assert not hasattr(oar, 'max_dose')
+        assert not hasattr(oar, 'min_dose')
+        assert not hasattr(oar, 'dvh')
 
 
 class TestWithRealNIfTIData:

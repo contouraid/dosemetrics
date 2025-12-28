@@ -72,7 +72,6 @@ class Structure(ABC):
         self.name = name
         self.spacing = tuple(spacing)
         self.origin = tuple(origin)
-        self._dose_data: Optional[np.ndarray] = None
 
         # Set and validate mask
         if mask is not None:
@@ -101,67 +100,6 @@ class Structure(ABC):
     def mask(self) -> Optional[np.ndarray]:
         """Get the binary mask array."""
         return self._mask
-
-    # ------------------------------------------------------------------
-    # Backward-compatibility dose helpers (array-based)
-    # ------------------------------------------------------------------
-    @property
-    def has_dose(self) -> bool:
-        """Compatibility flag indicating dose has been attached."""
-        return self._dose_data is not None
-
-    def set_dose_data(self, dose_array: np.ndarray) -> None:
-        """Attach dose data array to this structure (legacy convenience)."""
-        dose_arr = np.asarray(dose_array)
-        if self._mask is not None and dose_arr.shape != self._mask.shape:
-            raise ValueError("Dose shape must match structure mask shape")
-        self._dose_data = dose_arr
-
-    def get_dose_data(self) -> Optional[np.ndarray]:
-        """Return attached dose data if present."""
-        return self._dose_data
-
-    # Dose statistics (legacy API)
-    def _dose_values(self) -> np.ndarray:
-        if self._dose_data is None or self._mask is None:
-            return np.array([])
-        return self._dose_data[self._mask]
-
-    def mean_dose(self) -> Optional[float]:
-        vals = self._dose_values()
-        if vals.size == 0:
-            return None
-        return float(np.mean(vals))
-
-    def max_dose(self) -> Optional[float]:
-        vals = self._dose_values()
-        if vals.size == 0:
-            return None
-        return float(np.max(vals))
-
-    def min_dose(self) -> Optional[float]:
-        vals = self._dose_values()
-        if vals.size == 0:
-            return None
-        return float(np.min(vals))
-
-    def percentile_dose(self, percentile: float) -> Optional[float]:
-        vals = self._dose_values()
-        if vals.size == 0:
-            return None
-        return float(np.percentile(vals, percentile))
-
-    def dvh(self, max_dose: float = 70.0, step_size: float = 1.0):
-        """Legacy DVH computation on attached dose array."""
-        vals = self._dose_values()
-        if vals.size == 0:
-            bins = np.arange(0, max_dose + step_size, step_size)
-            return bins, np.zeros_like(bins)
-        bins = np.arange(0, max_dose + step_size, step_size)
-        volumes = np.array([
-            100.0 * np.sum(vals >= b) / len(vals) for b in bins
-        ])
-        return bins, volumes
 
     @property
     @abstractmethod
