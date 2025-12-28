@@ -23,6 +23,16 @@ import numpy as np
 from typing import Tuple, Optional, Dict, Any
 import warnings
 
+try:
+    from pymedphys import gamma as pymedphys_gamma
+    PYMEDPHYS_AVAILABLE = True
+except ImportError:
+    PYMEDPHYS_AVAILABLE = False
+    warnings.warn(
+        "pymedphys not available. Gamma analysis will be limited. "
+        "Install with: pip install pymedphys"
+    )
+
 from ..dose import Dose
 
 
@@ -89,25 +99,68 @@ def compute_gamma_index(
     ValueError
         If dose distributions have incompatible geometry.
     """
-    # TODO: Implement gamma index calculation
-    # Steps:
-    # 1. Validate spatial compatibility of doses
-    # 2. Determine normalization factor (global max or local dose)
-    # 3. Apply dose threshold
-    # 4. For each point in evaluated dose:
-    #    a. Search within max_search_distance for minimum gamma
-    #    b. Gamma = sqrt((dose_diff/dose_crit)^2 + (distance/dist_crit)^2)
-    # 5. Return gamma array
+    if not PYMEDPHYS_AVAILABLE:
+        raise ImportError(
+            "pymedphys is required for gamma analysis. "
+            "Install with: pip install pymedphys"
+        )
     
-    warnings.warn(
-        "compute_gamma_index is not yet implemented. "
-        "This is a placeholder for future development.",
-        FutureWarning
-    )
-    raise NotImplementedError(
-        "Gamma index calculation is not yet implemented. "
-        "Contributions welcome!"
-    )
+    # Validate spatial compatibility
+    if dose_reference.dose_array.shape != dose_evaluated.dose_array.shape:
+        raise ValueError(
+            f"Dose shapes must match: {dose_reference.dose_array.shape} vs "
+            f"{dose_evaluated.dose_array.shape}"
+        )
+    
+    # Get dose arrays
+    ref_dose = dose_reference.dose_array
+    eval_dose = dose_evaluated.dose_array
+    
+    # Get coordinate arrays from dose properties
+    origin = dose_reference.origin
+    spacing = dose_reference.spacing
+    shape = dose_reference.shape
+    
+    axes = [
+        origin[i] + np.arange(shape[i]) * spacing[i]
+        for i in range(3)
+    ]
+    
+    # Determine normalization
+    if global_normalization:
+        dose_ref_value = np.max(ref_dose)
+    else:
+        dose_ref_value = None  # pymedphys will use local normalization
+    
+    # Calculate dose threshold
+    dose_threshold = dose_threshold_percent / 100.0 * np.max(ref_dose)
+    
+    # Set max search distance
+    if max_search_distance_mm is None:
+        max_search_distance_mm = 3 * distance_criterion_mm
+    
+    try:
+        # Use pymedphys gamma function
+        gamma_result = pymedphys_gamma(
+            axes[2], axes[1], axes[0],  # z, y, x coordinates
+            eval_dose,
+            axes[2], axes[1], axes[0],
+            ref_dose,
+            dose_criterion_percent,
+            distance_criterion_mm,
+            lower_percent_dose_cutoff=dose_threshold_percent,
+            interp_fraction=10,  # interpolation factor
+            max_gamma=2.0,  # cap gamma at 2 for performance
+            local_gamma=not global_normalization,
+            global_normalisation=dose_ref_value if global_normalization else None,
+            quiet=True
+        )
+        
+        return gamma_result
+        
+    except Exception as e:
+        warnings.warn(f"Gamma calculation failed: {e}")
+        raise
 
 
 def compute_gamma_passing_rate(
@@ -128,13 +181,19 @@ def compute_gamma_passing_rate(
     -------
     passing_rate : float
         Percentage of points with gamma <= threshold (0-100).
-    
-    Raises
-    ------
-    NotImplementedError
-        This function is a stub for future implementation.
     """
-    raise NotImplementedError("Gamma passing rate calculation not yet implemented.")
+    # Remove NaN values (below threshold points)
+    valid_gamma = gamma[~np.isnan(gamma)]
+    
+    if len(valid_gamma) == 0:
+        return 0.0
+    
+    # Calculate passing rate
+    passing = np.sum(valid_gamma <= threshold)
+    total = len(valid_gamma)
+    passing_rate = (passing / total) * 100.0
+    
+    return float(passing_rate)
 
 
 def compute_gamma_statistics(
@@ -157,13 +216,28 @@ def compute_gamma_statistics(
             - 'max_gamma': Maximum gamma value
             - 'gamma_50': Median gamma value
             - 'gamma_95': 95th percentile gamma
-    
-    Raises
-    ------
-    NotImplementedError
-        This function is a stub for future implementation.
     """
-    raise NotImplementedError("Gamma statistics not yet implemented.")
+    # Remove NaN values
+    valid_gamma = gamma[~np.isnan(gamma)]
+    
+    if len(valid_gamma) == 0:
+        return {
+            'passing_rate_1_0': 0.0,
+            'mean_gamma': np.nan,
+            'max_gamma': np.nan,
+            'gamma_50': np.nan,
+            'gamma_95': np.nan
+        }
+    
+    stats = {
+        'passing_rate_1_0': compute_gamma_passing_rate(gamma, threshold=1.0),
+        'mean_gamma': float(np.mean(valid_gamma)),
+        'max_gamma': float(np.max(valid_gamma)),
+        'gamma_50': float(np.percentile(valid_gamma, 50)),
+        'gamma_95': float(np.percentile(valid_gamma, 95))
+    }
+    
+    return stats
 
 
 def compute_2d_gamma(
@@ -196,10 +270,33 @@ def compute_2d_gamma(
     
     Raises
     ------
-    NotImplementedError
-        This function is a stub for future implementation.
+    ImportError
+        If pymedphys is not available.
     """
-    raise NotImplementedError("2D gamma calculation not yet implemented.")
+    if not PYMEDPHYS_AVAILABLE:
+        raise ImportError(
+            "pymedphys is required for gamma analysis. "
+            "Install with: pip install pymedphys"
+        )
+    
+    # Create coordinate arrays
+    rows = np.arange(dose_reference_slice.shape[0]) * pixel_spacing[0]
+    cols = np.arange(dose_reference_slice.shape[1]) * pixel_spacing[1]
+    
+    try:
+        gamma_result = pymedphys_gamma(
+            rows, cols,
+            dose_evaluated_slice,
+            rows, cols,
+            dose_reference_slice,
+            dose_criterion_percent,
+            distance_criterion_mm,
+            quiet=True
+        )
+        return gamma_result
+    except Exception as e:
+        warnings.warn(f"2D Gamma calculation failed: {e}")
+        raise
 
 
 # Placeholder for GPU-accelerated gamma
@@ -211,6 +308,9 @@ def compute_gamma_index_gpu(
 ) -> np.ndarray:
     """
     GPU-accelerated gamma index calculation (requires CuPy or similar).
+    
+    Note: This is a placeholder. For GPU acceleration, use pymedphys
+    with GPU backend or implement using CuPy.
     
     Parameters
     ----------
@@ -231,11 +331,17 @@ def compute_gamma_index_gpu(
     Raises
     ------
     NotImplementedError
-        This function is a stub for future implementation.
+        GPU acceleration not implemented. Use pymedphys with GPU backend.
     """
+    warnings.warn(
+        "GPU-accelerated gamma is not implemented. "
+        "Use compute_gamma_index() which leverages pymedphys, "
+        "or configure pymedphys with GPU backend for acceleration.",
+        FutureWarning
+    )
     raise NotImplementedError(
-        "GPU-accelerated gamma not yet implemented. "
-        "Consider using pymedphys.gamma for GPU implementation."
+        "GPU-accelerated gamma not implemented. "
+        "Use compute_gamma_index() or configure pymedphys with GPU backend."
     )
 
 

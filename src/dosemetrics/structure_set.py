@@ -16,7 +16,6 @@ from typing import Dict, List, Optional, Tuple, Iterator
 from .structures import Structure, OAR, Target, AvoidanceStructure, StructureType
 from .dose import Dose
 from .metrics import dvh as dvh_metrics
-from .metrics import statistics
 
 
 class StructureSet:

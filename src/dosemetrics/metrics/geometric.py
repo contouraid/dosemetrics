@@ -10,6 +10,8 @@ from __future__ import annotations
 import numpy as np
 from typing import Dict, Optional, TYPE_CHECKING
 import pandas as pd
+from scipy.spatial.distance import directed_hausdorff
+from scipy import ndimage
 
 if TYPE_CHECKING:
     from ..structures import Structure
@@ -222,17 +224,59 @@ def compute_hausdorff_distance(
     Returns:
         Hausdorff distance in mm
         
-    Note:
-        This is a placeholder. Full implementation requires scipy or SimpleITK.
-        
     Examples:
         >>> hd = compute_hausdorff_distance(auto_structure, manual_structure)
         >>> hd95 = compute_hausdorff_distance(auto_structure, manual_structure, percentile=95)
     """
-    raise NotImplementedError(
-        "Hausdorff distance computation requires scipy.spatial or SimpleITK. "
-        "Will be implemented in future version."
-    )
+    # Validate percentile
+    if percentile is not None:
+        if not (0 < percentile <= 100):
+            raise ValueError(f"Percentile must be between 0 and 100, got {percentile}")
+    
+    if structure1.mask is None or structure2.mask is None:
+        return float('inf')
+    
+    # Get surface points (boundary voxels)
+    # Use binary erosion to get boundary
+    eroded1 = ndimage.binary_erosion(structure1.mask)
+    eroded2 = ndimage.binary_erosion(structure2.mask)
+    surface1 = structure1.mask & ~eroded1
+    surface2 = structure2.mask & ~eroded2
+    
+    # Get coordinates of surface points
+    points1 = np.argwhere(surface1)
+    points2 = np.argwhere(surface2)
+    
+    if len(points1) == 0 or len(points2) == 0:
+        return float('inf')
+    
+    # Scale by voxel spacing to get mm
+    spacing = np.array(structure1.spacing)
+    points1_mm = points1 * spacing
+    points2_mm = points2 * spacing
+    
+    if percentile is not None:
+        # Compute percentile Hausdorff distance
+        # Calculate distances from points1 to points2
+        from scipy.spatial.distance import cdist
+        distances = cdist(points1_mm, points2_mm)
+        
+        # For each point in set 1, find min distance to set 2
+        min_distances_1_to_2 = np.min(distances, axis=1)
+        # For each point in set 2, find min distance to set 1
+        min_distances_2_to_1 = np.min(distances, axis=0)
+        
+        # Compute percentile
+        hd_1_to_2 = np.percentile(min_distances_1_to_2, percentile)
+        hd_2_to_1 = np.percentile(min_distances_2_to_1, percentile)
+        
+        return float(max(hd_1_to_2, hd_2_to_1))
+    else:
+        # Standard Hausdorff distance
+        hd_1_to_2, _, _ = directed_hausdorff(points1_mm, points2_mm)
+        hd_2_to_1, _, _ = directed_hausdorff(points2_mm, points1_mm)
+        
+        return float(max(hd_1_to_2, hd_2_to_1))
 
 
 def compute_mean_surface_distance(
@@ -242,7 +286,7 @@ def compute_mean_surface_distance(
     """
     Compute mean surface distance between two structures.
     
-    Average of all point-to-surface distances.
+    Average of all point-to-surface distances (symmetric).
     
     Args:
         structure1: First structure
@@ -250,14 +294,38 @@ def compute_mean_surface_distance(
         
     Returns:
         Mean surface distance in mm
-        
-    Note:
-        This is a placeholder. Full implementation requires surface extraction.
     """
-    raise NotImplementedError(
-        "Mean surface distance computation not yet implemented. "
-        "Will be added in future version."
-    )
+    if structure1.mask is None or structure2.mask is None:
+        return float('inf')
+    
+    # Get surface points (boundary voxels)
+    eroded1 = ndimage.binary_erosion(structure1.mask)
+    eroded2 = ndimage.binary_erosion(structure2.mask)
+    surface1 = structure1.mask & ~eroded1
+    surface2 = structure2.mask & ~eroded2
+    
+    # Get coordinates of surface points
+    points1 = np.argwhere(surface1)
+    points2 = np.argwhere(surface2)
+    
+    if len(points1) == 0 or len(points2) == 0:
+        return float('inf')
+    
+    # Scale by voxel spacing to get mm
+    spacing = np.array(structure1.spacing)
+    points1_mm = points1 * spacing
+    points2_mm = points2 * spacing
+    
+    # Compute pairwise distances
+    from scipy.spatial.distance import cdist
+    distances = cdist(points1_mm, points2_mm)
+    
+    # Mean of minimum distances from each point to other surface
+    mean_1_to_2 = np.mean(np.min(distances, axis=1))
+    mean_2_to_1 = np.mean(np.min(distances, axis=0))
+    
+    # Return symmetric average
+    return float((mean_1_to_2 + mean_2_to_1) / 2.0)
 
 
 def compare_structure_sets(

@@ -1,93 +1,209 @@
 """
 Tests for dosemetrics.utils.plot module.
 
-Tests plotting and visualization functionality.
+Tests publication-quality plotting functionality.
 """
 
 import unittest
-import logging
 import numpy as np
-import dosemetrics
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend for testing
+import matplotlib.pyplot as plt
+import pandas as pd
+import tempfile
+from pathlib import Path
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from dosemetrics.dose import Dose
+from dosemetrics.structures import Target, OAR, StructureType
+from dosemetrics.structure_set import StructureSet
+from dosemetrics.utils import plot
 
 
-class TestPlot(unittest.TestCase):
+class TestPlotFunctions(unittest.TestCase):
     """Test plotting functionality."""
-
-    def test_import_functions_exist(self):
-        """Test that expected plotting functions are available."""
-        # Test that key plotting functions are accessible
-        self.assertTrue(hasattr(dosemetrics, "plot_dvh"))
-        self.assertTrue(hasattr(dosemetrics, "from_dataframe"))
-        self.assertTrue(hasattr(dosemetrics, "generate_dvh_variations"))
-        self.assertTrue(hasattr(dosemetrics, "plot_dvh_variations"))
-
-    def test_plot_dvh_exists(self):
-        """Test that plot_dvh function is callable."""
-        # Basic existence test - actual plotting would require test data
-        self.assertTrue(callable(dosemetrics.plot_dvh))
-
-    def test_generate_dvh_variations_exists(self):
-        """Test that generate_dvh_variations function is callable."""
-        self.assertTrue(callable(dosemetrics.generate_dvh_variations))
-
-    def test_plot_dvh_variations_exists(self):
-        """Test that plot_dvh_variations function is callable."""
-        self.assertTrue(callable(dosemetrics.plot_dvh_variations))
-
-    def test_generate_dvh_variations_basic(self):
-        """Test basic functionality of generate_dvh_variations."""
-        # Create simple test data
-        dose_volume = np.random.rand(10, 10, 10) * 50
-        structure_mask = np.zeros((10, 10, 10), dtype=np.uint8)
-        structure_mask[3:7, 3:7, 3:7] = 1
-
-        # Generate variations
-        dvh_data, dice_coefficients, original_dvh = dosemetrics.generate_dvh_variations(
-            dose_volume,
-            structure_mask,
-            n_variations=5,  # Small number for testing
-            dice_range=(0.7, 1.0),
-            volume_variation=0.2,
-            max_dose=50,
-            step_size=1.0,
+    
+    def setUp(self):
+        """Create test data for plotting."""
+        # Create simple dose and structure data
+        dose_data = np.random.rand(10, 10, 10) * 50
+        spacing = (1.0, 1.0, 1.0)
+        origin = (0.0, 0.0, 0.0)
+        self.dose = Dose(
+            dose_array=dose_data,
+            spacing=spacing,
+            origin=origin
         )
-
-        # Check outputs
-        self.assertEqual(len(dvh_data), 5)
-        self.assertEqual(len(dice_coefficients), 5)
-        self.assertIsInstance(original_dvh, tuple)
-        self.assertEqual(len(original_dvh), 2)
-
-        # Check that all Dice coefficients are in valid range
-        for dice in dice_coefficients:
-            self.assertGreaterEqual(dice, 0.0)
-            self.assertLessEqual(dice, 1.0)
-
-    def test_variability_backward_compatibility(self):
-        """Test that legacy variability function still works."""
-        # Create simple test data
-        dose_volume = np.random.rand(10, 10, 10) * 50
-        structure_mask = np.zeros((10, 10, 10), dtype=np.uint8)
-        structure_mask[3:7, 3:7, 3:7] = 1
-
-        # Call legacy function
-        fig, (max_dice, min_dice) = dosemetrics.variability(
-            dose_volume,
-            structure_mask,
-            constraint_limit=30.0,
-            structure_of_interest="Test",
+        
+        # Create test structures
+        mask1 = np.zeros((10, 10, 10), dtype=bool)
+        mask1[3:7, 3:7, 3:7] = True
+        self.structure1 = Target(
+            name="PTV",
+            mask=mask1,
+            spacing=spacing,
+            origin=origin
         )
+        
+        mask2 = np.zeros((10, 10, 10), dtype=bool)
+        mask2[1:4, 1:4, 1:4] = True
+        self.structure2 = OAR(
+            name="OAR",
+            mask=mask2,
+            spacing=spacing,
+            origin=origin
+        )
+        
+        # Create StructureSet and add structures
+        self.structures = StructureSet(spacing=spacing, origin=origin)
+        self.structures.add_structure_object(self.structure1)
+        self.structures.add_structure_object(self.structure2)
+        
+        # Mock dataset
+        self.dataset = {
+            'subject1': {'dose': self.dose, 'structures': self.structures},
+            'subject2': {'dose': self.dose, 'structures': self.structures}
+        }
+    
+    def tearDown(self):
+        """Close all figures after each test."""
+        plt.close('all')
+    
+    def test_plot_dvh_basic(self):
+        """Test basic DVH plotting."""
+        ax = plot.plot_dvh(self.dose, self.structure1, bins=10)
+        
+        self.assertIsInstance(ax, plt.Axes)
+        # Check axis labels
+        self.assertIn('Dose', ax.get_xlabel())
+        self.assertIn('Volume', ax.get_ylabel())
+    
+    def test_plot_dvh_with_custom_ax(self):
+        """Test DVH plotting on custom axis."""
+        fig, ax = plt.subplots()
+        result_ax = plot.plot_dvh(self.dose, self.structure1, ax=ax, bins=10)
+        
+        self.assertIs(result_ax, ax)
+    
+    def test_plot_subject_dvhs(self):
+        """Test plotting all structures for a subject."""
+        fig, ax = plot.plot_subject_dvhs(
+            self.dose,
+            self.structures,
+            bins=10
+        )
+        
+        self.assertIsInstance(fig, plt.Figure)
+        self.assertIsInstance(ax, plt.Axes)
+        
+        # Check that legend exists
+        legend = ax.get_legend()
+        self.assertIsNotNone(legend)
+    
+    def test_plot_dvh_comparison(self):
+        """Test DVH comparison plotting."""
+        # Create second dose (slightly different)
+        dose2_data = self.dose.dose_array * 1.1
+        dose2 = Dose(
+            dose_array=dose2_data,
+            spacing=self.dose.spacing,
+            origin=self.dose.origin
+        )
+        
+        fig, ax = plot.plot_dvh_comparison(
+            self.dose,
+            dose2,
+            self.structure1,
+            labels=('Dose 1', 'Dose 2'),
+            bins=10
+        )
+        
+        self.assertIsInstance(fig, plt.Figure)
+        self.assertIsInstance(ax, plt.Axes)
+        
+        # Check legend exists with both labels
+        legend = ax.get_legend()
+        self.assertIsNotNone(legend)
+    
+    def test_plot_dvh_band(self):
+        """Test DVH band plotting for population."""
+        ax = plot.plot_dvh_band(
+            self.dataset,
+            'PTV',
+            bins=10,
+            show_median=True,
+            show_individual=False
+        )
+        
+        self.assertIsInstance(ax, plt.Axes)
+    
+    def test_plot_metric_boxplot(self):
+        """Test metric box plot."""
+        # Create test dataframe
+        df = pd.DataFrame({
+            'subject_id': ['s1', 's1', 's2', 's2'],
+            'structure': ['PTV', 'OAR', 'PTV', 'OAR'],
+            'mean_dose': [50.0, 20.0, 52.0, 22.0]
+        })
+        
+        fig, ax = plot.plot_metric_boxplot(
+            df,
+            'mean_dose',
+            group_by='structure',
+            show_points=False
+        )
+        
+        self.assertIsInstance(fig, plt.Figure)
+        self.assertIsInstance(ax, plt.Axes)
+    
+    def test_plot_metric_comparison(self):
+        """Test metric comparison plotting."""
+        df1 = pd.DataFrame({
+            'subject_id': ['s1', 's2'],
+            'structure': ['PTV', 'PTV'],
+            'mean_dose': [50.0, 52.0]
+        })
+        
+        df2 = pd.DataFrame({
+            'subject_id': ['s3', 's4'],
+            'structure': ['PTV', 'PTV'],
+            'mean_dose': [48.0, 49.0]
+        })
+        
+        fig, ax = plot.plot_metric_comparison(
+            df1, df2,
+            'mean_dose',
+            cohort_names=('Cohort1', 'Cohort2')
+        )
+        
+        self.assertIsInstance(fig, plt.Figure)
+        self.assertIsInstance(ax, plt.Axes)
+    
+    def test_plot_dose_slice(self):
+        """Test dose slice plotting."""
+        fig, ax = plot.plot_dose_slice(
+            self.dose,
+            slice_idx=5,
+            axis=2
+        )
+        
+        self.assertIsInstance(fig, plt.Figure)
+        self.assertIsInstance(ax, plt.Axes)
+    
+    def test_save_figure(self):
+        """Test saving figures in multiple formats."""
+        fig, ax = plt.subplots()
+        ax.plot([1, 2, 3], [1, 2, 3])
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / 'test_figure'
+            
+            # Save in PNG format
+            plot.save_figure(fig, filepath, formats=['png'], dpi=100)
+            
+            # Check file exists
+            png_file = filepath.with_suffix('.png')
+            self.assertTrue(png_file.exists())
 
-        # Check outputs
-        self.assertIsNotNone(fig)
-        self.assertGreaterEqual(max_dice, 0.0)
-        self.assertLessEqual(max_dice, 1.0)
-        self.assertGreaterEqual(min_dice, 0.0)
-        self.assertLessEqual(min_dice, 1.0)
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

@@ -354,3 +354,70 @@ class TestEdgeCases:
         
         assert dice == 0.0
         assert sens == 0.0  # No true positives
+
+class TestHausdorffDistance:
+    """Test Hausdorff distance computation."""
+    
+    def test_identical_structures(self, identical_structures):
+        """Hausdorff distance should be 0 for identical structures."""
+        structure1, structure2 = identical_structures
+        hd = geometric.compute_hausdorff_distance(structure1, structure2)
+        assert hd == 0.0
+    
+    def test_overlapping_structures(self, overlapping_structures):
+        """Hausdorff distance should be positive for different structures."""
+        structure1, structure2 = overlapping_structures
+        hd = geometric.compute_hausdorff_distance(structure1, structure2)
+        assert hd > 0.0
+    
+    def test_symmetric(self, overlapping_structures):
+        """Hausdorff distance should be symmetric."""
+        structure1, structure2 = overlapping_structures
+        hd1 = geometric.compute_hausdorff_distance(structure1, structure2)
+        hd2 = geometric.compute_hausdorff_distance(structure2, structure1)
+        assert abs(hd1 - hd2) < 0.01
+    
+    def test_percentile_hausdorff(self, overlapping_structures):
+        """Percentile Hausdorff should be <= standard Hausdorff."""
+        structure1, structure2 = overlapping_structures
+        hd100 = geometric.compute_hausdorff_distance(structure1, structure2, percentile=None)
+        hd95 = geometric.compute_hausdorff_distance(structure1, structure2, percentile=95)
+        assert hd95 <= hd100
+    
+    def test_invalid_percentile(self, identical_structures):
+        """Should raise error for invalid percentile."""
+        structure1, structure2 = identical_structures
+        with pytest.raises(ValueError, match="Percentile must be"):
+            geometric.compute_hausdorff_distance(structure1, structure2, percentile=-1)
+        with pytest.raises(ValueError, match="Percentile must be"):
+            geometric.compute_hausdorff_distance(structure1, structure2, percentile=101)
+
+
+class TestMeanSurfaceDistance:
+    """Test mean surface distance computation."""
+    
+    def test_identical_structures(self, identical_structures):
+        """MSD should be 0 for identical structures."""
+        structure1, structure2 = identical_structures
+        msd = geometric.compute_mean_surface_distance(structure1, structure2)
+        assert msd == 0.0
+    
+    def test_overlapping_structures(self, overlapping_structures):
+        """MSD should be positive for different structures."""
+        structure1, structure2 = overlapping_structures
+        msd = geometric.compute_mean_surface_distance(structure1, structure2)
+        assert msd > 0.0
+    
+    def test_symmetric(self, overlapping_structures):
+        """MSD should be symmetric."""
+        structure1, structure2 = overlapping_structures
+        msd1 = geometric.compute_mean_surface_distance(structure1, structure2)
+        msd2 = geometric.compute_mean_surface_distance(structure2, structure1)
+        assert abs(msd1 - msd2) < 0.01
+    
+    def test_smaller_than_hausdorff(self, overlapping_structures):
+        """MSD should typically be smaller than Hausdorff distance."""
+        structure1, structure2 = overlapping_structures
+        msd = geometric.compute_mean_surface_distance(structure1, structure2)
+        hd = geometric.compute_hausdorff_distance(structure1, structure2)
+        assert msd <= hd

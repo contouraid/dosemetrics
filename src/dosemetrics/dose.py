@@ -33,7 +33,7 @@ class Dose:
     
     Examples:
         >>> from dosemetrics.dose import Dose
-        >>> from dosemetrics.metrics import statistics, dvh
+        >>> from dosemetrics.metrics import dvh
         >>> 
         >>> # Load dose from DICOM
         >>> dose = Dose.from_dicom("path/to/rtdose.dcm", name="Plan_v1")

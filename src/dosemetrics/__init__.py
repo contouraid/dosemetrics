@@ -34,19 +34,10 @@ from .structures import (
     AvoidanceStructure,
 )
 from .structure_set import StructureSet
-from .metrics.scores import dose_score, dvh_score
 from .utils.compliance import quality_index, get_default_constraints, check_compliance
-from .utils.plot import (
-    compare_dvh,
-    from_dataframe,
-    generate_dvh_variations,
-    plot_dvh,
-    plot_dvh_variations,
-    variability,
-)
 import numpy as np
 
-# Metrics subpackage (use: from dosemetrics.metrics import dvh, statistics, etc.)
+# Metrics subpackage (use: from dosemetrics.metrics import dvh, conformity, etc.)
 from . import metrics
 
 # I/O utilities
@@ -116,7 +107,7 @@ __all__ = [
     "StructureSet",
     # Helper functions
     "create_structure_set_from_masks",
-    # Metrics subpackage (access via metrics.dvh, metrics.statistics, etc.)
+    # Metrics subpackage (access via metrics.dvh, metrics.conformity, etc.)
     "metrics",
     # I/O subpackage
     "load_from_folder",
@@ -138,7 +129,5 @@ __all__ = [
     "plot_dvh",
     "plot_dvh_variations",
     "variability",
-    "dose_score",
-    "dvh_score",
 ]
 

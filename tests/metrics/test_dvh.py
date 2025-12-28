@@ -224,11 +224,12 @@ class TestDoseAtVolumeCC:
     
     def test_dose_at_volume_cc_small_volume(self, sample_dose, sample_structure):
         """Test D_0.1cc (common OAR constraint)."""
+        from dosemetrics.metrics import dvh
         d_01cc = dvh.compute_dose_at_volume_cc(sample_dose, sample_structure, 0.1)
         
         # Should be close to max dose
-        from dosemetrics.metrics import statistics
-        max_dose = statistics.compute_max_dose(sample_dose, sample_structure)
+        from dosemetrics.metrics import dvh
+        max_dose = dvh.compute_max_dose(sample_dose, sample_structure)
         
         assert d_01cc <= max_dose + 1.0
         assert d_01cc >= 0

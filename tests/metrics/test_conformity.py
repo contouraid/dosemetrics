@@ -207,8 +207,8 @@ class TestRealDataConformity:
             pytest.skip("No PTV/GTV found")
         
         # Estimate prescription dose (e.g., D95 of target)
-        from dosemetrics.metrics import statistics
-        stats = statistics.compute_dose_statistics(dose, ptv)
+        from dosemetrics.metrics import dvh
+        stats = dvh.compute_dose_statistics(dose, ptv)
         prescription = stats['D95']
         
         # Compute conformity indices

@@ -7,19 +7,16 @@ This package provides metrics for radiotherapy dose analysis, including:
 - Conformity indices
 - Homogeneity indices
 - Geometric metrics for structure comparison
-- Gamma analysis (future)
-- Advanced DVH metrics (future)
-- Dose comparison metrics (future)
+- Gamma analysis
+- Advanced DVH metrics
+- Dose comparison metrics
 """
 
 # Import all metrics modules
 from . import dvh
-from . import statistics
 from . import conformity
 from . import homogeneity
 from . import geometric
-
-# Future feature modules (stubs with NotImplementedError)
 from . import gamma
 from . import advanced_dvh
 from . import dose_comparison
@@ -33,9 +30,7 @@ from .dvh import (
     compute_equivalent_uniform_dose,
     create_dvh_table,
     extract_dvh_metrics,
-)
-
-from .statistics import (
+    # Dose statistics (moved from statistics.py)
     compute_dose_statistics,
     compute_mean_dose,
     compute_max_dose,
@@ -72,15 +67,13 @@ from .geometric import (
 __all__ = [
     # Submodules
     "dvh",
-    "statistics",
     "conformity",
     "homogeneity",
     "geometric",
-    # Future feature modules
     "gamma",
     "advanced_dvh",
     "dose_comparison",
-    # DVH functions
+    # DVH and statistics functions
     "compute_dvh",
     "compute_volume_at_dose",
     "compute_dose_at_volume",
@@ -88,7 +81,6 @@ __all__ = [
     "compute_equivalent_uniform_dose",
     "create_dvh_table",
     "extract_dvh_metrics",
-    # Statistics functions
     "compute_dose_statistics",
     "compute_mean_dose",
     "compute_max_dose",

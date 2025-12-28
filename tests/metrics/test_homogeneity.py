@@ -198,7 +198,7 @@ class TestRealDataHomogeneity:
     def test_homogeneity_on_real_data(self, hf_data_path):
         """Test homogeneity metrics on real dose."""
         from dosemetrics.io import load_structure_set
-        from dosemetrics.metrics import statistics
+        from dosemetrics.metrics import dvh
         
         subject_path = hf_data_path / "test_subject"
         if not subject_path.exists():
@@ -233,7 +233,7 @@ class TestRealDataHomogeneity:
         assert ui >= 0  # UI can vary, just check it's valid
         
         # Get prescription dose for GI
-        stats = statistics.compute_dose_statistics(dose, target)
+        stats = dvh.compute_dose_statistics(dose, target)
         prescription = stats['D95']
         
         gi = homogeneity.compute_gradient_index(dose, target, prescription)
