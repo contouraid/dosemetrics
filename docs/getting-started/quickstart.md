@@ -164,7 +164,7 @@ dosemetrics check-constraints \
 
 Now that you've seen the basics:
 
-- [Using Your Own Data](../notebooks/getting-started-own-data.ipynb) - Detailed guide for your specific data
+- [Using Your Own Data](../notebooks/04-getting-started-own-data.ipynb) - Detailed guide for your specific data
 - [File Formats](file-formats.md) - Learn about supported file formats
 - [User Guide](../user-guide/overview.md) - Comprehensive documentation
 - [API Reference](../api/index.md) - Detailed API documentation

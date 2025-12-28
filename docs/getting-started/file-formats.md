@@ -317,7 +317,7 @@ for structure_name in structures.get_structure_names():
 
 If you have data in a different format or need help preparing your files:
 
-1. Check our [interactive notebook](../notebooks/getting-started-own-data.ipynb) for detailed examples
+1. Check our [interactive notebook](../notebooks/04-getting-started-own-data.ipynb) for detailed examples
 2. Try the [live demo](https://huggingface.co/spaces/contouraid/dosemetrics) to test with sample data
 3. [Open an issue](https://github.com/contouraid/dosemetrics/issues) on GitHub
 

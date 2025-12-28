@@ -115,7 +115,7 @@ For large dose distributions, ensure you have sufficient RAM. As a guideline:
 Now that you have DoseMetrics installed:
 
 1. [Quick Start Guide](quickstart.md) - Run your first analysis
-2. [Using Your Own Data](../notebooks/getting-started-own-data.ipynb) - Load and analyze your data
+2. [Using Your Own Data](../notebooks/04-getting-started-own-data.ipynb) - Load and analyze your data
 3. [File Formats](file-formats.md) - Learn about supported formats
 
 ## Try Without Installing

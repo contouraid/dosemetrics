@@ -112,7 +112,7 @@ nav:
   - Getting Started:
     - Installation: getting-started/installation.md
     - Quick Start: getting-started/quickstart.md
-    - Your Own Data: notebooks/getting-started-own-data.ipynb
+    - Your Own Data: notebooks/04-getting-started-own-data.ipynb
     - File Formats: getting-started/file-formats.md
   - User Guide:
     - Overview: user-guide/overview.md
@@ -122,12 +122,13 @@ nav:
     - Visualizations: user-guide/visualizations.md
     - Geometric Analysis: user-guide/geometric-analysis.md
   - Examples:
-    - Basic Usage: notebooks/basic-usage.ipynb
-    - Computing Metrics: notebooks/computing-metrics.ipynb
-    - Exporting Results: notebooks/exporting-results.ipynb
-    - DICOM I/O: notebooks/dicom-io.ipynb
-    - NIfTI I/O: notebooks/nifti-io.ipynb
-    - Comparing Plans: notebooks/comparing-plans.ipynb
+    - 1. Basic Usage: notebooks/01-basic-usage.ipynb
+    - 2. NIfTI I/O: notebooks/02-nifti-io.ipynb
+    - 3. DICOM I/O: notebooks/03-dicom-io.ipynb
+    - 4. Your Own Data: notebooks/04-getting-started-own-data.ipynb
+    - 5. Computing Metrics: notebooks/05-computing-metrics.ipynb
+    - 6. Comparing Plans: notebooks/06-comparing-plans.ipynb
+    - 7. Exporting Results: notebooks/07-exporting-results.ipynb
     - Batch Processing: examples/batch-processing.md
   - API Reference:
     - Overview: api/index.md

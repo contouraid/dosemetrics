@@ -9,13 +9,6 @@ This module contains core functions for dose analysis, DVH computation, quality 
       show_source: true
       heading_level: 3
 
-## Statistics Module
-
-::: dosemetrics.metrics.statistics
-    options:
-      show_source: true
-      heading_level: 3
-
 ## Conformity Module
 
 ::: dosemetrics.metrics.conformity
@@ -61,7 +54,7 @@ dvh = compute_dvh(
 from dosemetrics import Dose, Structure
 from dosemetrics.metrics.conformity import compute_conformity_index
 from dosemetrics.metrics.homogeneity import compute_homogeneity_index
-from dosemetrics.metrics.statistics import compute_dose_statistics
+from dosemetrics.metrics.dvh import compute_dose_statistics
 
 # Conformity Index
 ci = compute_conformity_index(

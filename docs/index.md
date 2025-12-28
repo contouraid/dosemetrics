@@ -102,7 +102,7 @@ New to DoseMetrics? Start here:
 
 1. [**Installation**](getting-started/installation.md) - Set up DoseMetrics in your environment
 2. [**Quick Start**](getting-started/quickstart.md) - Run your first analysis in minutes
-3. [**Using Your Own Data**](notebooks/getting-started-own-data.ipynb) - Learn how to prepare and analyze your data
+3. [**Using Your Own Data**](notebooks/04-getting-started-own-data.ipynb) - Learn how to prepare and analyze your data
 4. [**File Formats**](getting-started/file-formats.md) - Understand supported input formats
 
 ## Use Cases

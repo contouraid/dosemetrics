@@ -1,5 +1,5 @@
 # Makefile for DoseMetrics
-.PHONY: help setup run test deploy clean format lint install check update info app docs docs-serve docs-build
+.PHONY: help setup run test deploy clean format lint install check update info app docs docs-serve docs-build docs-test
 
 # Default target
 .DEFAULT_GOAL := help
@@ -50,13 +50,25 @@ deploy: ## Deploy to Hugging Face Space
 
 docs-serve: ## Serve documentation locally with live-reload
 	@echo "$(BLUE)📚 Starting documentation server...$(NC)"
-	@echo "$(YELLOW)Make sure you have docs dependencies installed: pip install -e \".[docs]\"$(NC)"
-	@mkdocs serve
+	@if command -v uv > /dev/null; then \
+		uv run mkdocs serve; \
+	else \
+		mkdocs serve; \
+	fi
 
 docs-build: ## Build static documentation site
 	@echo "$(BLUE)📚 Building documentation...$(NC)"
-	@mkdocs build
+	@if command -v uv > /dev/null; then \
+		uv run mkdocs build; \
+	else \
+		mkdocs build; \
+	fi
 	@echo "$(GREEN)✅ Documentation built in site/$(NC)"
+
+docs-test: ## Test documentation build (same as GitHub Actions)
+	@echo "$(BLUE)🧪 Testing documentation build...$(NC)"
+	@chmod +x scripts/test_docs_build.sh
+	@./scripts/test_docs_build.sh
 
 docs: docs-serve ## Alias for docs-serve
 
@@ -75,21 +87,28 @@ clean: ## Clean up cache and temporary files
 
 format: ## Format code with black (if installed)
 	@echo "$(BLUE)🎨 Formatting code...$(NC)"
-	@if command -v black > /dev/null; then \
-		black src/ tests/ examples/; \
+	@if command -v uv > /dev/null; then \
+		uv run black src/ tests/ examples/ 2>/dev/null || echo "$(YELLOW)⚠️  black not in uv environment$(NC)"; \
 		echo "$(GREEN)✅ Code formatted$(NC)"; \
 	else \
-		echo "$(YELLOW)⚠️  black not installed, skipping$(NC)"; \
-		echo "   Install with: pip install black"; \
+		if command -v black > /dev/null; then \
+			black src/ tests/ examples/; \
+			echo "$(GREEN)✅ Code formatted$(NC)"; \
+		else \
+			echo "$(YELLOW)⚠️  black not installed, skipping$(NC)"; \
+		fi; \
 	fi
 
 lint: ## Run linting checks with ruff (if installed)
 	@echo "$(BLUE)🔍 Running linting...$(NC)"
-	@if command -v ruff > /dev/null; then \
-		ruff check src/ tests/ examples/; \
+	@if command -v uv > /dev/null; then \
+		uv run ruff check src/ tests/ examples/ 2>/dev/null || echo "$(YELLOW)⚠️  ruff not in uv environment$(NC)"; \
 	else \
-		echo "$(YELLOW)⚠️  ruff not installed, skipping$(NC)"; \
-		echo "   Install with: pip install ruff"; \
+		if command -v ruff > /dev/null; then \
+			ruff check src/ tests/ examples/; \
+		else \
+			echo "$(YELLOW)⚠️  ruff not installed, skipping$(NC)"; \
+		fi; \
 	fi
 
 check: format lint test ## Run all checks (format + lint + test)
