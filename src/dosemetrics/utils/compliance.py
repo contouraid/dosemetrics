@@ -163,36 +163,36 @@ def quality_index(
 ) -> float:
     """
     Compute the quality index of a dose distribution relative to a constraint.
-    
+
     Quality index interpretation:
     - Positive values: Constraint is met (higher is better, 1.0 is ideal)
     - Negative values: Constraint is violated (magnitude indicates severity)
-    
+
     Args:
         dose: Dose distribution object
         structure: Structure to evaluate
         constraint_type: Type of constraint ('max', 'mean', or 'min')
         constraint_level: Constraint value in Gy
-        
+
     Returns:
         Quality index (-1 to 1)
-        
+
     Examples:
         >>> from dosemetrics.dose import Dose
         >>> from dosemetrics.utils.compliance import quality_index
-        >>> 
+        >>>
         >>> dose = Dose.from_dicom("rtdose.dcm")
         >>> brainstem = structures.get_structure("Brainstem")
-        >>> 
+        >>>
         >>> # Check max dose constraint
         >>> qi = quality_index(dose, brainstem, "max", 54.0)
         >>> if qi < 0:
         ...     print("Constraint violated!")
     """
     from ..metrics import dvh, statistics
-    
+
     dose_bins, volumes = dvh.compute_dvh(dose, structure)
-    
+
     if constraint_type == "mean":
         # Check if mean dose exceeds constraint
         indices = np.where(dose_bins > constraint_level)[0]
@@ -200,7 +200,7 @@ def quality_index(
             proportion_above = np.max(volumes[indices])
         else:
             proportion_above = 0.0
-        
+
         if proportion_above > 0:
             # Negative value indicates violation
             # Worst case is -1 (all voxels above constraint)
@@ -210,7 +210,7 @@ def quality_index(
             mean_dose_val = statistics.compute_mean_dose(dose, structure)
             gap_between = (constraint_level - mean_dose_val) / constraint_level
             return float(gap_between)
-    
+
     elif constraint_type == "max":
         # Check if any dose exceeds constraint
         indices = np.where(dose_bins > constraint_level)[0]
@@ -218,7 +218,7 @@ def quality_index(
             proportion_above = np.max(volumes[indices])
         else:
             proportion_above = 0.0
-        
+
         if proportion_above > 0:
             # Negative value indicates violation
             return -proportion_above / 100.0
@@ -227,7 +227,7 @@ def quality_index(
             max_dose_val = statistics.compute_max_dose(dose, structure)
             gap_between = (constraint_level - max_dose_val) / constraint_level
             return float(gap_between)
-    
+
     elif constraint_type == "min":
         # For targets - check if dose is below constraint
         indices = np.where(dose_bins < constraint_level)[0]
@@ -235,18 +235,15 @@ def quality_index(
             proportion_below = np.min(volumes[indices])
         else:
             proportion_below = 0.0
-        
+
         if proportion_below < 100:
             # Negative value indicates violation
             return -(100 - proportion_below) / 100.0
         else:
             return 1.0
-    
+
     # Default return
     return 0.0
-
-
-def compute_mirage_compliance(dose_volume: np.ndarray, structure_masks: dict):
     compliance_stats = {}
 
     for struct_name in sorted(structure_masks.keys()):

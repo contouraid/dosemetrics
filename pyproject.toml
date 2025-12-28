@@ -44,6 +44,7 @@ dependencies = [
     "nbconvert>=7.16.6",
     "nbformat>=5.10.4",
     "nibabel==5.2.1",
+    "numba>=0.58.0",
     "numpy~=1.26.2",
     "pandas>=2.1.4",
     "pillow==10.4.0",

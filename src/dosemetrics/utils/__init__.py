@@ -8,7 +8,6 @@ from .compliance import (
     get_default_constraints,
     check_compliance,
     quality_index,
-    compute_mirage_compliance,
 )
 
 # Batch processing
@@ -50,7 +49,6 @@ __all__ = [
     "get_default_constraints",
     "check_compliance",
     "quality_index",
-    "compute_mirage_compliance",
     # Batch processing
     "load_dataset",
     "load_multiple_doses",

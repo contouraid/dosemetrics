@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from io import BytesIO
 
-from dosemetrics.io import read_byte_data, read_from_nifti
+from dosemetrics_app.utils import read_byte_data
 from dosemetrics_app.utils import get_example_datasets, load_example_files
 
 
@@ -11,17 +11,15 @@ def request_dose_and_masks(instruction_text):
     """Helper function to request dose and mask file uploads or example selection"""
     st.markdown(instruction_text)
     st.markdown(f"Check instructions on the sidebar for more information.")
-    
+
     # Add option to use example data
     data_source = st.radio(
-        "Data source:",
-        ["Upload your own files", "Use example data"],
-        horizontal=True
+        "Data source:", ["Upload your own files", "Use example data"], horizontal=True
     )
-    
+
     dose_file = None
     mask_files = None
-    
+
     if data_source == "Upload your own files":
         dose_file = st.file_uploader(
             "Upload a dose distribution volume (in .nii.gz)", type=["gz"]
@@ -35,34 +33,38 @@ def request_dose_and_masks(instruction_text):
         if example_datasets:
             # Get list of dataset names with test_subject first
             dataset_names = list(example_datasets.keys())
-            default_index = dataset_names.index("test_subject") if "test_subject" in dataset_names else 0
-            
-            selected_dataset = st.selectbox(
-                "Select example dataset:",
-                options=dataset_names,
-                index=default_index
+            default_index = (
+                dataset_names.index("test_subject")
+                if "test_subject" in dataset_names
+                else 0
             )
-            
+
+            selected_dataset = st.selectbox(
+                "Select example dataset:", options=dataset_names, index=default_index
+            )
+
             if selected_dataset:
                 dataset_path = example_datasets[selected_dataset]
                 with st.spinner("Loading example data..."):
                     dose_path, mask_paths = load_example_files(dataset_path)
-                    
+
                     if dose_path:
                         # Read files and create BytesIO objects for compatibility
-                        with open(dose_path, 'rb') as f:
+                        with open(dose_path, "rb") as f:
                             dose_bytes = BytesIO(f.read())
                             dose_bytes.name = dose_path.name
                             dose_file = dose_bytes
-                        
+
                         mask_files = []
                         for mask_path in mask_paths:
-                            with open(mask_path, 'rb') as f:
+                            with open(mask_path, "rb") as f:
                                 mask_bytes = BytesIO(f.read())
                                 mask_bytes.name = mask_path.name
                                 mask_files.append(mask_bytes)
-                        
-                        st.success(f"✓ Loaded {len(mask_files)} structures from {selected_dataset}")
+
+                        st.success(
+                            f"Loaded {len(mask_files)} structures from {selected_dataset}"
+                        )
         else:
             st.warning("Example data not available. Please upload your own files.")
             data_source = "Upload your own files"

@@ -1,7 +1,13 @@
 import hmac
 import streamlit as st
 
-from dosemetrics_app.tabs import calculate_dvh, visualize_dose, instructions, variations
+from dosemetrics_app.tabs import (
+    comprehensive_analysis,
+    geometric_tab,
+    gamma_tab,
+    compliance_tab,
+    instructions,
+)
 
 
 def check_password():
@@ -35,7 +41,7 @@ def check_password():
     # Show inputs for username + password.
     login_form()
     if "password_correct" in st.session_state:
-        st.error("😕 User not known or password incorrect")
+        st.error("User not known or password incorrect")
     return False
 
 
@@ -44,27 +50,32 @@ def main_loop():
     # if not check_password():
     #     st.stop()
 
-    def calculate_dvh_page():
-        st.markdown("# Calculate DVH")
-        calculate_dvh.panel()
+    def comprehensive_analysis_page():
+        st.markdown("# Dosimetric Analysis")
+        comprehensive_analysis.panel()
 
-    def visualize_dose_page():
-        st.markdown("# Visualize Dose")
-        visualize_dose.panel()
+    def geometric_page():
+        st.markdown("# Geometric Comparison")
+        geometric_tab.panel()
 
-    def dice_dvh_analysis():
-        st.markdown("# Contour Variation Robustness")
-        variations.panel()
+    def gamma_page():
+        st.markdown("# Gamma Analysis")
+        gamma_tab.panel()
+
+    def compliance_page():
+        st.markdown("# Compliance Checking")
+        compliance_tab.panel()
 
     def instructions_page():
         st.markdown("# Instructions")
         instructions.panel()
 
     page_names_to_funcs = {
-        "Calculate DVH": calculate_dvh_page,
-        "Visualize Dose": visualize_dose_page,
-        "Contour Variation Robustness": dice_dvh_analysis,
         "Instructions": instructions_page,
+        "Dosimetric Analysis": comprehensive_analysis_page,
+        "Geometric Comparison": geometric_page,
+        "Gamma Analysis": gamma_page,
+        "Compliance Checking": compliance_page,
     }
 
     task_selection = st.sidebar.selectbox("Choose a task:", page_names_to_funcs.keys())
