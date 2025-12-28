@@ -1,5 +1,5 @@
 # Makefile for DoseMetrics
-.PHONY: help setup run test deploy clean format lint install check update info app docs docs-serve docs-build docs-test
+.PHONY: help setup run test test-cov test-cov-html deploy clean format lint install check update info app docs docs-serve docs-build docs-test
 
 # Default target
 .DEFAULT_GOAL := help
@@ -42,6 +42,30 @@ test: ## Run all tests
 	@echo "$(BLUE)🧪 Running tests...$(NC)"
 	@chmod +x scripts/run_tests.sh
 	@./scripts/run_tests.sh
+
+test-cov: ## Run tests with coverage and show text report
+	@echo "$(BLUE)🧪 Running tests with coverage...$(NC)"
+	@if command -v uv > /dev/null; then \
+		uv run pytest tests/ --cov=src/dosemetrics --cov-report=term-missing --cov-report=html; \
+	else \
+		pytest tests/ --cov=src/dosemetrics --cov-report=term-missing --cov-report=html; \
+	fi
+	@echo ""
+	@echo "$(GREEN)✅ Coverage report generated$(NC)"
+	@echo "$(YELLOW)💡 Text report shown above$(NC)"
+	@echo "$(YELLOW)💡 HTML report: open htmlcov/index.html$(NC)"
+
+test-cov-html: ## Generate HTML coverage report and open in browser
+	@echo "$(BLUE)🧪 Generating HTML coverage report...$(NC)"
+	@if command -v uv > /dev/null; then \
+		uv run pytest tests/ --cov=src/dosemetrics --cov-report=html --cov-report=term-missing:skip-covered; \
+	else \
+		pytest tests/ --cov=src/dosemetrics --cov-report=html --cov-report=term-missing:skip-covered; \
+	fi
+	@echo ""
+	@echo "$(GREEN)✅ HTML coverage report generated in htmlcov/$(NC)"
+	@echo "$(YELLOW)💡 Opening in browser...$(NC)"
+	@open htmlcov/index.html 2>/dev/null || xdg-open htmlcov/index.html 2>/dev/null || echo "$(YELLOW)⚠️  Please open htmlcov/index.html manually$(NC)"
 
 deploy: ## Deploy to Hugging Face Space
 	@echo "$(BLUE)🚀 Deploying to Hugging Face Space...$(NC)"
