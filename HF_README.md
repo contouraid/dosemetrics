@@ -14,10 +14,11 @@ A Streamlit application for analyzing radiotherapy dose distributions and creati
 
 ## Features
 
-- **Calculate DVH**: Generate dose-volume histograms for uploaded dose and mask files
-- **Visualize Dose**: Interactive 3D visualization of dose distributions
-- **Contour Variation Robustness**: Analyze the impact of contour variations on dose metrics
-- **Compliance Checking**: Evaluate treatment plans against clinical constraints
+- **Instructions**: Get started with comprehensive usage guidelines and examples
+- **Dosimetric Analysis**: Comprehensive dose analysis with DVH calculations, dose statistics, and interactive visualizations
+- **Geometric Comparison**: Analyze geometric differences between structure sets including dice coefficient, Hausdorff distance, and volume overlaps
+- **Gamma Analysis**: Perform gamma analysis to compare dose distributions between reference and evaluated plans
+- **Compliance Checking**: Evaluate treatment plans against clinical constraints and dose limits
 
 ## Usage
 

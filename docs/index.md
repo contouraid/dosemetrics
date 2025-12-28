@@ -70,6 +70,14 @@ plot_dvh(dvh_data, title="Target Coverage Analysis")
 !!! tip "Live Demo Available"
     Want to try DoseMetrics without installing anything? Check out our interactive demo on Hugging Face Spaces where you can upload your own data and explore the features through a web interface.
     
+    **Available Features in the Live Demo:**
+    
+    - **Instructions**: Get started with comprehensive usage guidelines
+    - **Dosimetric Analysis**: DVH calculations, dose statistics, and interactive visualizations
+    - **Geometric Comparison**: Dice coefficient, Hausdorff distance, and volume overlaps
+    - **Gamma Analysis**: Compare dose distributions with configurable criteria
+    - **Compliance Checking**: Evaluate plans against clinical constraints
+    
     [:material-rocket-launch: Launch Live Demo](https://huggingface.co/spaces/contouraid/dosemetrics){ .md-button .md-button--primary target="_blank" }
 
 ## Package Structure
