@@ -9,6 +9,11 @@ from __future__ import annotations
 
 import pandas as pd
 import numpy as np
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..dose import Dose
+    from ..structures import Structure
 
 
 def get_custom_constraints():

@@ -10,9 +10,13 @@ from __future__ import annotations
 import os
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
+
+if TYPE_CHECKING:
+    from ..dose import Dose
+    from ..structure_set import StructureSet
 
 
 def compare_dose_distributions(

@@ -8,8 +8,12 @@ for evaluating auto-segmentation algorithms or inter-observer variability.
 from __future__ import annotations
 
 import numpy as np
-from typing import Dict, Optional
+from typing import Dict, Optional, TYPE_CHECKING
 import pandas as pd
+
+if TYPE_CHECKING:
+    from ..structures import Structure
+    from ..structure_set import StructureSet
 
 
 def compute_dice_coefficient(structure1: Structure, structure2: Structure) -> float:

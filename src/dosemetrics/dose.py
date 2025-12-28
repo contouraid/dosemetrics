@@ -10,7 +10,10 @@ from __future__ import annotations
 
 import numpy as np
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .structures import Structure
 
 
 class Dose:

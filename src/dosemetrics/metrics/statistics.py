@@ -7,8 +7,12 @@ including mean, max, min, median, standard deviation, and dose percentiles.
 
 from __future__ import annotations
 
-from typing import Dict
+from typing import Dict, TYPE_CHECKING
 import numpy as np
+
+if TYPE_CHECKING:
+    from ..dose import Dose
+    from ..structures import Structure
 
 
 def compute_dose_statistics(dose: Dose, structure: Structure) -> Dict[str, float]:

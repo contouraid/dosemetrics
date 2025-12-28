@@ -7,9 +7,14 @@ metrics such as volume at dose (VX) and dose at volume (DX).
 
 from __future__ import annotations
 
-from typing import Tuple, Optional, Dict
+from typing import Tuple, Optional, Dict, TYPE_CHECKING
 import numpy as np
 import pandas as pd
+
+if TYPE_CHECKING:
+    from ..dose import Dose
+    from ..structures import Structure
+    from ..structure_set import StructureSet
 
 
 def compute_dvh(

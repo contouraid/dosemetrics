@@ -8,7 +8,12 @@ critical for assessing treatment plan quality.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 import numpy as np
+
+if TYPE_CHECKING:
+    from ..dose import Dose
+    from ..structures import Structure
 
 
 def compute_conformity_index(
