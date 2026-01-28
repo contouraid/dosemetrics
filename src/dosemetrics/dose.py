@@ -119,7 +119,7 @@ class Dose:
         return (
             self.shape == structure.mask.shape
             and np.allclose(self.spacing, structure.spacing, rtol=1e-5)
-            and np.allclose(self.origin, structure.origin, rtol=1e-5)
+            and np.allclose(self.origin, structure.origin, rtol=1e-3, atol=1.0)
         )
     
     def get_dose_in_structure(self, structure: Structure) -> np.ndarray:
