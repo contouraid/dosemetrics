@@ -10,28 +10,65 @@ References:
     - Depuydt T, Van Esch A, Huyskens DP. "A quantitative evaluation of IMRT
       dose distributions: refinement and clinical assessment of the gamma
       evaluation." Radiother Oncol. 2002;62(3):309-19.
-
-Future Implementation TODOs:
-    - Global vs. local gamma normalization
-    - 2D and 3D gamma analysis
-    - GPU-accelerated computation
-    - Passing rate statistics
-    - Gamma histograms and visualization
 """
 
 import numpy as np
 from typing import Tuple, Optional, Dict, Any
 import warnings
-
-try:
-    from pymedphys import gamma as pymedphys_gamma
-
-    PYMEDPHYS_AVAILABLE = True
-except (ImportError, ModuleNotFoundError, FileNotFoundError) as e:
-    PYMEDPHYS_AVAILABLE = False
-    # Silently fail - we'll handle this gracefully in the functions that use it
+from scipy.interpolate import RegularGridInterpolator
+from scipy.ndimage import distance_transform_edt
 
 from ..dose import Dose
+
+
+def _compute_gamma_at_point(
+    eval_coords: np.ndarray,
+    ref_dose_value: float,
+    eval_interpolator: RegularGridInterpolator,
+    dose_criterion: float,
+    distance_criterion_mm: float,
+    normalization_dose: float,
+) -> float:
+    """
+    Compute gamma at a single reference point.
+
+    Parameters
+    ----------
+    eval_coords : np.ndarray
+        Coordinates to evaluate (Nx3 array of search positions)
+    ref_dose_value : float
+        Reference dose value at the point
+    eval_interpolator : RegularGridInterpolator
+        Interpolator for evaluated dose
+    dose_criterion : float
+        Dose criterion in absolute units
+    distance_criterion_mm : float
+        Distance criterion in mm
+    normalization_dose : float
+        Normalization dose value
+
+    Returns
+    -------
+    float
+        Minimum gamma value at this point
+    """
+    # Interpolate evaluated dose at search positions
+    eval_dose_values = eval_interpolator(eval_coords)
+
+    # Compute dose differences (normalized)
+    dose_diff = np.abs(eval_dose_values - ref_dose_value) / normalization_dose
+
+    # Compute distances (already in physical units)
+    # eval_coords contains the search grid, we need distance from origin
+    distances = np.sqrt(np.sum(eval_coords**2, axis=1))
+
+    # Compute gamma values
+    gamma_values = np.sqrt(
+        (distances / distance_criterion_mm) ** 2
+        + (dose_diff / (dose_criterion / 100.0)) ** 2
+    )
+
+    return np.min(gamma_values)
 
 
 def compute_gamma_index(
@@ -92,17 +129,9 @@ def compute_gamma_index(
 
     Raises
     ------
-    NotImplementedError
-        This function is a stub for future implementation.
     ValueError
         If dose distributions have incompatible geometry.
     """
-    if not PYMEDPHYS_AVAILABLE:
-        raise ImportError(
-            "pymedphys is required for gamma analysis. "
-            "Install with: pip install pymedphys"
-        )
-
     # Validate spatial compatibility
     if dose_reference.dose_array.shape != dose_evaluated.dose_array.shape:
         raise ValueError(
@@ -110,61 +139,121 @@ def compute_gamma_index(
             f"{dose_evaluated.dose_array.shape}"
         )
 
-    # Get dose arrays
+    if not np.allclose(dose_reference.spacing, dose_evaluated.spacing):
+        raise ValueError(
+            f"Dose spacings must match: {dose_reference.spacing} vs "
+            f"{dose_evaluated.spacing}"
+        )
+
+    # Get dose arrays and spatial information
     ref_dose = dose_reference.dose_array
     eval_dose = dose_evaluated.dose_array
-
-    # Get coordinate arrays from dose properties
-    origin = dose_reference.origin
-    spacing = dose_reference.spacing
+    spacing = np.array(dose_reference.spacing)
+    origin = np.array(dose_reference.origin)
     shape = dose_reference.shape
-
-    axes = [origin[i] + np.arange(shape[i]) * spacing[i] for i in range(3)]
-
-    # Determine normalization
-    if global_normalization:
-        dose_ref_value = np.max(ref_dose)
-    else:
-        dose_ref_value = None  # pymedphys will use local normalization
-
-    # Calculate dose threshold
-    dose_threshold = dose_threshold_percent / 100.0 * np.max(ref_dose)
 
     # Set max search distance
     if max_search_distance_mm is None:
         max_search_distance_mm = 3 * distance_criterion_mm
 
-    try:
-        # Use pymedphys gamma function
-        # Note: pymedphys expects (axes_reference, dose_reference, axes_evaluation, dose_evaluation, ...)
-        # where axes can be a tuple of coordinate arrays
-        gamma_result = pymedphys_gamma(
-            (axes[0], axes[1], axes[2]),  # reference axes (x, y, z)
-            ref_dose,  # reference dose
-            (axes[0], axes[1], axes[2]),  # evaluation axes (x, y, z)
-            eval_dose,  # evaluation dose
-            dose_criterion_percent,
-            distance_criterion_mm,
-            lower_percent_dose_cutoff=dose_threshold_percent,
-            interp_fraction=10,  # interpolation factor
-            max_gamma=2.0,  # cap gamma at 2 for performance
-            local_gamma=not global_normalization,
-            global_normalisation=dose_ref_value if global_normalization else None,
-            quiet=True,
-        )
+    # Determine normalization dose
+    if global_normalization:
+        normalization_dose = np.max(ref_dose)
+    else:
+        normalization_dose = None  # Will use local normalization
 
-        return gamma_result
+    # Calculate absolute dose threshold
+    dose_threshold = dose_threshold_percent / 100.0 * np.max(ref_dose)
 
-    except FileNotFoundError as e:
-        # pymedphys has missing dependency files issue - raise with clear message
-        raise RuntimeError(
-            f"pymedphys has an environment issue: {e}. "
-            "This is a known issue with certain Python environments. "
-            "Consider using a compatible pymedphys installation."
-        ) from e
-    except Exception as e:
-        warnings.warn(f"Gamma calculation failed: {e}")
-        raise
+    # Create coordinate grids for both distributions
+    x = origin[0] + np.arange(shape[0]) * spacing[0]
+    y = origin[1] + np.arange(shape[1]) * spacing[1]
+    z = origin[2] + np.arange(shape[2]) * spacing[2]
+
+    # Create interpolator for evaluated dose
+    eval_interpolator = RegularGridInterpolator(
+        (x, y, z), eval_dose, method="linear", bounds_error=False, fill_value=0.0
+    )
+
+    # Initialize gamma array
+    gamma_result = np.full(shape, np.nan, dtype=np.float32)
+
+    # Create search grid offsets (in voxel indices)
+    search_radius_voxels = np.ceil(max_search_distance_mm / spacing).astype(int)
+
+    # For efficiency, create a search template
+    i_range = np.arange(-search_radius_voxels[0], search_radius_voxels[0] + 1)
+    j_range = np.arange(-search_radius_voxels[1], search_radius_voxels[1] + 1)
+    k_range = np.arange(-search_radius_voxels[2], search_radius_voxels[2] + 1)
+
+    di, dj, dk = np.meshgrid(i_range, j_range, k_range, indexing="ij")
+
+    # Physical distances for search template
+    dx = di * spacing[0]
+    dy = dj * spacing[1]
+    dz = dk * spacing[2]
+    distances_template = np.sqrt(dx**2 + dy**2 + dz**2)
+
+    # Only keep points within search distance
+    valid_search = distances_template <= max_search_distance_mm
+    di_valid = di[valid_search]
+    dj_valid = dj[valid_search]
+    dk_valid = dk[valid_search]
+    distances_valid = distances_template[valid_search]
+
+    # Iterate through reference dose grid
+    for i in range(shape[0]):
+        for j in range(shape[1]):
+            for k in range(shape[2]):
+                ref_value = ref_dose[i, j, k]
+
+                # Skip if below threshold
+                if ref_value < dose_threshold:
+                    continue
+
+                # Use local normalization if requested
+                if not global_normalization:
+                    normalization_dose = ref_value if ref_value > 0 else 1.0
+
+                # Get search positions in index space
+                i_search = i + di_valid
+                j_search = j + dj_valid
+                k_search = k + dk_valid
+
+                # Filter for valid indices
+                valid_mask = (
+                    (i_search >= 0)
+                    & (i_search < shape[0])
+                    & (j_search >= 0)
+                    & (j_search < shape[1])
+                    & (k_search >= 0)
+                    & (k_search < shape[2])
+                )
+
+                i_search = i_search[valid_mask]
+                j_search = j_search[valid_mask]
+                k_search = k_search[valid_mask]
+                local_distances = distances_valid[valid_mask]
+
+                if len(i_search) == 0:
+                    continue
+
+                # Get evaluated dose values at search positions
+                eval_values = eval_dose[i_search, j_search, k_search]
+
+                # Compute dose differences (normalized)
+                dose_diff = np.abs(eval_values - ref_value) / normalization_dose
+
+                # Compute gamma values using the Low et al. formula
+                gamma_values = np.sqrt(
+                    (local_distances / distance_criterion_mm) ** 2
+                    + (dose_diff / (dose_criterion_percent / 100.0)) ** 2
+                )
+
+                # Store minimum gamma value
+                gamma_result[i, j, k] = np.min(gamma_values)
+
+    return gamma_result
 
 
 def compute_gamma_passing_rate(gamma: np.ndarray, threshold: float = 1.0) -> float:
@@ -269,42 +358,108 @@ def compute_2d_gamma(
 
     Raises
     ------
-    ImportError
-        If pymedphys is not available.
+    ValueError
+        If slice shapes don't match or are not 2D.
     """
-    if not PYMEDPHYS_AVAILABLE:
-        raise ImportError(
-            "pymedphys is required for gamma analysis. "
-            "Install with: pip install pymedphys"
+    # Validate input
+    if dose_reference_slice.ndim != 2:
+        raise ValueError(
+            f"Reference slice must be 2D, got shape {dose_reference_slice.shape}"
+        )
+    if dose_evaluated_slice.ndim != 2:
+        raise ValueError(
+            f"Evaluated slice must be 2D, got shape {dose_evaluated_slice.shape}"
+        )
+    if dose_reference_slice.shape != dose_evaluated_slice.shape:
+        raise ValueError(
+            f"Slice shapes must match: {dose_reference_slice.shape} vs "
+            f"{dose_evaluated_slice.shape}"
         )
 
-    # Create coordinate arrays
-    rows = np.arange(dose_reference_slice.shape[0]) * pixel_spacing[0]
-    cols = np.arange(dose_reference_slice.shape[1]) * pixel_spacing[1]
+    # Get shape and spacing
+    shape = dose_reference_slice.shape
+    spacing = np.array(pixel_spacing)
 
-    try:
-        # pymedphys expects (axes_reference, dose_reference, axes_evaluation, dose_evaluation, ...)
-        # For 2D, pass as tuple of 2D coordinate arrays
-        gamma_result = pymedphys_gamma(
-            (rows, cols),  # reference axes
-            dose_reference_slice,  # reference dose
-            (rows, cols),  # evaluation axes
-            dose_evaluated_slice,  # evaluation dose
-            dose_criterion_percent,
-            distance_criterion_mm,
-            quiet=True,
-        )
-        return gamma_result
-    except FileNotFoundError as e:
-        # pymedphys has missing dependency files issue - raise with clear message
-        raise RuntimeError(
-            f"pymedphys has an environment issue: {e}. "
-            "This is a known issue with certain Python environments. "
-            "Consider using a compatible pymedphys installation."
-        ) from e
-    except Exception as e:
-        warnings.warn(f"2D Gamma calculation failed: {e}")
-        raise
+    # Determine normalization dose (global max)
+    normalization_dose = np.max(dose_reference_slice)
+    if normalization_dose == 0:
+        normalization_dose = 1.0
+
+    # Create interpolator for evaluated dose
+    x = np.arange(shape[0]) * spacing[0]
+    y = np.arange(shape[1]) * spacing[1]
+    eval_interpolator = RegularGridInterpolator(
+        (x, y),
+        dose_evaluated_slice,
+        method="linear",
+        bounds_error=False,
+        fill_value=0.0,
+    )
+
+    # Initialize gamma array
+    gamma_result = np.full(shape, np.nan, dtype=np.float32)
+
+    # Create search grid offsets (in voxel indices)
+    max_search_distance_mm = 3 * distance_criterion_mm
+    search_radius_voxels = np.ceil(max_search_distance_mm / spacing).astype(int)
+
+    # Create search template
+    i_range = np.arange(-search_radius_voxels[0], search_radius_voxels[0] + 1)
+    j_range = np.arange(-search_radius_voxels[1], search_radius_voxels[1] + 1)
+
+    di, dj = np.meshgrid(i_range, j_range, indexing="ij")
+
+    # Physical distances for search template
+    dx = di * spacing[0]
+    dy = dj * spacing[1]
+    distances_template = np.sqrt(dx**2 + dy**2)
+
+    # Only keep points within search distance
+    valid_search = distances_template <= max_search_distance_mm
+    di_valid = di[valid_search]
+    dj_valid = dj[valid_search]
+    distances_valid = distances_template[valid_search]
+
+    # Iterate through reference dose grid
+    for i in range(shape[0]):
+        for j in range(shape[1]):
+            ref_value = dose_reference_slice[i, j]
+
+            # Get search positions in index space
+            i_search = i + di_valid
+            j_search = j + dj_valid
+
+            # Filter for valid indices
+            valid_mask = (
+                (i_search >= 0)
+                & (i_search < shape[0])
+                & (j_search >= 0)
+                & (j_search < shape[1])
+            )
+
+            i_search = i_search[valid_mask]
+            j_search = j_search[valid_mask]
+            local_distances = distances_valid[valid_mask]
+
+            if len(i_search) == 0:
+                continue
+
+            # Get evaluated dose values at search positions
+            eval_values = dose_evaluated_slice[i_search, j_search]
+
+            # Compute dose differences (normalized)
+            dose_diff = np.abs(eval_values - ref_value) / normalization_dose
+
+            # Compute gamma values
+            gamma_values = np.sqrt(
+                (local_distances / distance_criterion_mm) ** 2
+                + (dose_diff / (dose_criterion_percent / 100.0)) ** 2
+            )
+
+            # Store minimum gamma value
+            gamma_result[i, j] = np.min(gamma_values)
+
+    return gamma_result
 
 
 # Placeholder for GPU-accelerated gamma
@@ -317,8 +472,7 @@ def compute_gamma_index_gpu(
     """
     GPU-accelerated gamma index calculation (requires CuPy or similar).
 
-    Note: This is a placeholder. For GPU acceleration, use pymedphys
-    with GPU backend or implement using CuPy.
+    Note: This is a placeholder for future GPU acceleration using CuPy or similar.
 
     Parameters
     ----------
@@ -339,17 +493,15 @@ def compute_gamma_index_gpu(
     Raises
     ------
     NotImplementedError
-        GPU acceleration not implemented. Use pymedphys with GPU backend.
+        GPU acceleration not implemented yet.
     """
     warnings.warn(
         "GPU-accelerated gamma is not implemented. "
-        "Use compute_gamma_index() which leverages pymedphys, "
-        "or configure pymedphys with GPU backend for acceleration.",
+        "Use compute_gamma_index() for CPU-based calculation.",
         FutureWarning,
     )
     raise NotImplementedError(
-        "GPU-accelerated gamma not implemented. "
-        "Use compute_gamma_index() or configure pymedphys with GPU backend."
+        "GPU-accelerated gamma not implemented. Use compute_gamma_index()."
     )
 
 

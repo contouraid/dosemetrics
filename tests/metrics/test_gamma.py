@@ -45,82 +45,101 @@ def evaluated_dose_shifted():
     return Dose(dose_array, (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
 
 
-@pytest.mark.skipif(
-    not gamma.PYMEDPHYS_AVAILABLE,
-    reason="pymedphys not installed or has unresolvable dependency issues",
-)
 class TestGammaIndex:
     """Test gamma index calculation."""
 
     def test_gamma_identical(self, reference_dose):
         """Test gamma index for identical doses."""
-        try:
-            gamma_result = gamma.compute_gamma_index(
-                reference_dose,
-                reference_dose,
-                dose_criterion_percent=3.0,
-                distance_criterion_mm=3.0,
-            )
+        gamma_result = gamma.compute_gamma_index(
+            reference_dose,
+            reference_dose,
+            dose_criterion_percent=3.0,
+            distance_criterion_mm=3.0,
+        )
 
-            # Most values should be close to 0 for identical doses
-            valid_gamma = gamma_result[~np.isnan(gamma_result)]
-            if len(valid_gamma) > 0:
-                assert np.mean(valid_gamma) < 0.5
-        except RuntimeError as e:
-            if "environment issue" in str(e):
-                pytest.skip(f"pymedphys environment issue: {e}")
-            raise
+        # Most values should be close to 0 for identical doses
+        valid_gamma = gamma_result[~np.isnan(gamma_result)]
+        if len(valid_gamma) > 0:
+            assert np.mean(valid_gamma) < 0.1  # Very small gamma for identical doses
+            assert np.max(valid_gamma) < 0.5
 
     def test_gamma_similar(self, reference_dose, evaluated_dose_similar):
         """Test gamma index for similar doses."""
-        try:
-            gamma_result = gamma.compute_gamma_index(
-                reference_dose,
-                evaluated_dose_similar,
-                dose_criterion_percent=3.0,
-                distance_criterion_mm=3.0,
-            )
+        gamma_result = gamma.compute_gamma_index(
+            reference_dose,
+            evaluated_dose_similar,
+            dose_criterion_percent=3.0,
+            distance_criterion_mm=3.0,
+        )
 
-            # Should be an array
-            assert isinstance(gamma_result, np.ndarray)
-            assert gamma_result.shape == reference_dose.dose_array.shape
-        except RuntimeError as e:
-            if "environment issue" in str(e):
-                pytest.skip(f"pymedphys environment issue: {e}")
-            raise
+        # Should be an array
+        assert isinstance(gamma_result, np.ndarray)
+        assert gamma_result.shape == reference_dose.dose_array.shape
+
+        # Should have many passing points (gamma < 1)
+        valid_gamma = gamma_result[~np.isnan(gamma_result)]
+        if len(valid_gamma) > 0:
+            passing_rate = np.sum(valid_gamma <= 1.0) / len(valid_gamma) * 100
+            assert passing_rate > 80  # Most points should pass 3%/3mm
 
     def test_gamma_shifted(self, reference_dose, evaluated_dose_shifted):
         """Test gamma index for spatially shifted dose."""
-        try:
-            gamma_result = gamma.compute_gamma_index(
-                reference_dose,
-                evaluated_dose_shifted,
-                dose_criterion_percent=3.0,
-                distance_criterion_mm=3.0,
-            )
+        gamma_result = gamma.compute_gamma_index(
+            reference_dose,
+            evaluated_dose_shifted,
+            dose_criterion_percent=3.0,
+            distance_criterion_mm=3.0,
+        )
 
-            assert isinstance(gamma_result, np.ndarray)
-        except RuntimeError as e:
-            if "environment issue" in str(e):
-                pytest.skip(f"pymedphys environment issue: {e}")
-            raise
+        assert isinstance(gamma_result, np.ndarray)
+
+        # Shifted by 2mm (1 voxel * 2mm spacing), should pass with 3mm criterion
+        valid_gamma = gamma_result[~np.isnan(gamma_result)]
+        if len(valid_gamma) > 0:
+            passing_rate = np.sum(valid_gamma <= 1.0) / len(valid_gamma) * 100
+            assert passing_rate > 70  # Most should still pass
 
     def test_gamma_local_normalization(self, reference_dose, evaluated_dose_similar):
         """Test gamma with local normalization."""
-        try:
-            gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compute_gamma_index(
+            reference_dose,
+            evaluated_dose_similar,
+            dose_criterion_percent=3.0,
+            distance_criterion_mm=3.0,
+            global_normalization=False,
+        )
+
+        assert isinstance(gamma_result, np.ndarray)
+        valid_gamma = gamma_result[~np.isnan(gamma_result)]
+        assert len(valid_gamma) > 0
+
+    def test_gamma_shape_mismatch(self, reference_dose):
+        """Test gamma raises error for mismatched shapes."""
+        # Create dose with different shape
+        wrong_shape = Dose(np.zeros((20, 20, 10)), (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
+
+        with pytest.raises(ValueError, match="shapes must match"):
+            gamma.compute_gamma_index(
                 reference_dose,
-                evaluated_dose_similar,
+                wrong_shape,
                 dose_criterion_percent=3.0,
                 distance_criterion_mm=3.0,
-                global_normalization=False,
             )
 
-            assert isinstance(gamma_result, np.ndarray)
-        except RuntimeError as e:
-            if "environment issue" in str(e):
-                pytest.skip(f"pymedphys environment issue: {e}")
-            raise
+    def test_gamma_custom_threshold(self, reference_dose):
+        """Test gamma with custom dose threshold."""
+        gamma_result = gamma.compute_gamma_index(
+            reference_dose,
+            reference_dose,
+            dose_criterion_percent=3.0,
+            distance_criterion_mm=3.0,
+            dose_threshold_percent=50.0,  # High threshold
+        )
+
+        # Should have more NaN values due to higher threshold
+        assert isinstance(gamma_result, np.ndarray)
+        num_nan = np.sum(np.isnan(gamma_result))
+        assert num_nan > 0
 
 
 class TestGammaPassingRate:
@@ -202,10 +221,6 @@ class TestGammaStatistics:
         assert np.isnan(stats["mean_gamma"])
 
 
-@pytest.mark.skipif(
-    not gamma.PYMEDPHYS_AVAILABLE,
-    reason="pymedphys not installed or has unresolvable dependency issues",
-)
 class Test2DGamma:
     """Test 2D gamma calculation."""
 
@@ -217,44 +232,64 @@ class Test2DGamma:
         eval_slice = np.ones((30, 30)) * 50.0
         eval_slice[10:20, 10:20] = 61.0
 
-        try:
-            gamma_result = gamma.compute_2d_gamma(
-                ref_slice,
-                eval_slice,
-                dose_criterion_percent=3.0,
-                distance_criterion_mm=3.0,
-                pixel_spacing=(2.0, 2.0),
-            )
+        gamma_result = gamma.compute_2d_gamma(
+            ref_slice,
+            eval_slice,
+            dose_criterion_percent=3.0,
+            distance_criterion_mm=3.0,
+            pixel_spacing=(2.0, 2.0),
+        )
 
-            assert gamma_result.shape == ref_slice.shape
-        except RuntimeError as e:
-            if "environment issue" in str(e):
-                pytest.skip(f"pymedphys environment issue: {e}")
-            raise
+        assert gamma_result.shape == ref_slice.shape
 
     def test_2d_gamma_identical(self):
         """Test 2D gamma for identical slices."""
         ref_slice = np.ones((20, 20)) * 50.0
 
-        try:
-            gamma_result = gamma.compute_2d_gamma(
+        gamma_result = gamma.compute_2d_gamma(
+            ref_slice,
+            ref_slice,
+            dose_criterion_percent=3.0,
+            distance_criterion_mm=3.0,
+        )
+
+        # Most values should be close to 0
+        valid_gamma = gamma_result[~np.isnan(gamma_result)]
+        if len(valid_gamma) > 0:
+            assert np.mean(valid_gamma) < 0.1
+            assert np.max(valid_gamma) < 0.5
+
+    def test_2d_gamma_mismatched_shapes(self):
+        """Test 2D gamma with mismatched slice shapes."""
+        ref_slice = np.ones((20, 20)) * 50.0
+        eval_slice = np.ones((30, 30)) * 50.0
+
+        with pytest.raises(ValueError, match="shapes must match"):
+            gamma.compute_2d_gamma(
                 ref_slice,
-                ref_slice,
+                eval_slice,
                 dose_criterion_percent=3.0,
                 distance_criterion_mm=3.0,
             )
 
-            # Most values should be close to 0
-            valid_gamma = gamma_result[~np.isnan(gamma_result)]
-            if len(valid_gamma) > 0:
-                assert np.mean(valid_gamma) < 0.5
-        except RuntimeError as e:
-            if "environment issue" in str(e):
-                pytest.skip(f"pymedphys environment issue: {e}")
-            raise
+    def test_2d_gamma_non_2d_input(self):
+        """Test 2D gamma with non-2D input."""
+        ref_3d = np.ones((10, 20, 20)) * 50.0
+        eval_2d = np.ones((20, 20)) * 50.0
+
+        with pytest.raises(ValueError, match="must be 2D"):
+            gamma.compute_2d_gamma(
+                ref_3d,
+                eval_2d,
+                dose_criterion_percent=3.0,
+                distance_criterion_mm=3.0,
+            )
 
 
-def test_pymedphys_import():
-    """Test pymedphys availability."""
-    # This test always passes but logs availability
-    assert isinstance(gamma.PYMEDPHYS_AVAILABLE, bool)
+def test_standalone_implementation():
+    """Test that gamma module is standalone (no PyMedPhys dependency)."""
+    # Verify that compute_gamma_index is callable and doesn't require PyMedPhys
+    assert callable(gamma.compute_gamma_index)
+    assert callable(gamma.compute_2d_gamma)
+    assert callable(gamma.compute_gamma_passing_rate)
+    assert callable(gamma.compute_gamma_statistics)
