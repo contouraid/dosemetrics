@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+**Six new dose quality metrics** drawn from the radiotherapy dose-prediction literature:
+
+- `compute_dvh_score(dose_reference, dose_evaluated, structure)` — Average absolute difference in D1, D95, and D99 between two dose distributions. Captures clinical discrepancies at near-maximum, coverage, and near-minimum DVH points. *(metrics/dvh.py)*
+- `compute_dvh_auc(dose, structure, num_bins, normalize, dose_range)` — Area under the DVH curve via trapezoidal integration. Single-distribution metric; higher value = more volume at higher dose. *(metrics/dvh.py)*
+- `compute_rtog_conformity_index(dose, target, prescription_dose)` — RTOG CI = V_Rx / V_target. The ICRU/RTOG 90-05 standard conformity definition, distinct from the existing ICRU CI (V_target_rx / V_rx). *(metrics/conformity.py)*
+- `compute_prescription_mae(dose, target, prescription_dose)` — Mean absolute error between actual dose and prescription dose within the target; directly measures under/overdosing. *(metrics/conformity.py)*
+- `compute_variance_of_laplacian(dose, structure=None)` — Variance of the 2D Laplacian applied to the dose volume, measuring dose-gradient sharpness. *(metrics/dose_comparison.py)*
+- `compute_normalized_mae(dose_reference, dose_evaluated, structure, normalization_value, dose_threshold_gy)` — MAE normalized by a reference value with optional high-dose threshold masking. *(metrics/dose_comparison.py)*
+
+**Two new visualization functions** in `utils/plot.py`:
+
+- `plot_dvh_score_breakdown` — DVH comparison overlaid with D1/D95/D99 markers and gap annotations, with the DVH Score in the title.
+- `plot_dvh_auc` — DVH with filled area-under-curve and AUC value annotated.
+
+**Documentation**:
+
+- Expanded `docs/user-guide/quality-metrics.md` from a placeholder into a full guide covering all conformity and homogeneity indices with formulas, named-after context (Paddick, van't Riet, RTOG, ICRU), interpretation guidance, and code examples.
+- Updated `docs/api/metrics.md` to include the `dose_comparison`, `gamma`, and `advanced_dvh` modules.
+- Updated `docs/architecture/metrics-architecture.md` with correct function signatures and the two new modules.
+
 ## [0.3.0] - 2025-12-28
 
 ### Added

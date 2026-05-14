@@ -121,6 +121,13 @@ nav:
     - Compliance Checking: user-guide/compliance-checking.md
     - Visualizations: user-guide/visualizations.md
     - Geometric Analysis: user-guide/geometric-analysis.md
+    - StructureSet: user-guide/structure-set.md
+    - Gamma Index Performance: user-guide/gamma-performance.md
+    - Migration v0.2→v0.3: user-guide/migration-v0.2-v0.3.md
+  - Architecture:
+    - Overview: architecture/index.md
+    - Dose Architecture: architecture/dose-architecture.md
+    - Metrics Architecture: architecture/metrics-architecture.md
   - Examples:
     - 1. Basic Usage: notebooks/01-basic-usage.ipynb
     - 2. NIfTI I/O: notebooks/02-nifti-io.ipynb

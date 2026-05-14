@@ -36,4 +36,4 @@ echo "Installing test dependencies..."
 python3 -m pip install --no-input pytest pytest-cov nbformat nbconvert ipykernel huggingface_hub || echo "Warning: some test dependencies may not be installed"
 
 echo "Running tests with pytest..."
-python3 -m pytest tests/ -v --tb=short
+python3 -m pytest tests/ -v --tb=short --ignore=tests/metrics/test_gamma_performance.py

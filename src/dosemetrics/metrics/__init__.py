@@ -3,7 +3,7 @@ Core dose metrics and calculations.
 
 This package provides metrics for radiotherapy dose analysis, including:
 - DVH computation and analysis
-- Dose statistics  
+- Dose statistics
 - Conformity indices
 - Homogeneity indices
 - Geometric metrics for structure comparison
@@ -37,6 +37,9 @@ from .dvh import (
     compute_min_dose,
     compute_median_dose,
     compute_dose_percentile,
+    # DVH comparison and integral metrics
+    compute_dvh_score,
+    compute_dvh_auc,
 )
 
 from .conformity import (
@@ -45,6 +48,9 @@ from .conformity import (
     compute_paddick_conformity_index,
     compute_coverage,
     compute_spillage,
+    # New conformity metrics
+    compute_rtog_conformity_index,
+    compute_prescription_mae,
 )
 
 from .homogeneity import (
@@ -62,6 +68,11 @@ from .geometric import (
     compute_sensitivity,
     compute_specificity,
     compare_structure_sets,
+)
+
+from .dose_comparison import (
+    compute_variance_of_laplacian,
+    compute_normalized_mae,
 )
 
 __all__ = [
@@ -87,12 +98,16 @@ __all__ = [
     "compute_min_dose",
     "compute_median_dose",
     "compute_dose_percentile",
+    "compute_dvh_score",
+    "compute_dvh_auc",
     # Conformity functions
     "compute_conformity_index",
     "compute_conformity_number",
     "compute_paddick_conformity_index",
     "compute_coverage",
     "compute_spillage",
+    "compute_rtog_conformity_index",
+    "compute_prescription_mae",
     # Homogeneity functions
     "compute_homogeneity_index",
     "compute_gradient_index",
@@ -106,5 +121,7 @@ __all__ = [
     "compute_sensitivity",
     "compute_specificity",
     "compare_structure_sets",
+    # Dose comparison functions
+    "compute_variance_of_laplacian",
+    "compute_normalized_mae",
 ]
-

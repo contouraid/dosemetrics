@@ -178,7 +178,7 @@ def panel():
                     "Value": [
                         f"{dose_criteria}%/{distance_criteria}mm",
                         f"{threshold}%",
-                        f"{gamma_stats['passing_rate']:.2f}",
+                        f"{gamma_stats['passing_rate_1_0']:.2f}",
                         f"{gamma_stats['mean_gamma']:.3f}",
                         f"{gamma_stats['max_gamma']:.3f}",
                         f"{gamma_stats.get('n_points', 'N/A')}",
@@ -196,7 +196,7 @@ def panel():
             fig_gauge = go.Figure(
                 go.Indicator(
                     mode="gauge+number+delta",
-                    value=gamma_stats["passing_rate"],
+                    value=gamma_stats["passing_rate_1_0"],
                     domain={"x": [0, 1], "y": [0, 1]},
                     title={"text": "Gamma Passing Rate (%)"},
                     delta={"reference": 95.0},
@@ -287,13 +287,12 @@ def panel():
             )
 
             # Explanation
-            st.markdown(
-                f"""
+            st.markdown(f"""
             ### Gamma Analysis Summary
             
             Gamma analysis with **{dose_criteria}%/{distance_criteria}mm** criteria:
             
-            - **Passing Rate**: {gamma_stats['passing_rate']:.2f}% of points have gamma ≤ 1.0
+            - **Passing Rate**: {gamma_stats['passing_rate_1_0']:.2f}% of points have gamma ≤ 1.0
             - **Mean Gamma**: {gamma_stats['mean_gamma']:.3f}
             - **Maximum Gamma**: {gamma_stats['max_gamma']:.3f}
             
@@ -310,5 +309,4 @@ def panel():
             - **Dose Difference**: {dose_criteria}% (percentage of reference dose)
             - **Distance-to-Agreement**: {distance_criteria}mm (spatial tolerance)
             - **Low Dose Threshold**: {threshold}% (doses below this are excluded)
-            """
-            )
+            """)

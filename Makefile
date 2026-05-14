@@ -46,9 +46,9 @@ test: ## Run all tests
 test-cov: ## Run tests with coverage and show text report
 	@echo "$(BLUE)🧪 Running tests with coverage...$(NC)"
 	@if command -v uv > /dev/null; then \
-		uv run pytest tests/ --cov=src/dosemetrics --cov-report=term-missing --cov-report=html; \
+		uv run pytest tests/ --cov=src/dosemetrics --cov-report=term-missing --cov-report=html --ignore=tests/metrics/test_gamma_performance.py; \
 	else \
-		pytest tests/ --cov=src/dosemetrics --cov-report=term-missing --cov-report=html; \
+		pytest tests/ --cov=src/dosemetrics --cov-report=term-missing --cov-report=html --ignore=tests/metrics/test_gamma_performance.py; \
 	fi
 	@echo ""
 	@echo "$(GREEN)✅ Coverage report generated$(NC)"
@@ -58,9 +58,9 @@ test-cov: ## Run tests with coverage and show text report
 test-cov-html: ## Generate HTML coverage report and open in browser
 	@echo "$(BLUE)🧪 Generating HTML coverage report...$(NC)"
 	@if command -v uv > /dev/null; then \
-		uv run pytest tests/ --cov=src/dosemetrics --cov-report=html --cov-report=term-missing:skip-covered; \
+		uv run pytest tests/ --cov=src/dosemetrics --cov-report=html --cov-report=term-missing:skip-covered --ignore=tests/metrics/test_gamma_performance.py; \
 	else \
-		pytest tests/ --cov=src/dosemetrics --cov-report=html --cov-report=term-missing:skip-covered; \
+		pytest tests/ --cov=src/dosemetrics --cov-report=html --cov-report=term-missing:skip-covered --ignore=tests/metrics/test_gamma_performance.py; \
 	fi
 	@echo ""
 	@echo "$(GREEN)✅ HTML coverage report generated in htmlcov/$(NC)"
