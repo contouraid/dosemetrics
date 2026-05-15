@@ -14,6 +14,41 @@ from dosemetrics.metrics import gamma as gamma_module
 from dosemetrics_app.utils import get_example_datasets, load_example_files
 
 
+@st.fragment
+def _gamma_slice_viewer():
+    """Fragment so the slice slider only reruns this section, not the full page."""
+    gamma_map = st.session_state.get("gamma_map")
+    if gamma_map is None:
+        return
+
+    st.markdown("### Gamma Map Visualization")
+
+    slice_idx = st.slider(
+        "Select slice:", 0, gamma_map.shape[2] - 1, gamma_map.shape[2] // 2
+    )
+
+    fig_slice = go.Figure()
+    fig_slice.add_trace(
+        go.Heatmap(
+            z=np.rot90(gamma_map[:, :, slice_idx], k=3),
+            colorscale="RdYlGn_r",
+            zmin=0,
+            zmax=2,
+            colorbar=dict(title="Gamma"),
+        )
+    )
+
+    fig_slice.update_layout(
+        title=f"Gamma Map - Slice {slice_idx}",
+        xaxis_title="",
+        yaxis_title="",
+        xaxis=dict(showticklabels=False),
+        yaxis=dict(showticklabels=False),
+    )
+
+    st.plotly_chart(fig_slice, use_container_width=True)
+
+
 def request_two_dose_files(instruction_text):
     """Helper function to request two dose files for gamma analysis"""
     st.markdown(instruction_text)
@@ -144,11 +179,9 @@ def panel():
             with st.spinner(
                 "Loading data and computing gamma analysis (this may take a while)..."
             ):
-                # Load dose distributions (read_byte_data returns Dose objects)
                 reference, _ = read_byte_data(dose_file1, [])
                 evaluated, _ = read_byte_data(dose_file2, [])
 
-                # Compute gamma analysis
                 gamma_map = gamma_module.compute_gamma_index(
                     reference,
                     evaluated,
@@ -157,8 +190,16 @@ def panel():
                     dose_threshold_percent=threshold,
                 )
 
-                # Compute statistics
                 gamma_stats = gamma_module.compute_gamma_statistics(gamma_map)
+
+            st.session_state["gamma_map"] = gamma_map
+            st.session_state["gamma_stats"] = gamma_stats
+            st.session_state["gamma_criteria"] = (dose_criteria, distance_criteria, threshold)
+
+        if "gamma_map" in st.session_state:
+            gamma_map = st.session_state["gamma_map"]
+            gamma_stats = st.session_state["gamma_stats"]
+            dose_criteria, distance_criteria, threshold = st.session_state["gamma_criteria"]
 
             st.success("Gamma analysis computed successfully")
 
@@ -249,33 +290,9 @@ def panel():
 
                 st.plotly_chart(fig_hist, use_container_width=True)
 
-            # Gamma map slice visualization
-            st.markdown("### Gamma Map Visualization")
-
-            slice_idx = st.slider(
-                "Select slice:", 0, gamma_map.shape[2] - 1, gamma_map.shape[2] // 2
-            )
-
-            fig_slice = go.Figure()
-            fig_slice.add_trace(
-                go.Heatmap(
-                    z=np.rot90(gamma_map[:, :, slice_idx], k=3),
-                    colorscale="RdYlGn_r",
-                    zmin=0,
-                    zmax=2,
-                    colorbar=dict(title="Gamma"),
-                )
-            )
-
-            fig_slice.update_layout(
-                title=f"Gamma Map - Slice {slice_idx}",
-                xaxis_title="",
-                yaxis_title="",
-                xaxis=dict(showticklabels=False),
-                yaxis=dict(showticklabels=False),
-            )
-
-            st.plotly_chart(fig_slice, use_container_width=True)
+            # Slice viewer as a module-level fragment so the slider does not
+            # trigger a full-page rerun (which would reset the computed state).
+            _gamma_slice_viewer()
 
             # Download results
             csv = results_df.to_csv(index=False)
@@ -289,23 +306,23 @@ def panel():
             # Explanation
             st.markdown(f"""
             ### Gamma Analysis Summary
-            
+
             Gamma analysis with **{dose_criteria}%/{distance_criteria}mm** criteria:
-            
+
             - **Passing Rate**: {gamma_stats['passing_rate_1_0']:.2f}% of points have gamma ≤ 1.0
             - **Mean Gamma**: {gamma_stats['mean_gamma']:.3f}
             - **Maximum Gamma**: {gamma_stats['max_gamma']:.3f}
-            
+
             ### Interpretation
-            
+
             The gamma index combines dose difference and distance-to-agreement into a single metric:
             - Gamma ≤ 1.0: Point passes (dose agreement within criteria)
             - Gamma > 1.0: Point fails (dose disagreement exceeds criteria)
-            
+
             A passing rate of ≥ 95% is typically considered acceptable for clinical treatment verification.
-            
+
             ### Criteria Used
-            
+
             - **Dose Difference**: {dose_criteria}% (percentage of reference dose)
             - **Distance-to-Agreement**: {distance_criteria}mm (spatial tolerance)
             - **Low Dose Threshold**: {threshold}% (doses below this are excluded)

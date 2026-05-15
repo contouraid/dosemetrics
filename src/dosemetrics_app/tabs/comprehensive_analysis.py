@@ -20,6 +20,41 @@ from dosemetrics import Dose, StructureSet
 from dosemetrics.metrics import dvh, conformity, homogeneity
 
 
+@st.fragment
+def _dose_viz_fragment():
+    """Fragment so all slice/axis/volume controls only rerun this section."""
+    dose = st.session_state.get("comp_dose")
+    structure_masks = st.session_state.get("comp_structure_masks")
+    if dose is None or structure_masks is None:
+        return
+
+    volume_to_viz = st.radio(
+        "Select volume to visualize:",
+        ["Dose Distribution"] + list(structure_masks.keys()),
+        horizontal=True,
+    )
+
+    col1, col2 = st.columns(2)
+    with col1:
+        axis = st.selectbox("View axis:", ["axial", "coronal", "sagittal"])
+    with col2:
+        if axis == "axial":
+            max_slice = dose.shape[0]
+        elif axis == "coronal":
+            max_slice = dose.shape[1]
+        else:
+            max_slice = dose.shape[2]
+        slice_idx = st.slider("Slice:", 0, max_slice - 1, max_slice // 2)
+
+    if volume_to_viz == "Dose Distribution":
+        fig = plot_dose_only(dose, slice_idx, axis)
+    else:
+        selected_struct = structure_masks[volume_to_viz]
+        other_structures = {k: v for k, v in structure_masks.items() if k != volume_to_viz}
+        fig = plot_structure_slice(selected_struct, other_structures, slice_idx, axis, dose)
+    st.plotly_chart(fig, use_container_width=True)
+
+
 def request_dose_and_masks(instruction_text):
     """Helper function to request dose and mask file uploads or example selection"""
     st.markdown(instruction_text)
@@ -308,6 +343,12 @@ def panel():
                 for name, struct in structure_masks.items():
                     structure_set.structures[name] = struct
 
+                # Store in session_state so the viz fragment can access them
+                # without requiring a full-page rerun when the slice slider moves.
+                st.session_state["comp_dose"] = dose
+                st.session_state["comp_structure_masks"] = structure_masks
+                st.session_state["comp_structure_set"] = structure_set
+
             except Exception as e:
                 st.error(f"Error loading data: {str(e)}")
                 import traceback
@@ -325,42 +366,9 @@ def panel():
 
         with viz_tab:
             st.markdown("### Dose Distribution Visualization")
-
-            # Volume selector
-            volume_to_viz = st.radio(
-                "Select volume to visualize:",
-                ["Dose Distribution"] + list(structure_masks.keys()),
-                horizontal=True,
-            )
-
-            # Slice selector
-            col1, col2 = st.columns(2)
-            with col1:
-                axis = st.selectbox("View axis:", ["axial", "coronal", "sagittal"])
-            with col2:
-                # Dynamically calculate max slice based on selected axis
-                if axis == "axial":
-                    max_slice = dose.shape[0]
-                elif axis == "coronal":
-                    max_slice = dose.shape[1]
-                else:  # sagittal
-                    max_slice = dose.shape[2]
-                slice_idx = st.slider("Slice:", 0, max_slice - 1, max_slice // 2)
-
-            # Plot selected volume with structure overlays
-            if volume_to_viz == "Dose Distribution":
-                # Plot dose only, no structure overlays
-                fig = plot_dose_only(dose, slice_idx, axis)
-            else:
-                # Show selected structure as main volume with other structures as overlays
-                selected_struct = structure_masks[volume_to_viz]
-                other_structures = {
-                    k: v for k, v in structure_masks.items() if k != volume_to_viz
-                }
-                fig = plot_structure_slice(
-                    selected_struct, other_structures, slice_idx, axis, dose
-                )
-            st.plotly_chart(fig, use_container_width=True)
+            # Module-level fragment: slice/axis/volume changes rerun only this
+            # section, preventing a full page rerun and the associated scroll-to-top.
+            _dose_viz_fragment()
 
         with dvh_tab:
             st.markdown("### Dose-Volume Histogram")

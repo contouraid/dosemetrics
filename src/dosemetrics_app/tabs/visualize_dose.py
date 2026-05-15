@@ -7,6 +7,23 @@ from dosemetrics_app.utils import read_byte_data
 from dosemetrics_app.utils import get_example_datasets, load_example_files
 
 
+@st.fragment
+def _dose_slice_viewer():
+    """Fragment so the slider only reruns this section, not the full page."""
+    dose_volume = st.session_state.get("viz_dose_volume")
+    if dose_volume is None:
+        return
+    max_slice = min(128, dose_volume.shape[2] - 1)
+    slice_num = st.slider("Choose an axial slice number:", 1, max_slice, max_slice // 2)
+    fig, ax = plt.subplots(figsize=(6, 6), dpi=80)
+    ax.imshow(np.rot90(dose_volume[:, :, slice_num], 3), cmap="hot")
+    ax.tick_params(axis="x", which="both", bottom=False, top=False, labelbottom=False)
+    ax.tick_params(axis="y", which="both", left=False, right=False, labelleft=False)
+    ax.set_title("Dose Volume")
+    st.pyplot(fig)
+    plt.close(fig)
+
+
 def request_dose_and_masks(instruction_text):
     """Helper function to request dose and mask file uploads or example selection"""
     st.markdown(instruction_text)
@@ -85,24 +102,6 @@ def panel():
     if files_uploaded:
         st.divider()
         st.markdown(f"## Step 2: Visualize Dose")
-        dose_volume, structure_masks = read_byte_data(dose_file, mask_files)
-        plt.figure(figsize=(6, 6), dpi=80)
-        fig, ax = plt.subplots()
-        slice_num = st.slider("Choose an axial slice number:", 1, 128, 64)
-        plt.imshow(np.rot90(dose_volume[:, :, slice_num], 3), cmap="hot")
-        plt.tick_params(
-            axis="x",  # changes apply to the x-axis
-            which="both",  # both major and minor ticks are affected
-            bottom=False,  # ticks along the bottom edge are off
-            top=False,  # ticks along the top edge are off
-            labelbottom=False,
-        )
-        plt.tick_params(
-            axis="y",  # changes apply to the x-axis
-            which="both",  # both major and minor ticks are affected
-            left=False,  # ticks along the bottom edge are off
-            right=False,  # ticks
-            labelleft=False,
-        )
-        plt.title("Dose Volume")
-        st.pyplot(fig)
+        dose_volume, _structure_masks = read_byte_data(dose_file, mask_files)
+        st.session_state["viz_dose_volume"] = dose_volume
+        _dose_slice_viewer()
