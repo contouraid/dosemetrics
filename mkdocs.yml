@@ -146,6 +146,7 @@ nav:
   - Contributing: contributing.md
   - Changelog: changelog.md
   - License: license.md
+  - Design Prompts: design-prompts.md
 
 extra:
   social:

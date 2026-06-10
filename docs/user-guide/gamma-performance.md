@@ -2,6 +2,17 @@
 
 The gamma index implementation in DoseMetrics is algorithmically correct and validated against established medical physics literature (Low et al. 1998). However, the current implementation has significant performance limitations for large volumes that users should be aware of.
 
+## How the Gamma Index Works
+
+![Gamma Index](../images/gamma-index.png)
+*Gamma Index — for each voxel v, the index searches for the reference voxel v′ that minimises the combined spatial distance r(v, v′) / Δd and dose distance δ(v, v′) / ΔD. The voxel at 64 Gy (centre of the highlighted grid) fails because no reference neighbour within Δd = 3 mm matches its dose within ΔD. (Joseph Weibel, MSc Thesis Defense, University of Bern)*
+
+The gamma index at a point $v$ is:
+
+$$\gamma(v) = \min_{v'} \sqrt{\frac{r^2(v, v')}{(\Delta d)^2} + \frac{\delta^2(v, v')}{(\Delta D)^2}} \leq 1$$
+
+where $r(v,v')$ is the Euclidean distance between voxels, $\delta(v,v')$ is the absolute dose difference, $\Delta d$ is the distance-to-agreement criterion (e.g. 3 mm), and $\Delta D$ is the dose-difference criterion (e.g. 3% of prescription). A voxel **passes** when $\gamma \leq 1$.
+
 ## Current Performance
 
 | Volume Size | Voxels | Runtime | Clinical Target | Status |

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import fitz; print\\('pymupdf ok'\\)\")",
+      "Bash(python3 -c \"import pdf2image; print\\('pdf2image ok'\\)\")",
+      "Bash(pdftoppm -r 150 -f 18 -l 22 -png /Users/amithkamath/Repositories/ContourAId/business/Defense.pdf /Users/amithkamath/Repositories/ContourAId/dosemetrics/docs/images/slide)"
+    ]
+  }
+}
