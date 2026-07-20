@@ -1,324 +1,111 @@
 # Supported File Formats
 
-DoseMetrics supports multiple file formats commonly used in radiotherapy and medical imaging.
+DoseMetrics 0.4.0 reads NIfTI and DICOM-RT data. NRRD is not currently supported by the public I/O API.
 
-## Dose Distributions
+## NIfTI
 
-### NIfTI (.nii, .nii.gz)
-
-**Recommended format** for dose distributions.
+Load a dose and one mask:
 
 ```python
-from dosemetrics.io import read_from_nifti
+from dosemetrics import Dose, StructureType
+from dosemetrics.io import load_structure
 
-dose = read_from_nifti("dose.nii.gz")
-```
-
-**Advantages:**
-
-- Compact with gzip compression
-- Includes spatial metadata (spacing, origin, orientation)
-- Wide software support
-- Fast I/O
-
-**Requirements:**
-
-- 3D volume with dose values (typically in Gy or cGy)
-- Header must contain correct voxel spacing and orientation
-
-### DICOM-RT Dose (.dcm)
-
-Native format from treatment planning systems.
-
-```python
-from dosemetrics.io import read_from_nifti  # Also handles DICOM
-
-dose = read_from_nifti("RTDose.dcm")
-```
-
-**Advantages:**
-
-- Direct export from TPS
-- Contains complete metadata
-- Clinical standard
-
-**Notes:**
-
-- DoseMetrics uses `pydicom` for DICOM reading
-- Dose scaling factor is automatically applied
-- Coordinate system transformations are handled
-
-### NRRD (.nrrd)
-
-Alternative medical imaging format.
-
-```python
-from dosemetrics.io import read_from_nifti  # Also handles NRRD
-
-dose = read_from_nifti("dose.nrrd")
-```
-
-**Advantages:**
-
-- Human-readable header
-- Supports various data types
-- Good for research workflows
-
-## Structure Masks
-
-### Binary NIfTI (.nii, .nii.gz)
-
-**Recommended format** for structure masks.
-
-```python
-from dosemetrics.io import read_from_nifti
-
-mask = read_from_nifti("ptv.nii.gz")
-```
-
-**Requirements:**
-
-- Binary mask (0 = outside structure, 1 or 255 = inside structure)
-- Must align spatially with dose grid
-- Same coordinate system as dose
-
-### DICOM-RT Structure Set (.dcm)
-
-Contains contours from TPS.
-
-```python
-from dosemetrics import StructureSet
-
-structures = StructureSet.from_dicom(
-    "RTStruct.dcm",
-    reference_image="RTDose.dcm"
+dose = Dose.from_nifti("Dose.nii.gz", name="Clinical")
+ptv = load_structure(
+    "PTV.nii.gz",
+    name="PTV",
+    structure_type=StructureType.TARGET,
 )
-
-# Extract specific structure
-ptv_mask = structures.get_structure_mask("PTV")
 ```
 
-**Notes:**
-
-- Contours are converted to binary masks
-- Requires reference image for grid information
-- Structure names must match exactly
-
-### NRRD Segmentation (.seg.nrrd)
-
-Multi-label segmentation format.
+Load a folder containing `Dose.nii.gz` and binary masks:
 
 ```python
-from dosemetrics.io import load_mask
+from dosemetrics import Dose
+from dosemetrics.io import load_structure_set
 
-# Load specific label
-mask = load_mask("structures.seg.nrrd", label=1)
+patient_dir = "patient_001"
+dose = Dose.from_nifti(f"{patient_dir}/Dose.nii.gz")
+structures = load_structure_set(patient_dir)
 ```
 
-## Directory Structure Examples
+The dose is loaded separately from the structure set. `load_structure_set()` auto-classifies names containing `PTV`, `CTV`, `GTV`, or `TARGET` as targets; pass `structure_type_mapping` when names need explicit types.
 
-### Example 1: Single Patient, NIfTI Format
-
-```
-patient_001/
-├── dose.nii.gz
-└── structures/
-    ├── PTV.nii.gz
-    ├── Brain.nii.gz
-    ├── Brainstem.nii.gz
-    └── Optic_Chiasm.nii.gz
-```
+For raw arrays and metadata:
 
 ```python
-from dosemetrics import read_dose_and_mask_files
-from pathlib import Path
+from dosemetrics.io import load_volume
 
-patient_dir = Path("patient_001")
-dose, structures = read_dose_and_mask_files(patient_dir)
-
-for structure_name in structures.get_structure_names():
-    mask = structures.get_structure_mask(structure_name)
-    print(f"{structure_name}: {mask.sum()} voxels")
+array, spacing, origin = load_volume("Dose.nii.gz")
 ```
 
-### Example 2: Multiple Plans for Comparison
+## DICOM-RT
 
-```
-patient_001/
-├── plan_tps/
-│   ├── dose.nii.gz
-│   └── structures/
-│       └── ...
-└── plan_predicted/
-    ├── dose.nii.gz
-    └── structures/
-        └── ...
-```
+Load an RTDOSE file:
 
 ```python
-from dosemetrics.io import read_from_nifti
+from dosemetrics import Dose
 
-dose_tps = read_from_nifti("patient_001/plan_tps/dose.nii.gz")
-dose_pred = read_from_nifti("patient_001/plan_predicted/dose.nii.gz")
+dose = Dose.from_dicom("RTDOSE.dcm", name="Clinical")
 ```
 
-### Example 3: DICOM Workflow
-
-```
-patient_001/
-├── RTDose.dcm
-├── RTStruct.dcm
-└── CT_series/
-    ├── CT.0001.dcm
-    ├── CT.0002.dcm
-    └── ...
-```
+Load structures from a folder containing an RTSTRUCT and its referenced image data:
 
 ```python
-from dosemetrics.io import read_from_nifti
-from dosemetrics import StructureSet
+from dosemetrics.io import load_structure_set
 
-# Load dose
-dose = read_from_nifti("patient_001/RTDose.dcm")
+structures = load_structure_set("path/to/dicom_folder", format="dicom")
+```
 
-# Load structures
-structures = StructureSet.from_dicom(
-    "patient_001/RTStruct.dcm",
-    reference_image="patient_001/RTDose.dcm"
+The format-specific module exposes lower-level readers:
+
+```python
+from dosemetrics.io import dicom_io
+
+dose_array, spacing, origin, scaling = dicom_io.read_dicom_rtdose("RTDOSE.dcm")
+roi_data = dicom_io.read_dicom_rtstruct(
+    "RTSTRUCT.dcm",
+    reference_image=(dose_array.shape, spacing, origin),
 )
-
-# Get individual structure masks
-ptv_mask = structures.get_structure_mask("PTV")
-brainstem_mask = structures.get_structure_mask("Brainstem")
+ptv_mask = roi_data["PTV"]["mask"]
 ```
 
-### Example 4: Batch Processing
+RTSTRUCT rasterization needs a compatible reference grid. When loading a complete folder, the DICOM loader derives that grid from the available CT series or dose.
 
-```
-data/
-├── patient_001/
-│   ├── dose.nii.gz
-│   └── structures/
-├── patient_002/
-│   ├── dose.nii.gz
-│   └── structures/
-└── patient_003/
-    ├── dose.nii.gz
-    └── structures/
-```
+## Writing NIfTI
 
 ```python
-from dosemetrics import read_dose_and_mask_files
-from pathlib import Path
-import pandas as pd
+from dosemetrics.io import nifti_io
 
-results = []
-for patient_dir in Path("data").glob("patient_*"):
-    dose, structures = read_dose_and_mask_files(patient_dir)
-    
-    for structure_name in structures.get_structure_names():
-        mask = structures.get_structure_mask(structure_name)
-        # Process and store results
-        ...
+nifti_io.write_nifti_volume(
+    dose.dose_array,
+    "Dose-copy.nii.gz",
+    spacing=dose.spacing,
+    origin=dose.origin,
+)
+nifti_io.write_structure_as_nifti(ptv, "PTV-copy.nii.gz")
+nifti_io.write_structure_set_as_nifti(structures, "exported-structures")
 ```
 
-## Data Requirements
+## Spatial requirements
 
-### Spatial Alignment
+Before computing a metric, dose and structure data must have matching:
 
-**Critical:** Dose and structure masks must be spatially aligned:
-
-- Same image spacing (voxel size)
-- Same image dimensions
-- Same coordinate system origin
-- Same orientation
-
-DoseMetrics will warn if alignment issues are detected.
-
-### Dose Units
-
-Supported dose units:
-
-- **Gy** (Gray) - preferred
-- **cGy** (centigray)
-
-Specify units when loading if not in metadata:
+- array shape;
+- voxel spacing;
+- world-space origin.
 
 ```python
-dose = load_dose("dose.nii.gz", dose_unit="Gy")
+if not dose.is_compatible_with_structure(ptv):
+    raise ValueError("Dose and PTV grids are not compatible")
 ```
 
-### Mask Values
+DoseMetrics preserves spacing and origin but does not currently expose a public resampling function. Align grids before analysis when required.
 
-Binary masks should use:
-
-- **0** for voxels outside the structure
-- **1** or **255** for voxels inside the structure
-
-Multi-label masks:
-
-- Each structure has a unique integer label
-- 0 is reserved for background
-
-## Format Conversion
-
-### DICOM to NIfTI
-
-Convert DICOM RT Dose to NIfTI:
+## Format detection
 
 ```python
-from dosemetrics.io import read_from_nifti
-import nibabel as nib
-import numpy as np
+from dosemetrics.io import detect_folder_format
 
-# Load DICOM
-dose = read_from_nifti("RTDose.dcm")
-
-# Save as NIfTI
-nii = nib.Nifti1Image(dose, affine=np.eye(4))
-nib.save(nii, "dose.nii.gz")
+format_name = detect_folder_format("patient_001")  # "nifti" or "dicom"
 ```
-
-### Extract Structures from RT Structure Set
-
-Convert DICOM RT Struct to individual masks:
-
-```python
-from dosemetrics import StructureSet
-import nibabel as nib
-from pathlib import Path
-
-# Load structure set
-structures = StructureSet.from_dicom("RTStruct.dcm", reference_image="RTDose.dcm")
-
-# Save each structure as separate file
-output_dir = Path("structures")
-output_dir.mkdir(exist_ok=True)
-
-for structure_name in structures.get_structure_names():
-    mask = structures.get_structure_mask(structure_name)
-    nii = nib.Nifti1Image(mask.astype(np.uint8), affine=np.eye(4))
-    nib.save(nii, output_dir / f"{structure_name}.nii.gz")
-```
-
-## Best Practices
-
-1. **Use NIfTI for storage**: Convert DICOM data to NIfTI for faster processing and smaller file sizes
-
-2. **Organize by patient**: Keep all files for one patient in a single directory
-
-3. **Consistent naming**: Use clear, consistent names for structures (e.g., "PTV", "Brainstem", not "ptv", "Brain_Stem")
-
-4. **Compression**: Always use `.nii.gz` (compressed) instead of `.nii` to save space
-
-5. **Metadata**: Preserve spatial metadata when converting between formats
-
-## Need Help with Your Data?
-
-If you have data in a different format or need help preparing your files:
-
-1. Check our [interactive notebook](../notebooks/04-getting-started-own-data.ipynb) for detailed examples
-2. Try the [live demo](https://huggingface.co/spaces/contouraid/dosemetrics) to test with sample data
-3. [Open an issue](https://github.com/contouraid/dosemetrics/issues) on GitHub
-
-[:material-rocket-launch: Try Interactive Demo](https://huggingface.co/spaces/contouraid/dosemetrics){ .md-button .md-button--primary target="_blank" }

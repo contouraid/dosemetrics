@@ -1,192 +1,68 @@
 # API Reference
 
-Welcome to the DoseMetrics API documentation. This section provides detailed information about all public classes, functions, and modules.
+DoseMetrics 0.4.0 separates data representation, I/O, computations, and workflow utilities.
 
-## Modules Overview
-
-### [:material-calculator: Metrics](metrics.md)
-Core functions for dose calculations, DVH generation, quality scoring, and plan comparison.
-
-**Key components:**
-
-- DVH computation and analysis
-- Conformity and homogeneity indices
-- Dose comparison metrics
-- Gamma analysis
-
-### [:material-folder-open: Data I/O](io.md)
-Data structures and I/O utilities for reading and writing dose distributions and structure masks.
-
-**Key components:**
-
-- Structure and StructureSet classes
-- Load dose from NIfTI, DICOM, NRRD
-- Load structure masks
-- Save results to various formats
-- DICOM RT Structure Set handling
-
-### [:material-tools: Utils](utils.md)
-Utility functions for plotting, compliance checking, and data processing.
-
-**Key components:**
-
-- Interactive plotting with Plotly
-- Compliance checking against dose constraints
-- Data transformation utilities
-- Statistical analysis helpers
-
-### [:material-database: Data Structures](data.md)
-Classes for managing structure sets and dose distributions.
-
-**Key components:**
-
-- StructureSet class for managing multiple structures
-- DoseGrid class for dose distribution handling
-- Metadata management
-
-## Quick Navigation
-
-Looking for something specific? Here are common tasks:
-
-**Computing DVH:**
+## Core objects
 
 ```python
-from dosemetrics.metrics.dvh import compute_dvh
+from dosemetrics import Dose, OAR, Target, StructureSet, StructureType
 ```
 
-[See metrics module documentation →](metrics.md)
+- `Dose` holds a 3D dose array and its geometry.
+- `OAR`, `Target`, and `AvoidanceStructure` hold binary geometry.
+- `StructureSet` manages named structures but does not store dose.
 
-**Loading Data:**
+[Data structure reference →](data.md)
+
+## Loading data
 
 ```python
-from dosemetrics import read_dose_and_mask_files, StructureSet
-# or
-from dosemetrics.io import read_from_nifti, StructureSet
+from dosemetrics import Dose
+from dosemetrics.io import load_structure, load_structure_set, load_volume
+
+dose = Dose.from_nifti("Dose.nii.gz")
+structures = load_structure_set("patient_folder")
+ptv = load_structure("PTV.nii.gz", name="PTV")
+array, spacing, origin = load_volume("Dose.nii.gz")
 ```
 
-[See data module documentation →](io.md)
+[I/O reference →](io.md)
 
-**Creating Plots:**
+## Computing metrics
 
 ```python
-from dosemetrics.utils.plot import plot_dvh, compare_dvh
+from dosemetrics.metrics import dvh, conformity, homogeneity
+
+stats = dvh.compute_dose_statistics(dose, ptv)
+ci = conformity.compute_conformity_index(dose, ptv, prescription_dose=60.0)
+hi = homogeneity.compute_homogeneity_index(dose, ptv)
 ```
 
-[See utils documentation →](utils.md)
+The metric package exports domain modules, not a flat function namespace:
 
-**Checking Compliance:**
+| Module | Purpose |
+|---|---|
+| `dvh` | DVHs, dose statistics, DVH comparisons |
+| `conformity` | Coverage and conformity indices |
+| `homogeneity` | Homogeneity and gradient indices |
+| `geometric` | Structure overlap and surface distances |
+| `gamma` | 2D/3D gamma analysis |
+| `dose_comparison` | Voxel-wise image comparisons |
+| `comparison` | Named plan-to-plan clinical distances |
+
+[Metrics reference →](metrics.md)
+
+## Utilities
 
 ```python
-from dosemetrics.utils.compliance import check_compliance, quality_index
+from dosemetrics.utils import batch, compliance, plot
+
+fig, ax = plot.plot_dvh(dose, ptv)
+constraints = compliance.get_default_constraints()
 ```
 
-[See utils documentation →](utils.md)
+[Utilities reference →](utils.md)
 
-## Package Structure
+## Comparison convention
 
-```
-dosemetrics/
-├── metrics/          # Core calculation functions
-│   ├── dvh.py       # DVH computation
-│   ├── statistics.py # Dose statistics
-│   ├── conformity.py # Conformity indices
-│   ├── homogeneity.py # Homogeneity indices
-│   └── geometric.py # Geometric metrics
-├── io/              # Data I/O
-│   ├── dicom_io.py  # DICOM reading
-│   └── nifti_io.py  # NIfTI I/O
-├── dose.py          # Dose class
-├── structures.py    # Structure classes
-├── structure_set.py # StructureSet class
-└── utils/           # Utilities
-    ├── plot.py      # Visualization
-    ├── compliance.py # Constraint checking
-    ├── comparison.py # Dose comparison
-    └── batch.py     # Batch processing
-```
-
-## Usage Examples
-
-### Basic Analysis Workflow
-
-```python
-from dosemetrics import Dose, Structure
-from dosemetrics.metrics.dvh import compute_dvh
-from dosemetrics.utils.plot import plot_dvh
-
-# Load data
-dose = Dose.from_nifti("dose.nii.gz")
-ptv = Structure.from_nifti("ptv.nii.gz", name="PTV")
-
-# Compute DVH
-dvh = compute_dvh(dose, ptv)
-
-# Visualize
-fig = plot_dvh(dvh, title="PTV Coverage")
-fig.show()
-```
-
-### Working with Structure Sets
-
-```python
-from dosemetrics import Dose, StructureSet
-from dosemetrics.io import load_structure_set
-from dosemetrics.metrics.dvh import compute_dvh, create_dvh_table
-
-# Load data
-dose = Dose.from_nifti("dose.nii.gz")
-structures = load_structure_set("structures/")
-
-# Compute DVH for all structures
-dvh_table = create_dvh_table(dose, structures)
-```
-
-## Type Hints and Return Values
-
-All functions include comprehensive type hints for better IDE support and type checking. Example:
-
-```python
-def compute_dvh(
-    dose: Dose,
-    structure: Structure,
-    bins: int = 1000
-) -> pd.DataFrame:
-    """Compute dose-volume histogram.
-    
-    Args:
-        dose: Dose distribution object
-        structure: Structure object with mask
-        bins: Number of bins for histogram
-        
-    Returns:
-        DataFrame with 'dose' and 'volume' columns
-    """
-    ...
-```
-
-## Conventions
-
-### Coordinate Systems
-
-- All spatial data uses RAS+ orientation (Right, Anterior, Superior)
-- Origin is typically at image corner
-- Spacing is in mm
-
-### Units
-
-- **Dose**: Gray (Gy) or centigray (cGy)
-- **Volume**: cm³ or % of total structure volume
-- **Distance**: mm
-
-### Array Shapes
-
-- **3D volumes**: (x, y, z) where z is superior-inferior axis
-- **Masks**: Binary (0/1) or labeled (0, 1, 2, ..., N)
-
-## See Also
-
-- [Getting Started Guide](../getting-started/quickstart.md)
-- [User Guide](../user-guide/overview.md)
-- [Examples](../examples/comparing-plans.md)
-
-[:material-rocket-launch: Try Live Demo](https://huggingface.co/spaces/contouraid/dosemetrics){ .md-button .md-button--primary target="_blank" }
+Every `compare_*` dose function accepts `reference` first and `evaluated` second. Compatible array shape, spacing, and origin are required unless a function documents otherwise.

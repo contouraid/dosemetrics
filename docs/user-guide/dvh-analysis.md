@@ -39,9 +39,9 @@ $$D_X = \min\!\{d : \text{DVH}(d) \leq X / 100\}$$
 ```python
 from dosemetrics.metrics.dvh import compute_dose_at_volume
 
-d95 = compute_dose_at_volume(dose, ptv, volume_fraction=0.05)   # D95
-d2  = compute_dose_at_volume(dose, ptv, volume_fraction=0.98)   # D2 (near-max)
-d98 = compute_dose_at_volume(dose, ptv, volume_fraction=0.02)   # D98 (near-min)
+d95 = compute_dose_at_volume(dose, ptv, volume_percent=95)  # D95
+d2  = compute_dose_at_volume(dose, ptv, volume_percent=2)   # D2 (near-max)
+d98 = compute_dose_at_volume(dose, ptv, volume_percent=98)  # D98 (near-min)
 
 print(f"D95: {d95:.1f} Gy   D2: {d2:.1f} Gy   D98: {d98:.1f} Gy")
 ```
@@ -55,8 +55,8 @@ $$V_X = \text{DVH}(X)$$
 ```python
 from dosemetrics.metrics.dvh import compute_volume_at_dose
 
-v20 = compute_volume_at_dose(dose, lung_left, dose_gy=20.0)
-v5  = compute_volume_at_dose(dose, lung_left, dose_gy=5.0)
+v20 = compute_volume_at_dose(dose, lung_left, dose_threshold=20.0)
+v5  = compute_volume_at_dose(dose, lung_left, dose_threshold=5.0)
 
 print(f"Lung V20: {v20 * 100:.1f}%   Lung V5: {v5 * 100:.1f}%")
 ```
@@ -85,8 +85,8 @@ The exponent $a$ encodes the tissue's dose-response: large positive $a$ for seri
 ```python
 from dosemetrics.metrics.dvh import compute_equivalent_uniform_dose
 
-eud_tumor = compute_equivalent_uniform_dose(dose, ptv,          a=-10.0)
-eud_cord  = compute_equivalent_uniform_dose(dose, spinal_cord,  a=8.0)
+eud_tumor = compute_equivalent_uniform_dose(dose, ptv, a_parameter=-10.0)
+eud_cord  = compute_equivalent_uniform_dose(dose, spinal_cord, a_parameter=8.0)
 
 print(f"EUD (PTV, a=-10): {eud_tumor:.1f} Gy")
 print(f"EUD (cord, a=8):  {eud_cord:.1f} Gy")

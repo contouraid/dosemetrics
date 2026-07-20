@@ -124,7 +124,7 @@ nav:
     - Geometric Analysis: user-guide/geometric-analysis.md
     - StructureSet: user-guide/structure-set.md
     - Gamma Index Performance: user-guide/gamma-performance.md
-    - Migration v0.2→v0.3: user-guide/migration-v0.2-v0.3.md
+    - Migration to v0.4: user-guide/migration-v0.2-v0.3.md
   - Architecture:
     - Overview: architecture/index.md
     - Dose Architecture: architecture/dose-architecture.md
@@ -137,6 +137,7 @@ nav:
     - 5. Computing Metrics: notebooks/05-computing-metrics.ipynb
     - 6. Comparing Plans: notebooks/06-comparing-plans.ipynb
     - 7. Exporting Results: notebooks/07-exporting-results.ipynb
+    - Comparing Plans: examples/comparing-plans.md
     - Batch Processing: examples/batch-processing.md
   - API Reference:
     - Overview: api/index.md

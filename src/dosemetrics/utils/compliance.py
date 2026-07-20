@@ -189,58 +189,25 @@ def quality_index(
         >>> if qi < 0:
         ...     print("Constraint violated!")
     """
-    from ..metrics import dvh, statistics
+    from ..metrics import dvh
 
-    dose_bins, volumes = dvh.compute_dvh(dose, structure)
+    if constraint_level <= 0:
+        raise ValueError("constraint_level must be positive")
 
     if constraint_type == "mean":
-        # Check if mean dose exceeds constraint
-        indices = np.where(dose_bins > constraint_level)[0]
-        if len(indices) > 0:
-            proportion_above = np.max(volumes[indices])
-        else:
-            proportion_above = 0.0
+        actual = dvh.compute_mean_dose(dose, structure)
+        margin = (constraint_level - actual) / constraint_level
+        return float(np.clip(margin, -1.0, 1.0))
 
-        if proportion_above > 0:
-            # Negative value indicates violation
-            # Worst case is -1 (all voxels above constraint)
-            return -proportion_above / 100.0
-        else:
-            # Constraint is met - compute gap
-            mean_dose_val = statistics.compute_mean_dose(dose, structure)
-            gap_between = (constraint_level - mean_dose_val) / constraint_level
-            return float(gap_between)
+    if constraint_type == "max":
+        actual = dvh.compute_max_dose(dose, structure)
+        margin = (constraint_level - actual) / constraint_level
+        return float(np.clip(margin, -1.0, 1.0))
 
-    elif constraint_type == "max":
-        # Check if any dose exceeds constraint
-        indices = np.where(dose_bins > constraint_level)[0]
-        if len(indices) > 0:
-            proportion_above = np.max(volumes[indices])
-        else:
-            proportion_above = 0.0
-
-        if proportion_above > 0:
-            # Negative value indicates violation
-            return -proportion_above / 100.0
-        else:
-            # Constraint is met - compute gap
-            max_dose_val = statistics.compute_max_dose(dose, structure)
-            gap_between = (constraint_level - max_dose_val) / constraint_level
-            return float(gap_between)
-
-    elif constraint_type == "min":
-        # For targets - check if dose is below constraint
-        indices = np.where(dose_bins < constraint_level)[0]
-        if len(indices) > 0:
-            proportion_below = np.min(volumes[indices])
-        else:
-            proportion_below = 0.0
-
-        if proportion_below < 100:
-            # Negative value indicates violation
-            return -(100 - proportion_below) / 100.0
-        else:
-            return 1.0
+    if constraint_type == "min":
+        actual = dvh.compute_min_dose(dose, structure)
+        margin = (actual - constraint_level) / constraint_level
+        return float(np.clip(margin, -1.0, 1.0))
 
     # Default return
     return 0.0

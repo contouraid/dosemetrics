@@ -542,16 +542,16 @@ All graphics should match the aesthetic of the existing slide illustrations:
 ## Usage Notes
 
 - When submitting prompts to [claude.ai/design](https://claude.ai/design), specify: **"University of Bern style: white background, deep red (#CC0000), clean sans-serif typography, minimal decoration"**.
-- Generated images should be saved to [docs/images/](docs/images/) and named after the metric function (e.g. `metric-dice-coefficient.png`).
+- Generated images should be saved to [images/](images/) and named after the metric function (e.g. `metric-dice-coefficient.png`).
 - After adding images, embed them in the relevant documentation page with:
   ```markdown
   ![Alt text](../images/metric-name.png)
   *Caption describing what the diagram illustrates.*
   ```
 - Pages that need new images:
-  - [docs/user-guide/dvh-analysis.md](docs/user-guide/dvh-analysis.md) — Groups 1 and 2
-  - [docs/user-guide/quality-metrics.md](docs/user-guide/quality-metrics.md) — Groups 3 and 4
-  - [docs/user-guide/geometric-analysis.md](docs/user-guide/geometric-analysis.md) — Groups 5, 6, and 7
-  - [docs/user-guide/gamma-performance.md](docs/user-guide/gamma-performance.md) — Group 8
-  - [docs/user-guide/quality-metrics.md](docs/user-guide/quality-metrics.md) — Group 9
-  - [docs/user-guide/dvh-analysis.md](docs/user-guide/dvh-analysis.md) — Group 10
+  - [user-guide/dvh-analysis.md](user-guide/dvh-analysis.md) — Groups 1 and 2
+  - [user-guide/quality-metrics.md](user-guide/quality-metrics.md) — Groups 3 and 4
+  - [user-guide/geometric-analysis.md](user-guide/geometric-analysis.md) — Groups 5, 6, and 7
+  - [user-guide/gamma-performance.md](user-guide/gamma-performance.md) — Group 8
+  - [user-guide/quality-metrics.md](user-guide/quality-metrics.md) — Group 9
+  - [user-guide/dvh-analysis.md](user-guide/dvh-analysis.md) — Group 10

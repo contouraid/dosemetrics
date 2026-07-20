@@ -50,7 +50,8 @@ class Structure(ABC):
         >>> # Compute dose statistics (using Dose object)
         >>> from dosemetrics.dose import Dose
         >>> dose = Dose.from_dicom("rtdose.dcm")
-        >>> stats = dose.compute_statistics(ptv)
+        >>> from dosemetrics.metrics import dvh
+        >>> stats = dvh.compute_dose_statistics(dose, ptv)
     """
 
     def __init__(

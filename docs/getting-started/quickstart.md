@@ -1,181 +1,101 @@
 # Quick Start
 
-This guide will help you get started with DoseMetrics in just a few minutes.
+## Load a NIfTI patient
 
-## Basic Usage
-
-Here's a simple example that loads dose and structure data, computes a DVH, and creates a visualization:
+A patient folder should contain `Dose.nii.gz` and one binary NIfTI mask per structure.
 
 ```python
-from dosemetrics import read_dose_and_mask_files, compute_dvh
-from dosemetrics.utils.plotting import plot_dvh
+from pathlib import Path
+from dosemetrics import Dose
+from dosemetrics.io import load_structure_set
 
-# Load dose distribution and structures
-dose, structures = read_dose_and_mask_files("path/to/patient_data")
+patient_dir = Path("path/to/patient")
+dose = Dose.from_nifti(patient_dir / "Dose.nii.gz", name="Clinical")
+structures = load_structure_set(patient_dir)
 
-# Get PTV mask
-ptv_mask = structures.get_structure_mask("PTV")
-
-# Compute dose-volume histogram
-dvh_data = compute_dvh(dose, ptv_mask, organ_name="PTV")
-
-# Create interactive plot
-plot_dvh(dvh_data, title="PTV Coverage Analysis")
+ptv = structures["PTV"]
+brainstem = structures["Brainstem"]
+print(dose)
+print(structures.structure_names)
 ```
 
-## Working with Multiple Structures
+`StructureSet` contains geometry only. Keeping the dose independent lets the same structures be reused with multiple plans.
 
-Analyze multiple organs at risk (OARs) and targets:
+## Compute DVHs and statistics
 
 ```python
-from dosemetrics import read_dose_and_mask_files, compute_dvh, dvh_by_structure
-from dosemetrics.utils.plotting import plot_multiple_dvhs
+from dosemetrics.metrics import dvh
 
-# Load dose and structures
-dose, structures = read_dose_and_mask_files("path/to/patient_data")
+dose_bins, volume_percent = dvh.compute_dvh(dose, ptv, step_size=0.1)
+stats = dvh.compute_dose_statistics(dose, ptv)
+d95 = dvh.compute_dose_at_volume(dose, ptv, volume_percent=95)
+v20 = dvh.compute_volume_at_dose(dose, brainstem, dose_threshold=20.0)
 
-# Compute DVHs for all structures
-dvh_results = dvh_by_structure(dose, structures)
-
-# Plot all DVHs together
-plot_multiple_dvhs(dvh_results, title="Treatment Plan Analysis")
+print(f"PTV D95: {d95:.2f} Gy")
+print(f"Brainstem V20: {v20:.1f}%")
 ```
 
-## Checking Dose Constraints
-
-Evaluate whether your plan meets clinical constraints:
+For every structure at once:
 
 ```python
-from dosemetrics import read_dose_and_mask_files, compute_dvh
-from dosemetrics.utils.compliance import check_constraint
-
-# Load data
-dose, structures = read_dose_and_mask_files("path/to/patient_data")
-brainstem_mask = structures.get_structure_mask("Brainstem")
-
-# Compute DVH
-dvh_data = compute_dvh(dose, brainstem_mask, organ_name="Brainstem")
-
-# Define constraint: Maximum dose to brainstem < 54 Gy
-constraint = {
-    "organ": "Brainstem",
-    "type": "max",
-    "limit": 54.0,
-    "unit": "Gy"
-}
-
-# Check compliance
-is_compliant = check_constraint(dvh_data, constraint)
-print(f"Constraint satisfied: {is_compliant}")
+dvh_table = dvh.create_dvh_table(dose, structures, step_size=0.1)
+dvh_table.to_csv("dvh_results.csv", index=False)
 ```
 
-## Computing Quality Metrics
-
-Calculate plan quality indices:
+## Compute plan-quality metrics
 
 ```python
-from dosemetrics import read_dose_and_mask_files
-from dosemetrics.metrics.scores import compute_conformity_index, compute_homogeneity_index
+from dosemetrics.metrics import conformity, homogeneity
 
-# Load dose and PTV
-dose, structures = read_dose_and_mask_files("path/to/patient_data")
-ptv_mask = structures.get_structure_mask("PTV")
+prescription = 60.0
+coverage = conformity.compute_coverage(dose, ptv, prescription)
+paddick_ci = conformity.compute_paddick_conformity_index(dose, ptv, prescription)
+homogeneity_index = homogeneity.compute_homogeneity_index(dose, ptv)
+gradient_index = homogeneity.compute_gradient_index(dose, ptv, prescription)
 
-# Compute conformity index
-ci = compute_conformity_index(dose, ptv_mask, prescription_dose=60.0)
-print(f"Conformity Index: {ci:.3f}")
-
-# Compute homogeneity index
-hi = compute_homogeneity_index(dose, ptv_mask)
-print(f"Homogeneity Index: {hi:.3f}")
+print(f"Coverage: {coverage:.1%}")
+print(f"Paddick CI: {paddick_ci:.3f}")
+print(f"Homogeneity index: {homogeneity_index:.3f}")
+print(f"Gradient index: {gradient_index:.3f}")
 ```
 
-## Comparing Two Plans
-
-Compare predicted vs. actual dose distributions:
+## Plot structures
 
 ```python
-from dosemetrics.io import read_from_nifti
-from dosemetrics.metrics import dose_comparison, gamma
+from dosemetrics.utils.plot import plot_subject_dvhs, save_figure
 
-# Load two dose distributions
-reference = read_from_nifti("path/to/tps_dose.nii.gz")
-evaluated = read_from_nifti("path/to/predicted_dose.nii.gz")
-
-# Compute absolute difference
-diff = dose_comparison.compare_dose_difference_map(
-    reference, evaluated, absolute=True
+fig, ax = plot_subject_dvhs(
+    dose,
+    structures,
+    structure_names=["PTV", "Brainstem"],
 )
+save_figure(fig, "dvh", formats=["png", "pdf"])
+```
 
-# Compute gamma index (3%/3mm criteria)
-gamma_map = gamma.compare_gamma_index(
-    reference,
-    evaluated,
-    dose_criterion_percent=3.0,
-    distance_criterion_mm=3.0,
-    dose_threshold_percent=10.0,
-)
+## Compare two plans
+
+```python
+from dosemetrics import Dose
+from dosemetrics.metrics import comparison, dose_comparison, gamma
+
+reference = Dose.from_nifti("reference.nii.gz")
+evaluated = Dose.from_nifti("evaluated.nii.gz")
+
+mae_gy = dose_comparison.compare_mae(reference, evaluated)
+ptv_distance_gy = comparison.compare_ptv_dose(reference, evaluated, ptv)
+gamma_map = gamma.compare_gamma_index(reference, evaluated)
 passing_rate = gamma.compute_gamma_passing_rate(gamma_map)
 
-print(f"Gamma pass rate: {passing_rate:.1f}%")
+print(f"MAE: {mae_gy:.3f} Gy")
+print(f"PTV mean-dose distance: {ptv_distance_gy:.3f} Gy")
+print(f"3%/3 mm gamma pass rate: {passing_rate:.1f}%")
 ```
 
-## Export Results
+All comparison functions take `reference` before `evaluated` and require compatible dose geometry.
 
-Save your analysis results:
+## Next steps
 
-```python
-from dosemetrics import read_dose_and_mask_files, compute_dvh
-import pandas as pd
-
-# Compute DVH
-dose, structures = read_dose_and_mask_files("path/to/patient_data")
-mask = structures.get_structure_mask("PTV")
-dvh_data = compute_dvh(dose, mask, organ_name="PTV")
-
-# Convert to DataFrame and save
-df = pd.DataFrame(dvh_data)
-df.to_csv("dvh_results.csv", index=False)
-
-# Save plot
-from dosemetrics.utils.plotting import plot_dvh
-fig = plot_dvh(dvh_data, title="DVH Analysis")
-fig.write_html("dvh_plot.html")
-fig.write_image("dvh_plot.png")
-```
-
-## Command Line Interface
-
-DoseMetrics also provides a CLI for common operations:
-
-```bash
-# Compute DVH from command line
-dosemetrics dvh \
-  --dose path/to/dose.nii.gz \
-  --mask path/to/mask.nii.gz \
-  --output dvh_results.csv
-
-# Check constraints
-dosemetrics check-constraints \
-  --dose path/to/dose.nii.gz \
-  --masks path/to/masks/ \
-  --constraints constraints.json \
-  --output compliance_report.csv
-```
-
-## Next Steps
-
-Now that you've seen the basics:
-
-- [Using Your Own Data](../notebooks/04-getting-started-own-data.ipynb) - Detailed guide for your specific data
-- [File Formats](file-formats.md) - Learn about supported file formats
-- [User Guide](../user-guide/overview.md) - Comprehensive documentation
-- [API Reference](../api/index.md) - Detailed API documentation
-
-## Try the Live Demo
-
-Want to experiment without writing code?
-
-[:material-rocket-launch: Try Interactive Demo on Hugging Face](https://huggingface.co/spaces/contouraid/dosemetrics){ .md-button .md-button--primary target="_blank" }
-
-Upload your data and explore DoseMetrics features through an intuitive web interface!
+- [File formats](file-formats.md)
+- [DVH analysis](../user-guide/dvh-analysis.md)
+- [Plan comparison metrics](../user-guide/plan-comparison-metrics.md)
+- [Executable notebooks](../notebooks/01-basic-usage.ipynb)

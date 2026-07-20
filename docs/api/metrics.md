@@ -63,11 +63,16 @@ The dose-plan API is organized by meaning:
 ### Computing a Basic DVH
 
 ```python
-from dosemetrics import Dose, Structure
+from dosemetrics import Dose, StructureType
+from dosemetrics.io import load_structure
 from dosemetrics.metrics import dvh
 
 dose = Dose.from_nifti("dose.nii.gz")
-ptv  = Structure.from_nifti("ptv.nii.gz", name="PTV")
+ptv = load_structure(
+    "ptv.nii.gz",
+    name="PTV",
+    structure_type=StructureType.TARGET,
+)
 
 dose_bins, volumes = dvh.compute_dvh(dose, ptv)
 ```

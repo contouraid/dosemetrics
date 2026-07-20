@@ -49,6 +49,7 @@ def analyze_by_structure(
     Examples
     --------
     >>> from dosemetrics.metrics import dvh
+    >>> from dosemetrics.io import load_structure_set
     >>> from dosemetrics.utils import analysis
     >>> 
     >>> metrics = {
@@ -123,7 +124,7 @@ def analyze_by_subject(
     >>> from dosemetrics.utils import analysis
     >>> 
     >>> dose = Dose.from_dicom('rtdose.dcm')
-    >>> structures = StructureSet.from_dicom('rtstruct.dcm')
+    >>> structures = load_structure_set('dicom-folder', format='dicom')
     >>> 
     >>> metrics = {
     ...     'mean_dose': dvh.compute_mean_dose,

@@ -5,285 +5,115 @@
 [![Tests](https://github.com/contouraid/dosemetrics/actions/workflows/tests.yml/badge.svg)](https://github.com/contouraid/dosemetrics/actions/workflows/tests.yml)
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://contouraid.github.io/dosemetrics/)
 [![License](https://img.shields.io/badge/license-CC%20BY--SA--NC%204.0-green.svg)](LICENSE)
-[![Development Status](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/contouraid/dosemetrics)
 
-A Python library for measuring radiotherapy doses and creating interactive visualizations for radiation therapy treatment planning and analysis.
+DoseMetrics 0.4.0 is a Python library for radiotherapy dose analysis. It provides typed containers for dose distributions and structures, NIfTI and DICOM-RT I/O, DVH and plan-quality metrics, dose and geometry comparisons, gamma analysis, batch utilities, and publication-ready Matplotlib plots.
 
-**📚 [Documentation](https://contouraid.github.io/dosemetrics/) | 🚀 [Try Live Demo](https://huggingface.co/spaces/contouraid/dosemetrics) | 💻 [GitHub](https://github.com/contouraid/dosemetrics)**
-
-## Overview
-
-DoseMetrics provides tools for analyzing radiation dose distributions, calculating dose-volume histograms (DVH), evaluating treatment plan quality, and creating publication-ready visualizations. This library is designed for medical physicists, radiation oncologists, and researchers working with radiotherapy treatment planning data.
-
-### Package Structure
-- `dosemetrics.metrics`: Core dose calculation functions (DVH, scores, etc.)
-- `dosemetrics.io`: File I/O utilities for reading dose and mask data  
-- `dosemetrics.utils`: Utility functions for compliance, plotting, etc.
-- App-specific code moved to separate `dosemetrics_app` package (not distributed on PyPI)
-
-## Features
-
-- **Dose Analysis**: Calculate and analyze 3D dose distributions
-- **DVH Generation**: Create dose-volume histograms for organs at risk (OARs) and targets
-- **Quality Metrics**: Compute conformity indices, homogeneity indices, and other plan quality metrics
-- **Compliance Checking**: Evaluate dose constraints and treatment plan compliance
-- **Interactive Visualizations**: Generate interactive plots using Plotly and Streamlit
-- **Comparative Analysis**: Compare predicted vs. actual dose distributions
-- **Geometric Analysis**: Compute spatial differences and overlaps between structures
-- **Export Capabilities**: Save results in various formats (CSV, PDF, PNG)
-- **Command Line Interface**: Basic CLI for common operations
-
-## Quick Start
-
-### Installation
-
-Install it easily using pip:
+## Installation
 
 ```bash
 pip install dosemetrics
 ```
 
-**For development**, clone the repository and run `make setup` (uses `uv` when available to install dependencies and prepare a virtual environment):
+For local development:
 
 ```bash
 git clone https://github.com/contouraid/dosemetrics.git
 cd dosemetrics
 make setup
-# or manually if you prefer:
-# ./scripts/setup_repo.sh
 ```
 
-### Interactive Web Application
+## Quick start
 
-Launch the interactive Streamlit application using the Makefile:
-
-```bash
-make app
-# or
-make run
-```
-
-Or use the shell script directly:
-
-```bash
-./scripts/run_streamlit_app.sh
-```
-
-Alternatively, run manually from the root directory:
-
-```bash
-PYTHONPATH=src streamlit run src/dosemetrics_app/app.py
-```
-
-**Note**: The application includes password authentication that is currently disabled for development/testing. If you need to enable authentication, uncomment the authentication check in `src/dosemetrics_app/app.py` and configure the `secrets.toml` file with user passwords.
-
-This provides a user-friendly interface for uploading NIfTI files, analyzing dose distributions, and generating reports.
-
-### Makefile Commands
-
-The project includes a Makefile for common operations:
-
-```bash
-make help       # Show all available commands
-make setup      # Initial setup and install dependencies
-make test       # Run all tests
-make run        # Run the Streamlit app locally
-make docs       # Serve documentation locally
-make deploy     # Deploy to Hugging Face Space
-make clean      # Clean up cache and temporary files
-make info       # Show project information
-```
-
-See `make help` for a complete list of commands.
-
-## Documentation
-
-Comprehensive documentation is available at **[contouraid.github.io/dosemetrics](https://contouraid.github.io/dosemetrics/)**
-
-- [Getting Started Guide](https://contouraid.github.io/dosemetrics/getting-started/quickstart/)
-- [Using Your Own Data](https://contouraid.github.io/dosemetrics/notebooks/getting-started-own-data/)
-- [API Reference](https://contouraid.github.io/dosemetrics/api/)
-- [User Guide](https://contouraid.github.io/dosemetrics/user-guide/overview/)
-
-### Building Documentation Locally
-
-```bash
-# Install documentation dependencies
-pip install -e ".[docs]"
-
-# Serve with live-reload
-make docs
-# or
-mkdocs serve
-```
-
-## Usage Examples
-
-### Basic DVH Analysis
+The current API keeps dose data, structure geometry, and metric computation separate:
 
 ```python
-import dosemetrics
+from dosemetrics import Dose
+from dosemetrics.io import load_structure_set
+from dosemetrics.metrics import conformity, dvh, homogeneity
+from dosemetrics.utils.plot import plot_subject_dvhs
 
-# Load dose and structure data (using the new structure)
-dose_data = dosemetrics.read_from_nifti("path/to/dose.nii.gz")
-structures = {"PTV": dosemetrics.read_from_nifti("path/to/ptv.nii.gz")}
+patient_dir = "path/to/patient"
+dose = Dose.from_nifti(f"{patient_dir}/Dose.nii.gz", name="Clinical")
+structures = load_structure_set(patient_dir)
+ptv = structures["PTV"]
 
-# Generate DVH
-dvh_df = dosemetrics.dvh_by_structure(dose_data, structures)
+dose_bins, volume_percent = dvh.compute_dvh(dose, ptv)
+stats = dvh.compute_dose_statistics(dose, ptv)
+ci = conformity.compute_paddick_conformity_index(dose, ptv, prescription_dose=60.0)
+hi = homogeneity.compute_homogeneity_index(dose, ptv)
+fig, ax = plot_subject_dvhs(dose, structures)
 
-# Plot DVH
-dosemetrics.plot_dvh(dose_data, structures, "output.pdf")
+print(f"D95: {stats['D95']:.2f} Gy; Paddick CI: {ci:.3f}; HI: {hi:.3f}")
 ```
 
-### Quality Metrics Calculation
+A NIfTI patient folder places `Dose.nii.gz` and one binary mask per structure in the same directory. `load_structure_set()` loads only geometry; load the dose independently with `Dose.from_nifti()`.
+
+## Comparing plans
+
+All reference-based functions accept `reference` first and `evaluated` second:
 
 ```python
-# Calculate dose summary statistics
-quality_metrics = dosemetrics.dose_summary(dose_data, structures)
+from dosemetrics import Dose
+from dosemetrics.metrics import comparison, dose_comparison, gamma
 
-print(f"Quality metrics: {quality_metrics}")
+reference = Dose.from_nifti("reference.nii.gz")
+evaluated = Dose.from_nifti("evaluated.nii.gz")
+
+mae_gy = dose_comparison.compare_mae(reference, evaluated)
+gamma_map = gamma.compare_gamma_index(reference, evaluated)
+gamma_pass = gamma.compute_gamma_passing_rate(gamma_map)
+ptv_dose_distance = comparison.compare_ptv_dose(reference, evaluated, ptv)
 ```
 
-### Command Line Interface
+## Public package layout
+
+- `dosemetrics`: `Dose`, structure classes, `StructureSet`, and high-level loaders
+- `dosemetrics.io`: unified NIfTI/DICOM loading plus format-specific modules
+- `dosemetrics.metrics`: `dvh`, `conformity`, `homogeneity`, `geometric`, `gamma`, `dose_comparison`, and `comparison`
+- `dosemetrics.utils`: plotting, compliance, batch processing, and cohort analysis
+
+Metrics are intentionally exposed through domain modules rather than flattened into the package root.
+
+## Command line
 
 ```bash
-# Generate DVH from command line
-dosemetrics dvh dose.nii.gz structure1.nii.gz structure2.nii.gz -o dvh_results.csv
-
-# Compute quality metrics  
-dosemetrics quality dose.nii.gz structure1.nii.gz structure2.nii.gz -o quality_report.csv
-
-# Check version
 dosemetrics --version
+dosemetrics dvh Dose.nii.gz patient_folder -o dvh.csv
+dosemetrics statistics Dose.nii.gz patient_folder -o statistics.csv
+dosemetrics conformity Dose.nii.gz PTV.nii.gz --prescription 60
+dosemetrics gamma reference.nii.gz evaluated.nii.gz --dose-criteria 3 --distance-criteria 3
 ```
 
-### Compliance Checking
-
-```python
-# Define dose constraints
-constraints = {
-    "Brainstem": {"max_dose": 54, "unit": "Gy"},
-    "Spinal_Cord": {"max_dose": 45, "unit": "Gy"},
-    "Parotid_L": {"mean_dose": 26, "unit": "Gy"}
-}
-
-# Check compliance
-compliance_results = dm.compliance.check_constraints(
-    dose_data, structures, constraints
-)
-```
-
-## Project Structure
-
-```
-dosemetrics/
-├── src/dosemetrics/           # Core library modules (new structure)
-│   ├── io/                    # Data I/O utilities
-│   │   └── data_io.py        # File loading and data reading
-│   ├── metrics/              # Core dose calculations
-│   │   ├── dvh.py           # DVH calculation
-│   │   ├── exposure.py      # Exposure metrics (formerly metrics.py)
-│   │   └── scores.py        # Scoring algorithms
-│   └── utils/               # Utility functions
-│       ├── comparison.py    # Plan comparison tools
-│       ├── compliance.py    # Constraint checking
-│       └── plot.py         # Visualization tools
-├── src/dosemetrics_app/      # Streamlit web application
-│   ├── app.py               # Main application entry point
-│   └── tabs/                # Application tab modules
-│       └── variations.py    # Variations analysis tab
-├── examples/                # Usage examples and scripts
-├── tests/                   # Organized unit tests
-│   ├── data_io/            # Tests for I/O functionality
-│   ├── metrics/            # Tests for metrics calculations
-│   └── utils/              # Tests for utility functions
-└── data/                   # Sample data for testing
-```
-
-## Examples
-
-The `examples/` directory contains comprehensive examples:
-
-- **DVH Analysis**: Generate and compare dose-volume histograms
-- **Quality Assessment**: Calculate treatment plan quality indices
-- **Geometric Analysis**: Compute structure overlaps and distances
-- **Interactive Plotting**: Create interactive visualizations
-- **Report Generation**: Generate automated treatment plan reports
-
-Run any example script:
-
-```bash
-python examples/plot_dvh_interactive.py
-python examples/compare_quality_index.py
-python examples/generate_dvh_family.py
-```
-
-## Supported Data Formats
-
-- **NIfTI**: `.nii`, `.nii.gz` files
+Run `dosemetrics --help` or `dosemetrics <command> --help` for all options.
 
 ## Development
 
-### Running Tests
-
-Execute the test suite to ensure everything works correctly:
-
 ```bash
-python -m unittest discover -s tests -p "test_*.py"
+make test
+make docs
+make app
 ```
 
-### Contributing
+The documentation notebooks use the public `contouraid/dosemetrics-data` dataset and are exercised by `tests/test_documentation.py`.
 
-We welcome contributions! Please see our contributing guidelines:
+## Documentation and demo
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Requirements
-
-- Python 3.9 or higher
-- See `pyproject.toml` for complete dependency list
-
-## Documentation
-
-For detailed API documentation and tutorials, visit our [documentation site](https://github.com/contouraid/dosemetrics) (coming soon).
+- [Documentation](https://contouraid.github.io/dosemetrics/)
+- [Interactive demo](https://huggingface.co/spaces/contouraid/dosemetrics)
+- [Issue tracker](https://github.com/contouraid/dosemetrics/issues)
 
 ## Citation
 
-If you use DoseMetrics in your research, please cite:
-
 ```bibtex
-@software{dosemetrics2024,
+@software{dosemetrics2026,
   author = {Kamath, Amith},
   title = {DoseMetrics: A Python Library for Radiotherapy Dose Analysis},
   url = {https://github.com/contouraid/dosemetrics},
-  version = {0.2.0},
-  year = {2024}
+  version = {0.4.0},
+  year = {2026}
 }
 ```
 
 ## License
 
-This project is licensed under the Creative Commons Attribution-ShareAlike-NonCommercial 4.0 International License - see the [LICENSE](LICENSE) file for details.
-
-**Non-Commercial Use**: This software is freely available for academic, research, and personal use. Commercial use requires explicit written permission from the copyright holder.
-
-For commercial licensing inquiries, please contact the folks at contouraid.
-
-## Contributors
-
-- **Amith Kamath** - *Lead Developer* - [amithjkamath](https://github.com/amithjkamath)
-
-## Acknowledgments
-
-- Medical physics community for guidance and feedback
-- Open source medical imaging libraries that make this work possible
-- Contributors and users who help improve the library
-
-## Support
-
-- **Issues**: [GitHub Issues](https://github.com/contouraid/dosemetrics/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/contouraid/dosemetrics/discussions)
+Licensed under the Creative Commons Attribution-ShareAlike-NonCommercial 4.0 International License. See [LICENSE](LICENSE). Commercial use requires explicit written permission from the copyright holder.

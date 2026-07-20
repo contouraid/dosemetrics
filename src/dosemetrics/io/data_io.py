@@ -53,8 +53,8 @@ def detect_folder_format(folder_path: Union[str, Path]) -> str:
 def load_from_folder(
     folder_path: Union[str, Path],
     format: Optional[str] = None,
-    **kwargs
-) -> Dict[str, Union[np.ndarray, Dict, Tuple]]:
+    **kwargs: object,
+) -> Union["StructureSet", Dict[str, Union[np.ndarray, Dict, Tuple]]]:
     """
     Load radiotherapy data from a folder, auto-detecting format.
 
@@ -67,9 +67,8 @@ def load_from_folder(
         **kwargs: Additional arguments passed to format-specific loaders
 
     Returns:
-        Dictionary with loaded data. Keys depend on format:
-            For DICOM: 'ct_volume', 'dose_volumes', 'structures', 'spacing', 'origin'
-            For NIfTI: 'dose_volume', 'structure_masks', 'image_volumes', 'spacing', 'origin'
+        A StructureSet by default. Pass ``return_as_structureset=False`` to
+        receive a format-specific dictionary of arrays and metadata.
 
     Raises:
         FileNotFoundError: If folder doesn't exist
@@ -100,7 +99,7 @@ def load_structure_set(
     format: Optional[str] = None,
     name: Optional[str] = None,
     structure_type_mapping: Optional[Dict[str, "StructureType"]] = None,
-    **kwargs
+    **kwargs: object,
 ) -> "StructureSet":
     """
     Load a complete StructureSet from a folder, auto-detecting format.
@@ -118,7 +117,7 @@ def load_structure_set(
                  For DICOM: dose_file_name (specific dose file to use)
 
     Returns:
-        StructureSet object with loaded structures and dose
+        StructureSet object with loaded structures. Dose is loaded separately.
 
     Raises:
         FileNotFoundError: If folder doesn't exist
@@ -230,7 +229,7 @@ def load_structure(
     name: Optional[str] = None,
     structure_type: "StructureType" = None,
     format: Optional[str] = None,
-    **kwargs
+    **kwargs: object,
 ) -> "Structure":
     """
     Load a single structure from a file.

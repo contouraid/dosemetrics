@@ -43,7 +43,7 @@ class Dose:
         >>>
         >>> # Compute dose statistics (use metrics module)
         >>> ptv = structure_set.get_structure("PTV")
-        >>> stats = statistics.compute_dose_statistics(dose, ptv)
+        >>> stats = dvh.compute_dose_statistics(dose, ptv)
         >>> print(f"Mean dose: {stats['mean_dose']:.2f} Gy")
         >>>
         >>> # Compute DVH (use metrics module)

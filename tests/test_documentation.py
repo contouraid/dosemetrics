@@ -2,6 +2,10 @@
 Tests for documentation notebooks to ensure they run without errors.
 """
 
+import ast
+import importlib
+import re
+
 import pytest
 import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
@@ -135,6 +139,43 @@ def test_notebook_uses_correct_structure_names():
                     pytest.fail(
                         f"{notebook_path.name} cell {i} uses 'Target' instead of PTV/CTV/GTV"
                     )
+
+
+def test_markdown_python_blocks_use_importable_public_api():
+    """Keep README and Markdown examples aligned with the installed API."""
+    repository_root = Path(__file__).parent.parent
+    markdown_files = [repository_root / "README.md", *repository_root.glob("docs/**/*.md")]
+
+    failures = []
+    for markdown_path in markdown_files:
+        text = markdown_path.read_text(encoding="utf-8")
+        for block_number, match in enumerate(
+            re.finditer(r"```python\s*\n(.*?)```", text, re.DOTALL), start=1
+        ):
+            source = match.group(1)
+            try:
+                tree = ast.parse(source)
+            except SyntaxError as error:
+                failures.append(f"{markdown_path}:{block_number}: {error}")
+                continue
+
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and node.module and (
+                    node.module == "dosemetrics"
+                    or node.module.startswith("dosemetrics.")
+                ):
+                    try:
+                        module = importlib.import_module(node.module)
+                        for imported_name in node.names:
+                            if not hasattr(module, imported_name.name):
+                                failures.append(
+                                    f"{markdown_path}:{block_number}: "
+                                    f"{node.module}.{imported_name.name} does not exist"
+                                )
+                    except ImportError as error:
+                        failures.append(f"{markdown_path}:{block_number}: {error}")
+
+    assert not failures, "\n".join(failures)
 
 
 if __name__ == "__main__":

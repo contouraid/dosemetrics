@@ -126,12 +126,6 @@ __all__ = [
     "utils",
     # Convenience exports from utils
     "check_compliance",
-    "from_dataframe",
     "quality_index",
     "get_default_constraints",
-    "compare_dvh",
-    "generate_dvh_variations",
-    "plot_dvh",
-    "plot_dvh_variations",
-    "variability",
 ]

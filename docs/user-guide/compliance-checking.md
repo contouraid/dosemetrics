@@ -60,9 +60,9 @@ Most clinical constraints are expressed in DVH terms. The core DVH functions mak
 |---|---|
 | Dmax ≤ X Gy | `compute_max_dose(dose, structure)` |
 | D0.1cc ≤ X Gy | `compute_dose_at_volume_cc(dose, structure, volume_cc=0.1)` |
-| DX% ≤ X Gy | `compute_dose_at_volume(dose, structure, volume_fraction=X/100)` |
-| VX Gy ≤ Y% | `compute_volume_at_dose(dose, structure, dose_gy=X)` |
-| D95 ≥ Rx | `compute_dose_at_volume(dose, structure, volume_fraction=0.05)` |
+| DX% ≤ X Gy | `compute_dose_at_volume(dose, structure, volume_percent=X)` |
+| VX Gy ≤ Y% | `compute_volume_at_dose(dose, structure, dose_threshold=X)` |
+| D95 ≥ Rx | `compute_dose_at_volume(dose, structure, volume_percent=95)` |
 | Mean ≤ X Gy | `compute_mean_dose(dose, structure)` |
 
 ```python
@@ -78,7 +78,7 @@ from dosemetrics.metrics.dvh import (
 cord_dmax   = compute_max_dose(dose, spinal_cord)
 cord_d01cc  = compute_dose_at_volume_cc(dose, spinal_cord, volume_cc=0.1)
 parotid_mean = compute_mean_dose(dose, parotid_left)
-ptv_d95     = compute_dose_at_volume(dose, ptv, volume_fraction=0.05)
+ptv_d95     = compute_dose_at_volume(dose, ptv, volume_percent=95)
 
 print(f"Spinal cord Dmax:   {cord_dmax:.1f} Gy  (limit ≤ 45 Gy)")
 print(f"Spinal cord D0.1cc: {cord_d01cc:.1f} Gy  (limit ≤ 48 Gy)")

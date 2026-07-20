@@ -1,203 +1,72 @@
-# Migration Guide: v0.2.0 → v0.3.0
+# Migrating to DoseMetrics 0.4
 
-Version 0.3.0 introduces significant architectural improvements with the new `Dose` and `StructureSet` classes. This guide covers every breaking change and provides a gradual migration path.
+This page replaces the former v0.2→v0.3 guide. Version 0.4 completes the separation between data containers and metric functions, so intermediate v0.3 examples that call metrics on `Dose`, `Structure`, or `StructureSet` are also obsolete.
 
-## Breaking Changes
+## Load data with the current API
 
-### 1. Dose data is no longer stored inside structures
-
-**Before (v0.2.0):**
 ```python
-from dosemetrics import Structure
+from dosemetrics import Dose, StructureType
+from dosemetrics.io import load_structure, load_structure_set
 
-structure = Structure.from_nifti("mask.nii.gz")
-structure.set_dose_data(dose_array, spacing, origin)
-dvh = structure.compute_dvh()
-```
-
-**After (v0.3.0):**
-```python
-from dosemetrics import Structure, Dose
-
-structure = Structure.from_nifti("mask.nii.gz")
-dose = Dose.from_nifti("dose.nii.gz")
-
-dvh = structure.compute_dvh(dose)
-```
-
-### 2. Multi-structure workflows use StructureSet
-
-**Before (v0.2.0):**
-```python
-structures = {}
-for name, mask_file in mask_files.items():
-    struct = Structure.from_nifti(mask_file)
-    struct.set_dose_data(dose_array, spacing, origin)
-    structures[name] = struct
-
-dvhs = {name: s.compute_dvh() for name, s in structures.items()}
-```
-
-**After (v0.3.0):**
-```python
-from dosemetrics import StructureSet, Dose
-from dosemetrics.structures import StructureType
-
-structure_set = StructureSet.from_folder(
-    folder_path="patient_data/",
-    structure_types={
-        "PTV": StructureType.TARGET,
-        "Brainstem": StructureType.OAR,
-        "SpinalCord": StructureType.OAR,
-    }
-)
-
-dvhs = structure_set.compute_all_dvhs()
-```
-
-## New Recommended Patterns
-
-### Loading data
-
-**Option 1: StructureSet from a folder (most convenient)**
-```python
-from dosemetrics import StructureSet
-from dosemetrics.structures import StructureType
-
-ss = StructureSet.from_folder(
-    folder_path="data/patient_001/",
-    structure_types={
-        "PTV": StructureType.TARGET,
-        "OAR1": StructureType.OAR,
-    }
+dose = Dose.from_nifti("Dose.nii.gz")
+structures = load_structure_set("patient_folder")
+ptv = load_structure(
+    "PTV.nii.gz",
+    name="PTV",
+    structure_type=StructureType.TARGET,
 )
 ```
 
-**Option 2: Dose and structures loaded separately**
-```python
-from dosemetrics import Dose, Structure, StructureSet
-from dosemetrics.structures import StructureType
+Replace removed loaders such as `read_dose_and_mask_files()`, `get_dose_and_structures_as_structure_set()`, and `Structure.from_nifti()` with `Dose.from_nifti()`, `load_structure()`, and `load_structure_set()`.
 
-dose = Dose.from_nifti("dose.nii.gz")
-structures = {
-    "PTV": Structure.from_nifti("ptv.nii.gz", structure_type=StructureType.TARGET),
-    "Brainstem": Structure.from_nifti("brainstem.nii.gz", structure_type=StructureType.OAR),
-}
-ss = StructureSet(structures=structures, dose=dose)
-```
-
-**Option 3: I/O helper function**
-```python
-from dosemetrics.io import get_dose_and_structures_as_structure_set
-
-ss = get_dose_and_structures_as_structure_set(
-    folder_path="data/",
-    structure_types={"PTV": StructureType.TARGET, "OAR1": StructureType.OAR}
-)
-```
-
-### Comparing multiple dose distributions
+## Call metrics through domain modules
 
 ```python
-dose_predicted = Dose.from_nifti("predicted_dose.nii.gz")
-dose_actual = Dose.from_nifti("actual_dose.nii.gz")
+from dosemetrics.metrics import conformity, dvh, homogeneity
 
-structure = ss["PTV"]
-dvh_predicted = structure.compute_dvh(dose_predicted)
-dvh_actual = structure.compute_dvh(dose_actual)
+dose_bins, volume_percent = dvh.compute_dvh(dose, ptv)
+stats = dvh.compute_dose_statistics(dose, ptv)
+ci = conformity.compute_conformity_index(dose, ptv, prescription_dose=60.0)
+hi = homogeneity.compute_homogeneity_index(dose, ptv)
 ```
 
-### Bulk operations
+Do not call removed methods such as `structure.compute_dvh()`, `dose.compute_statistics()`, or `structure_set.compute_all_dvhs()`.
+
+## Compute in bulk explicitly
 
 ```python
-dvhs   = structure_set.compute_all_dvhs()
-stats  = structure_set.get_all_statistics()
-oars   = structure_set.get_structures_by_type(StructureType.OAR)
+import pandas as pd
+from dosemetrics.metrics import dvh
 
-for name, structure in structure_set.items():
-    print(f"{name}: {structure.get_mean_dose(structure_set.dose):.2f} Gy")
+dvh_table = dvh.create_dvh_table(dose, structures)
+statistics_table = pd.DataFrame([
+    {"Structure": name, **dvh.compute_dose_statistics(dose, structure)}
+    for name, structure in structures
+])
 ```
 
-## Backward Compatibility
-
-Most `Structure` methods still work — just pass `dose` explicitly:
+## Compare plans with a fixed direction
 
 ```python
-structure = Structure.from_nifti("mask.nii.gz")
-dose = Dose.from_nifti("dose.nii.gz")
+from dosemetrics.metrics import comparison, dose_comparison
 
-mean_dose = structure.get_mean_dose(dose)
-max_dose  = structure.get_max_dose(dose)
-dvh       = structure.compute_dvh(dose)
+mae = dose_comparison.compare_mae(reference, evaluated)
+ptv_distance = comparison.compare_ptv_dose(reference, evaluated, ptv)
 ```
 
-## Common Migration Patterns
+All `compare_*` functions now put `reference` before `evaluated`.
 
-### Pattern 1: Single structure analysis
+## Plotting moved to `dosemetrics.utils.plot`
 
 ```python
-# Before
-structure = Structure.from_nifti("brainstem.nii.gz")
-structure.set_dose_data(dose_array, spacing, origin)
-stats = structure.get_statistics()
+from dosemetrics.utils.plot import plot_dvh, plot_subject_dvhs
 
-# After
-structure = Structure.from_nifti("brainstem.nii.gz")
-dose = Dose(dose_array, spacing, origin)
-stats = structure.get_statistics(dose)
+fig, ax = plot_dvh(dose, ptv)
+fig, ax = plot_subject_dvhs(dose, structures)
 ```
 
-### Pattern 2: Multiple structure analysis
+The old `dosemetrics.utils.plotting` module and root-level plotting functions are not part of the 0.4 public API.
 
-```python
-# Before
-structures = load_multiple_structures(folder)
-for struct in structures.values():
-    struct.set_dose_data(dose_array, spacing, origin)
-results = analyze_structures(structures)
+## Root namespace
 
-# After
-structure_set = StructureSet.from_folder(folder, structure_types)
-results = structure_set.compute_all_dvhs()
-```
-
-### Pattern 3: Plan comparison
-
-```python
-# Before — had to swap dose in-place (error-prone)
-struct.set_dose_data(dose1_array, spacing, origin)
-dvh1 = struct.compute_dvh()
-struct.set_dose_data(dose2_array, spacing, origin)
-dvh2 = struct.compute_dvh()
-
-# After — clean, no mutation
-struct = Structure.from_nifti("mask.nii.gz")
-dvh1 = struct.compute_dvh(Dose.from_nifti("dose1.nii.gz"))
-dvh2 = struct.compute_dvh(Dose.from_nifti("dose2.nii.gz"))
-```
-
-## Troubleshooting
-
-**`AttributeError: 'Structure' object has no attribute 'set_dose_data'`**  
-Remove `set_dose_data()` calls and pass a `Dose` object to the method directly.
-
-**`TypeError: compute_dvh() missing required argument 'dose'`**  
-Create a `Dose` object and pass it explicitly:
-```python
-dose = Dose.from_nifti("dose.nii.gz")
-dvh = structure.compute_dvh(dose)
-```
-
-**`TypeError: argument of type 'dict' is not iterable`**  
-Replace dictionary-based structure collections with `StructureSet`.
-
-## Gradual Migration Strategy
-
-You do not have to migrate everything at once:
-
-1. **Phase 1** — Update code that creates `Dose` objects instead of setting dose data on structures
-2. **Phase 2** — Replace manual structure dictionaries with `StructureSet`
-3. **Phase 3** — Adopt I/O helper functions for loading
-4. **Phase 4** — Leverage bulk operations and type-based filtering
-
-Each phase is independent and can be done incrementally across your codebase.
+The package root contains core classes and high-level I/O conveniences. Metric and utility functions should be imported from their domain modules. Avoid relying on `from dosemetrics import *`; explicit imports make API ownership clear.
