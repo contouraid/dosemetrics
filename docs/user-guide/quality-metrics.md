@@ -4,6 +4,12 @@ Guide to computing treatment plan quality metrics in dosemetrics.
 
 [:material-rocket-launch: Try Quality Metrics in Live Demo](https://huggingface.co/spaces/contouraid/dosemetrics){ .md-button target="_blank" }
 
+!!! important "Comparing a reference and evaluated plan"
+    The canonical definitions, task applicability, and five-category catalogue
+    for the nine plan-comparison metrics are documented in
+    [Plan Comparison Metrics](plan-comparison-metrics.md). This page also
+    documents useful single-plan indices and legacy variants.
+
 ---
 
 ## Overview
@@ -14,7 +20,7 @@ Plan quality metrics quantify how well a radiotherapy treatment plan delivers th
 |---|---|---|
 | **Conformity** | How well the high-dose region matches the target shape | `compute_conformity_index`, `compute_paddick_conformity_index`, `compute_rtog_conformity_index`, `compute_conformity_number`, `compute_coverage`, `compute_spillage`, `compute_prescription_mae` |
 | **Homogeneity** | How uniform the dose is within the target | `compute_homogeneity_index`, `compute_gradient_index`, `compute_dose_homogeneity`, `compute_uniformity_index` |
-| **DVH comparison** | Aggregate differences between two dose distributions | `compute_dvh_score`, `compute_dvh_auc`, `compute_normalized_mae`, `compute_variance_of_laplacian` |
+| **DVH comparison** | Aggregate differences between two dose distributions | `compare_dvh_score`, `compare_dvh_area`, `compare_dvh_wasserstein` |
 
 All functions follow the same calling convention: they accept a `Dose` object, one or two `Structure` objects, and any numeric parameters, and return a plain `float`.
 
@@ -100,7 +106,7 @@ else:
 ### Paddick Conformity Index (`compute_paddick_conformity_index`)
 
 ![Paddick Conformity Index Distance](../images/pcid.png)
-*Paddick Conformity Index Distance (PCID) — the prescription isodose volume (dashed red) overlaps the PTV mask (solid black). CI is the product of target coverage and target conformity; PCID is the absolute difference in CI between two plans. (Joseph Weibel, MSc Thesis Defense, University of Bern)*
+*Paddick Conformity Index Distance (PCID) — the prescription isodose volume (dashed red) overlaps the PTV mask (solid black). CI is the product of target coverage and target conformity; PCID is the absolute difference in CI between two plans.*
 
 $$\text{CI}_{\text{Paddick}} = \frac{V_{\text{target\_rx}}^2}{V_{\text{target}} \times V_{\text{rx}}}$$
 
@@ -196,7 +202,7 @@ Homogeneity indices measure the uniformity of dose *within* the target volume. A
 ### ICRU Homogeneity Index (`compute_homogeneity_index`)
 
 ![Homogeneity Index Distance](../images/homogeneity-index-distance.png)
-*Homogeneity Index Distance (HID) — D₂ (near-maximum), D₅₀ (median), and D₉₈ (near-minimum) are read from the PTV DVH. The shaded area illustrates the dose band between D₂ and D₉₈. HID is the absolute difference in HI between two plans. (Joseph Weibel, MSc Thesis Defense, University of Bern)*
+*Homogeneity Index Distance (HID) — D₂ (near-maximum), D₅₀ (median), and D₉₈ (near-minimum) are read from the PTV DVH. The shaded area illustrates the dose band between D₂ and D₉₈. HID is the absolute difference in HI between two plans.*
 
 $$\text{HI} = \frac{D_2 - D_{98}}{D_{50}}$$
 
@@ -227,7 +233,7 @@ else:
 ### Gradient Index — Paddick & Lippitz (`compute_gradient_index`)
 
 ![Paddick Gradient Index Distance](../images/paddick-gradient-index-distance.png)
-*Paddick Gradient Index Distance (PGID) — the ratio of the half-prescription isodose volume (outer dashed region) to the full-prescription isodose volume (inner dashed region) measures how steeply dose falls off outside the PTV. PGID is the absolute difference in GI between two plans. (Joseph Weibel, MSc Thesis Defense, University of Bern)*
+*Paddick Gradient Index Distance (PGID) — the ratio of the half-prescription isodose volume (outer dashed region) to the full-prescription isodose volume (inner dashed region) measures how steeply dose falls off outside the PTV. PGID is the absolute difference in GI between two plans.*
 
 $$\text{GI} = \frac{V_{50\%}}{V_{100\%}}$$
 
@@ -283,12 +289,14 @@ print(f"Uniformity Index: {ui:.3f}")   # 1.0 = perfectly uniform
 
 These metrics compare two dose distributions by summarising differences in their dose-volume histograms, making them useful for plan comparison and automated prediction evaluation.
 
-### DVH Score (`compute_dvh_score`)
+### DVH score (`comparison.compare_dvh_score`)
 
 ![DVH Score](../images/dvh-score.png)
-*DVH Score — D₁, D₉₅, and D₉₉ are read off for both the target (solid red) and predicted (dashed) DVH curves. The score is the average of the three absolute differences. (Joseph Weibel, MSc Thesis Defense, University of Bern)*
+*Target DVH criteria — D₁, D₉₅, and D₉₉ are read from both the reference and evaluated curves. OAR mean dose and D₀.₁cc criteria complete the score.*
 
-$$\text{DVH Score} = \frac{1}{3}\left(\lvert D_1^{\text{ref}} - D_1^{\text{eval}} \rvert + \lvert D_{95}^{\text{ref}} - D_{95}^{\text{eval}} \rvert + \lvert D_{99}^{\text{ref}} - D_{99}^{\text{eval}} \rvert\right)$$
+$$\text{DVH Score} =
+\frac{1}{M}\sum_{m=1}^{M}
+\left|m_{\text{evaluated}}-m_{\text{reference}}\right|$$
 
 The average absolute difference in three clinically important DVH dose points:
 
@@ -301,16 +309,25 @@ The average absolute difference in three clinically important DVH dose points:
 - **0 Gy:** perfect agreement at all three points
 - **Higher:** larger clinical discrepancy between the two distributions
 
-DVH Score was used in the GDP-HMM AAPM dose-prediction challenge to assess how well AI-predicted plans reproduced the DVH of clinical plans.
+Targets contribute \(D_1\), \(D_{95}\), and \(D_{99}\); OARs contribute
+\(D_{\mathrm{mean}}\) and \(D_{0.1\mathrm{cc}}\). Passing one target and no
+OARs deliberately computes the three-point subset without introducing a
+second score definition.
 
 ```python
-from dosemetrics.metrics.dvh import compute_dvh_score
+from dosemetrics.metrics import comparison
 
-score = compute_dvh_score(reference_dose, predicted_dose, ptv)
+score = comparison.compare_dvh_score(
+    reference,
+    evaluated,
+    targets=[ptv],
+    oars=[brainstem, spinal_cord],
+)
 print(f"DVH Score (PTV): {score:.2f} Gy")
 ```
 
-**Reference:** Adapted from GDP-HMM AAPM Challenge evaluation methodology.
+**Reference:** [Babier et al., OpenKBP, *Medical Physics*
+2021](https://doi.org/10.1002/mp.14845).
 
 ---
 
@@ -322,7 +339,8 @@ $$\text{DVH-AUC} = \int_{d_{\min}}^{d_{\max}} V(d)\, \mathrm{d}d$$
 
 A higher AUC means more of the structure volume receives higher doses. With `normalize=True` (default) the result is scaled to [0, 1], where 1.0 means 100% of the volume received the maximum dose.
 
-This is a single-distribution metric (unlike `compute_area_between_dvh_curves`, which computes the *difference* between two DVH curves).
+This is a single-plan metric (unlike `dvh.compare_dvh_area`, which compares
+two curves).
 
 ```python
 from dosemetrics.metrics.dvh import compute_dvh_auc
@@ -346,9 +364,9 @@ print(f"Cord DVH-AUC: {cord_auc:.1f} Gy·%")
 These metrics compare two dose distributions voxel-by-voxel across the full 3D volume, making them sensitive to localised dose differences that DVH-based metrics can miss.
 
 ![Gamma Index](../images/gamma-index.png)
-*Gamma Index — for each voxel v, the index finds the nearest reference voxel v′ that minimises the combined spatial distance r(v, v′) / Δd and dose distance δ(v, v′) / ΔD. A voxel passes when γ ≤ 1. (Joseph Weibel, MSc Thesis Defense, University of Bern)*
+*Gamma Index — for each voxel v, the index finds the evaluated voxel v′ that minimises the combined spatial distance r(v, v′) / Δd and dose distance δ(v, v′) / ΔD. A voxel passes when γ ≤ 1.*
 
-### Normalized MAE (`compute_normalized_mae`)
+### Normalized MAE (`compare_normalized_mae`)
 
 $$\text{Norm. MAE} = \frac{\text{MAE}(d_{\text{ref}},\, d_{\text{eval}})}{d_{\text{norm}}}$$
 
@@ -357,10 +375,10 @@ A dose comparison MAE scaled by a reference value (e.g., the prescription dose),
 Setting `dose_threshold_gy` excludes low-dose background voxels from the average, which avoids diluting the error signal with near-zero differences far from the treatment field.
 
 ```python
-from dosemetrics.metrics.dose_comparison import compute_normalized_mae
+from dosemetrics.metrics.dose_comparison import compare_normalized_mae
 
 # Normalised by prescription, restricted to high-dose region
-n_mae = compute_normalized_mae(
+n_mae = compare_normalized_mae(
     reference_dose,
     predicted_dose,
     structure=body,
@@ -439,16 +457,17 @@ print(f"D95:            {stats['D95']:.1f} Gy")
 ## Comparing Two Plans
 
 ```python
-from dosemetrics.metrics.dvh import compute_dvh_score
-from dosemetrics.metrics.dose_comparison import compute_normalized_mae, compute_variance_of_laplacian
+from dosemetrics.metrics import comparison, dose_comparison
 
-score    = dvh.compute_dvh_score(dose_tps, dose_predicted, ptv)
-n_mae    = dose_comparison.compute_normalized_mae(dose_tps, dose_predicted,
+score    = comparison.compare_dvh_score(
+    reference, evaluated, targets=[ptv], oars=oars
+)
+n_mae    = dose_comparison.compare_normalized_mae(reference, evaluated,
                                                   normalization_value=prescription,
                                                   dose_threshold_gy=5.0)
 sharpness_diff = (
-    dose_comparison.compute_variance_of_laplacian(dose_predicted)
-    - dose_comparison.compute_variance_of_laplacian(dose_tps)
+    dose_comparison.compute_variance_of_laplacian(evaluated)
+    - dose_comparison.compute_variance_of_laplacian(reference)
 )
 
 print(f"DVH Score:          {score:.2f} Gy  (0 = identical)")
@@ -468,6 +487,6 @@ For DVH visualisation see [`plot_dvh_comparison`](../api/utils.md) and `plot_dvh
 | Paddick CI | Paddick I, *J Neurosurg*, 2000;93(Suppl 3):219-222 |
 | ICRU HI | ICRU Report 83, *J ICRU*, 2010 |
 | Gradient Index | Paddick I & Lippitz B, *J Neurosurg*, 2006;105(Suppl):194-201 |
-| DVH Score | GDP-HMM AAPM Challenge, Gao et al. |
+| Complete DVH Score | Babier et al., OpenKBP, *Medical Physics*, 2021 |
 | Normalized MAE | GDP-HMM AAPM Challenge, Gao et al. |
 | Variance of Laplacian | GDP-HMM AAPM Challenge, Gao et al. |

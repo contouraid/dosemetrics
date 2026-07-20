@@ -50,7 +50,7 @@ class TestGammaIndex:
 
     def test_gamma_identical(self, reference_dose):
         """Test gamma index for identical doses."""
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             reference_dose,
             reference_dose,
             dose_criterion_percent=3.0,
@@ -65,7 +65,7 @@ class TestGammaIndex:
 
     def test_gamma_similar(self, reference_dose, evaluated_dose_similar):
         """Test gamma index for similar doses."""
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             reference_dose,
             evaluated_dose_similar,
             dose_criterion_percent=3.0,
@@ -84,7 +84,7 @@ class TestGammaIndex:
 
     def test_gamma_shifted(self, reference_dose, evaluated_dose_shifted):
         """Test gamma index for spatially shifted dose."""
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             reference_dose,
             evaluated_dose_shifted,
             dose_criterion_percent=3.0,
@@ -101,7 +101,7 @@ class TestGammaIndex:
 
     def test_gamma_local_normalization(self, reference_dose, evaluated_dose_similar):
         """Test gamma with local normalization."""
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             reference_dose,
             evaluated_dose_similar,
             dose_criterion_percent=3.0,
@@ -119,7 +119,7 @@ class TestGammaIndex:
         wrong_shape = Dose(np.zeros((20, 20, 10)), (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
 
         with pytest.raises(ValueError, match="shapes must match"):
-            gamma.compute_gamma_index(
+            gamma.compare_gamma_index(
                 reference_dose,
                 wrong_shape,
                 dose_criterion_percent=3.0,
@@ -128,7 +128,7 @@ class TestGammaIndex:
 
     def test_gamma_custom_threshold(self, reference_dose):
         """Test gamma with custom dose threshold."""
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             reference_dose,
             reference_dose,
             dose_criterion_percent=3.0,
@@ -232,7 +232,7 @@ class Test2DGamma:
         eval_slice = np.ones((30, 30)) * 50.0
         eval_slice[10:20, 10:20] = 61.0
 
-        gamma_result = gamma.compute_2d_gamma(
+        gamma_result = gamma.compare_2d_gamma(
             ref_slice,
             eval_slice,
             dose_criterion_percent=3.0,
@@ -246,7 +246,7 @@ class Test2DGamma:
         """Test 2D gamma for identical slices."""
         ref_slice = np.ones((20, 20)) * 50.0
 
-        gamma_result = gamma.compute_2d_gamma(
+        gamma_result = gamma.compare_2d_gamma(
             ref_slice,
             ref_slice,
             dose_criterion_percent=3.0,
@@ -265,7 +265,7 @@ class Test2DGamma:
         eval_slice = np.ones((30, 30)) * 50.0
 
         with pytest.raises(ValueError, match="shapes must match"):
-            gamma.compute_2d_gamma(
+            gamma.compare_2d_gamma(
                 ref_slice,
                 eval_slice,
                 dose_criterion_percent=3.0,
@@ -278,7 +278,7 @@ class Test2DGamma:
         eval_2d = np.ones((20, 20)) * 50.0
 
         with pytest.raises(ValueError, match="must be 2D"):
-            gamma.compute_2d_gamma(
+            gamma.compare_2d_gamma(
                 ref_3d,
                 eval_2d,
                 dose_criterion_percent=3.0,
@@ -288,8 +288,8 @@ class Test2DGamma:
 
 def test_standalone_implementation():
     """Test that gamma module is standalone (no PyMedPhys dependency)."""
-    # Verify that compute_gamma_index is callable and doesn't require PyMedPhys
-    assert callable(gamma.compute_gamma_index)
-    assert callable(gamma.compute_2d_gamma)
+    # Verify that compare_gamma_index is callable and doesn't require PyMedPhys
+    assert callable(gamma.compare_gamma_index)
+    assert callable(gamma.compare_2d_gamma)
     assert callable(gamma.compute_gamma_passing_rate)
     assert callable(gamma.compute_gamma_statistics)

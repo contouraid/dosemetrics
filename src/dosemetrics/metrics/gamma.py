@@ -13,67 +13,77 @@ References:
 """
 
 import numpy as np
-from typing import Tuple, Optional, Dict, Any
+from numba import njit, prange
+from typing import Tuple, Optional, Dict
 import warnings
-from scipy.interpolate import RegularGridInterpolator
-from scipy.ndimage import distance_transform_edt
 
 from ..dose import Dose
 
 
-def _compute_gamma_at_point(
-    eval_coords: np.ndarray,
-    ref_dose_value: float,
-    eval_interpolator: RegularGridInterpolator,
-    dose_criterion: float,
-    distance_criterion_mm: float,
-    normalization_dose: float,
-) -> float:
-    """
-    Compute gamma at a single reference point.
+@njit(parallel=True)
+def _compute_gamma_grid(
+    reference: np.ndarray,
+    evaluated: np.ndarray,
+    di: np.ndarray,
+    dj: np.ndarray,
+    dk: np.ndarray,
+    spatial_gamma_squared: np.ndarray,
+    dose_threshold: float,
+    global_normalization_dose: float,
+    dose_criterion_fraction: float,
+    global_normalization: bool,
+) -> np.ndarray:
+    """Evaluate the discrete Low gamma search in parallel over the dose grid."""
+    nx, ny, nz = reference.shape
+    gamma_flat = np.full(reference.size, np.nan, dtype=np.float32)
 
-    Parameters
-    ----------
-    eval_coords : np.ndarray
-        Coordinates to evaluate (Nx3 array of search positions)
-    ref_dose_value : float
-        Reference dose value at the point
-    eval_interpolator : RegularGridInterpolator
-        Interpolator for evaluated dose
-    dose_criterion : float
-        Dose criterion in absolute units
-    distance_criterion_mm : float
-        Distance criterion in mm
-    normalization_dose : float
-        Normalization dose value
+    for flat_index in prange(reference.size):
+        i = flat_index // (ny * nz)
+        remainder = flat_index - i * ny * nz
+        j = remainder // nz
+        k = remainder - j * nz
 
-    Returns
-    -------
-    float
-        Minimum gamma value at this point
-    """
-    # Interpolate evaluated dose at search positions
-    eval_dose_values = eval_interpolator(eval_coords)
+        reference_value = reference[i, j, k]
+        if reference_value < dose_threshold:
+            continue
 
-    # Compute dose differences (normalized)
-    dose_diff = np.abs(eval_dose_values - ref_dose_value) / normalization_dose
+        if global_normalization:
+            normalization_dose = global_normalization_dose
+        else:
+            normalization_dose = reference_value if reference_value > 0.0 else 1.0
 
-    # Compute distances (already in physical units)
-    # eval_coords contains the search grid, we need distance from origin
-    distances = np.sqrt(np.sum(eval_coords**2, axis=1))
+        dose_denominator = normalization_dose * dose_criterion_fraction
+        best_gamma_squared = np.inf
 
-    # Compute gamma values
-    gamma_values = np.sqrt(
-        (distances / distance_criterion_mm) ** 2
-        + (dose_diff / (dose_criterion / 100.0)) ** 2
-    )
+        # Offsets are ordered by spatial contribution. Once that contribution
+        # alone cannot improve the current minimum, all later offsets can stop.
+        for offset_index in range(spatial_gamma_squared.size):
+            spatial_term = spatial_gamma_squared[offset_index]
+            if spatial_term >= best_gamma_squared:
+                break
 
-    return np.min(gamma_values)
+            ii = i + di[offset_index]
+            jj = j + dj[offset_index]
+            kk = k + dk[offset_index]
+            if ii < 0 or ii >= nx or jj < 0 or jj >= ny or kk < 0 or kk >= nz:
+                continue
+
+            dose_term = (
+                (evaluated[ii, jj, kk] - reference_value) / dose_denominator
+            )
+            candidate = spatial_term + dose_term * dose_term
+            if candidate < best_gamma_squared:
+                best_gamma_squared = candidate
+
+        if best_gamma_squared < np.inf:
+            gamma_flat[flat_index] = np.sqrt(best_gamma_squared)
+
+    return gamma_flat.reshape(reference.shape)
 
 
-def compute_gamma_index(
-    dose_reference: Dose,
-    dose_evaluated: Dose,
+def compare_gamma_index(
+    reference: Dose,
+    evaluated: Dose,
     dose_criterion_percent: float = 3.0,
     distance_criterion_mm: float = 3.0,
     dose_threshold_percent: float = 10.0,
@@ -88,9 +98,9 @@ def compute_gamma_index(
 
     Parameters
     ----------
-    dose_reference : Dose
+    reference : Dose
         Reference (planned) dose distribution.
-    dose_evaluated : Dose
+    evaluated : Dose
         Evaluated (measured/calculated) dose distribution to compare.
     dose_criterion_percent : float, optional
         Dose difference criterion as percentage (default: 3.0 for 3%).
@@ -123,7 +133,7 @@ def compute_gamma_index(
 
     Examples
     --------
-    >>> gamma = compute_gamma_index(planned_dose, measured_dose)
+    >>> gamma = compare_gamma_index(planned_dose, measured_dose)
     >>> passing_rate = np.sum(gamma <= 1.0) / np.sum(~np.isnan(gamma)) * 100
     >>> print(f"Gamma passing rate: {passing_rate:.1f}%")
 
@@ -133,24 +143,21 @@ def compute_gamma_index(
         If dose distributions have incompatible geometry.
     """
     # Validate spatial compatibility
-    if dose_reference.dose_array.shape != dose_evaluated.dose_array.shape:
+    if reference.dose_array.shape != evaluated.dose_array.shape:
         raise ValueError(
-            f"Dose shapes must match: {dose_reference.dose_array.shape} vs "
-            f"{dose_evaluated.dose_array.shape}"
+            f"Dose shapes must match: {reference.dose_array.shape} vs "
+            f"{evaluated.dose_array.shape}"
         )
 
-    if not np.allclose(dose_reference.spacing, dose_evaluated.spacing):
+    if not np.allclose(reference.spacing, evaluated.spacing):
         raise ValueError(
-            f"Dose spacings must match: {dose_reference.spacing} vs "
-            f"{dose_evaluated.spacing}"
+            f"Dose spacings must match: {reference.spacing} vs {evaluated.spacing}"
         )
 
     # Get dose arrays and spatial information
-    ref_dose = dose_reference.dose_array
-    eval_dose = dose_evaluated.dose_array
-    spacing = np.array(dose_reference.spacing)
-    origin = np.array(dose_reference.origin)
-    shape = dose_reference.shape
+    ref_dose = np.ascontiguousarray(reference.dose_array)
+    eval_dose = np.ascontiguousarray(evaluated.dose_array)
+    spacing = np.array(reference.spacing)
 
     # Set max search distance
     if max_search_distance_mm is None:
@@ -160,23 +167,10 @@ def compute_gamma_index(
     if global_normalization:
         normalization_dose = np.max(ref_dose)
     else:
-        normalization_dose = None  # Will use local normalization
+        normalization_dose = 0.0  # The kernel uses each reference voxel locally.
 
     # Calculate absolute dose threshold
     dose_threshold = dose_threshold_percent / 100.0 * np.max(ref_dose)
-
-    # Create coordinate grids for both distributions
-    x = origin[0] + np.arange(shape[0]) * spacing[0]
-    y = origin[1] + np.arange(shape[1]) * spacing[1]
-    z = origin[2] + np.arange(shape[2]) * spacing[2]
-
-    # Create interpolator for evaluated dose
-    eval_interpolator = RegularGridInterpolator(
-        (x, y, z), eval_dose, method="linear", bounds_error=False, fill_value=0.0
-    )
-
-    # Initialize gamma array
-    gamma_result = np.full(shape, np.nan, dtype=np.float32)
 
     # Create search grid offsets (in voxel indices)
     search_radius_voxels = np.ceil(max_search_distance_mm / spacing).astype(int)
@@ -201,59 +195,24 @@ def compute_gamma_index(
     dk_valid = dk[valid_search]
     distances_valid = distances_template[valid_search]
 
-    # Iterate through reference dose grid
-    for i in range(shape[0]):
-        for j in range(shape[1]):
-            for k in range(shape[2]):
-                ref_value = ref_dose[i, j, k]
+    # Sorting enables an exact branch-and-bound search: once an offset's
+    # spatial contribution exceeds the best gamma found so far, no later
+    # candidate can improve it because the dose contribution is non-negative.
+    spatial_gamma_squared = (distances_valid / distance_criterion_mm) ** 2
+    order = np.argsort(spatial_gamma_squared, kind="stable")
 
-                # Skip if below threshold
-                if ref_value < dose_threshold:
-                    continue
-
-                # Use local normalization if requested
-                if not global_normalization:
-                    normalization_dose = ref_value if ref_value > 0 else 1.0
-
-                # Get search positions in index space
-                i_search = i + di_valid
-                j_search = j + dj_valid
-                k_search = k + dk_valid
-
-                # Filter for valid indices
-                valid_mask = (
-                    (i_search >= 0)
-                    & (i_search < shape[0])
-                    & (j_search >= 0)
-                    & (j_search < shape[1])
-                    & (k_search >= 0)
-                    & (k_search < shape[2])
-                )
-
-                i_search = i_search[valid_mask]
-                j_search = j_search[valid_mask]
-                k_search = k_search[valid_mask]
-                local_distances = distances_valid[valid_mask]
-
-                if len(i_search) == 0:
-                    continue
-
-                # Get evaluated dose values at search positions
-                eval_values = eval_dose[i_search, j_search, k_search]
-
-                # Compute dose differences (normalized)
-                dose_diff = np.abs(eval_values - ref_value) / normalization_dose
-
-                # Compute gamma values using the Low et al. formula
-                gamma_values = np.sqrt(
-                    (local_distances / distance_criterion_mm) ** 2
-                    + (dose_diff / (dose_criterion_percent / 100.0)) ** 2
-                )
-
-                # Store minimum gamma value
-                gamma_result[i, j, k] = np.min(gamma_values)
-
-    return gamma_result
+    return _compute_gamma_grid(
+        ref_dose,
+        eval_dose,
+        np.ascontiguousarray(di_valid[order]),
+        np.ascontiguousarray(dj_valid[order]),
+        np.ascontiguousarray(dk_valid[order]),
+        np.ascontiguousarray(spatial_gamma_squared[order]),
+        dose_threshold,
+        float(normalization_dose),
+        dose_criterion_percent / 100.0,
+        global_normalization,
+    )
 
 
 def compute_gamma_passing_rate(gamma: np.ndarray, threshold: float = 1.0) -> float:
@@ -263,7 +222,7 @@ def compute_gamma_passing_rate(gamma: np.ndarray, threshold: float = 1.0) -> flo
     Parameters
     ----------
     gamma : np.ndarray
-        Gamma index values from compute_gamma_index().
+        Gamma index values from compare_gamma_index().
     threshold : float, optional
         Gamma threshold for passing (default: 1.0).
 
@@ -328,9 +287,9 @@ def compute_gamma_statistics(gamma: np.ndarray) -> Dict[str, float]:
     return stats
 
 
-def compute_2d_gamma(
-    dose_reference_slice: np.ndarray,
-    dose_evaluated_slice: np.ndarray,
+def compare_2d_gamma(
+    reference: np.ndarray,
+    evaluated: np.ndarray,
     dose_criterion_percent: float = 3.0,
     distance_criterion_mm: float = 3.0,
     pixel_spacing: Tuple[float, float] = (1.0, 1.0),
@@ -340,9 +299,9 @@ def compute_2d_gamma(
 
     Parameters
     ----------
-    dose_reference_slice : np.ndarray
+    reference : np.ndarray
         2D reference dose slice.
-    dose_evaluated_slice : np.ndarray
+    evaluated : np.ndarray
         2D evaluated dose slice.
     dose_criterion_percent : float
         Dose criterion (%).
@@ -362,39 +321,23 @@ def compute_2d_gamma(
         If slice shapes don't match or are not 2D.
     """
     # Validate input
-    if dose_reference_slice.ndim != 2:
+    if reference.ndim != 2:
+        raise ValueError(f"Reference slice must be 2D, got shape {reference.shape}")
+    if evaluated.ndim != 2:
+        raise ValueError(f"Evaluated slice must be 2D, got shape {evaluated.shape}")
+    if reference.shape != evaluated.shape:
         raise ValueError(
-            f"Reference slice must be 2D, got shape {dose_reference_slice.shape}"
-        )
-    if dose_evaluated_slice.ndim != 2:
-        raise ValueError(
-            f"Evaluated slice must be 2D, got shape {dose_evaluated_slice.shape}"
-        )
-    if dose_reference_slice.shape != dose_evaluated_slice.shape:
-        raise ValueError(
-            f"Slice shapes must match: {dose_reference_slice.shape} vs "
-            f"{dose_evaluated_slice.shape}"
+            f"Slice shapes must match: {reference.shape} vs {evaluated.shape}"
         )
 
     # Get shape and spacing
-    shape = dose_reference_slice.shape
+    shape = reference.shape
     spacing = np.array(pixel_spacing)
 
     # Determine normalization dose (global max)
-    normalization_dose = np.max(dose_reference_slice)
+    normalization_dose = np.max(reference)
     if normalization_dose == 0:
         normalization_dose = 1.0
-
-    # Create interpolator for evaluated dose
-    x = np.arange(shape[0]) * spacing[0]
-    y = np.arange(shape[1]) * spacing[1]
-    eval_interpolator = RegularGridInterpolator(
-        (x, y),
-        dose_evaluated_slice,
-        method="linear",
-        bounds_error=False,
-        fill_value=0.0,
-    )
 
     # Initialize gamma array
     gamma_result = np.full(shape, np.nan, dtype=np.float32)
@@ -423,7 +366,7 @@ def compute_2d_gamma(
     # Iterate through reference dose grid
     for i in range(shape[0]):
         for j in range(shape[1]):
-            ref_value = dose_reference_slice[i, j]
+            ref_value = reference[i, j]
 
             # Get search positions in index space
             i_search = i + di_valid
@@ -445,7 +388,7 @@ def compute_2d_gamma(
                 continue
 
             # Get evaluated dose values at search positions
-            eval_values = dose_evaluated_slice[i_search, j_search]
+            eval_values = evaluated[i_search, j_search]
 
             # Compute dose differences (normalized)
             dose_diff = np.abs(eval_values - ref_value) / normalization_dose
@@ -463,9 +406,9 @@ def compute_2d_gamma(
 
 
 # Placeholder for GPU-accelerated gamma
-def compute_gamma_index_gpu(
-    dose_reference: Dose,
-    dose_evaluated: Dose,
+def compare_gamma_index_gpu(
+    reference: Dose,
+    evaluated: Dose,
     dose_criterion_percent: float = 3.0,
     distance_criterion_mm: float = 3.0,
 ) -> np.ndarray:
@@ -476,9 +419,9 @@ def compute_gamma_index_gpu(
 
     Parameters
     ----------
-    dose_reference : Dose
+    reference : Dose
         Reference dose.
-    dose_evaluated : Dose
+    evaluated : Dose
         Evaluated dose.
     dose_criterion_percent : float
         Dose criterion (%).
@@ -497,18 +440,18 @@ def compute_gamma_index_gpu(
     """
     warnings.warn(
         "GPU-accelerated gamma is not implemented. "
-        "Use compute_gamma_index() for CPU-based calculation.",
+        "Use compare_gamma_index() for CPU-based calculation.",
         FutureWarning,
     )
     raise NotImplementedError(
-        "GPU-accelerated gamma not implemented. Use compute_gamma_index()."
+        "GPU-accelerated gamma not implemented. Use compare_gamma_index()."
     )
 
 
 __all__ = [
-    "compute_gamma_index",
+    "compare_gamma_index",
     "compute_gamma_passing_rate",
     "compute_gamma_statistics",
-    "compute_2d_gamma",
-    "compute_gamma_index_gpu",
+    "compare_2d_gamma",
+    "compare_gamma_index_gpu",
 ]

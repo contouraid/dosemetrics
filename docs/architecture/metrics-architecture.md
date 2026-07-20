@@ -32,9 +32,12 @@ v20  = dvh.compute_volume_at_dose(dose, structure, dose_threshold=20.0)
 mean = dvh.compute_mean_dose(dose, structure)
 stats = dvh.compute_dose_statistics(dose, structure)
 
-# DVH comparison metrics (new in v0.4)
-score = dvh.compute_dvh_score(dose_ref, dose_eval, structure)   # D1/D95/D99 difference
-auc   = dvh.compute_dvh_auc(dose, structure, normalize=True)    # area under DVH curve
+# One-plan DVH summary
+auc = dvh.compute_dvh_auc(dose, structure, normalize=True)
+
+# Reference-based DVH comparisons use compare_*
+emd = dvh.compare_dvh_wasserstein(reference, evaluated, structure)
+area = dvh.compare_dvh_area(reference, evaluated, structure, norm="l1")
 ```
 
 ### `metrics/conformity.py` — Conformity Indices
@@ -110,7 +113,7 @@ Quantitative comparison of two dose distributions for patient-specific QA. Follo
 ```python
 from dosemetrics.metrics import gamma
 
-gamma_map  = gamma.compute_gamma_index(dose_ref, dose_eval,
+gamma_map  = gamma.compare_gamma_index(dose_ref, dose_eval,
                                        dose_criterion_percent=3.0,
                                        distance_criterion_mm=3.0)
 pass_rate  = gamma.compute_gamma_passing_rate(gamma_map)
@@ -128,15 +131,15 @@ Pixel/voxel-level comparison metrics between two dose grids, including image-qua
 from dosemetrics.metrics import dose_comparison
 
 # Standard image metrics
-mse  = dose_comparison.compute_mse(dose1, dose2)
-mae  = dose_comparison.compute_mae(dose1, dose2)
-ssim = dose_comparison.compute_ssim(dose1, dose2)
-psnr = dose_comparison.compute_psnr(dose1, dose2)
-ncc  = dose_comparison.compute_normalized_cross_correlation(dose1, dose2)
+mse  = dose_comparison.compare_mse(reference, evaluated)
+mae  = dose_comparison.compare_mae(reference, evaluated)
+ssim = dose_comparison.compare_ssim(reference, evaluated)
+psnr = dose_comparison.compare_psnr(reference, evaluated)
+ncc  = dose_comparison.compare_normalized_cross_correlation(reference, evaluated)
 
 # Normalized MAE with optional threshold masking (new in v0.4)
-n_mae = dose_comparison.compute_normalized_mae(
-    dose1, dose2,
+n_mae = dose_comparison.compare_normalized_mae(
+    reference, evaluated,
     normalization_value=60.0,
     dose_threshold_gy=5.0,
 )
@@ -145,21 +148,33 @@ n_mae = dose_comparison.compute_normalized_mae(
 vol = dose_comparison.compute_variance_of_laplacian(dose)
 ```
 
-### `metrics/advanced_dvh.py` — Statistical DVH Comparisons
+### `metrics/comparison.py` — Clinical Plan Comparisons
 
-Advanced statistical tests and distance measures between two DVH curves.
+The canonical reference-based API. Every function accepts `reference` before
+`evaluated`; raw single-plan indices remain in their domain modules.
 
 ```python
-from dosemetrics.metrics import advanced_dvh
+from dosemetrics.metrics import comparison
 
-emd  = advanced_dvh.compute_dvh_wasserstein_distance(dose1, dose2, structure)
-area = advanced_dvh.compute_area_between_dvh_curves(dose1, dose2, structure)
-ks   = advanced_dvh.compute_dvh_ks_test(dose1, dose2, structure)
+ptvdd = comparison.compare_ptv_dose(reference, evaluated, ptv)
+pcid = comparison.compare_paddick_conformity_index(
+    reference, evaluated, ptv, prescription
+)
+score = comparison.compare_dvh_score(
+    reference, evaluated, targets=targets, oars=oars
+)
 ```
 
 ## Naming Conventions
 
-Function names follow the pattern `compute_<metric_name>`. Parameters at the public API boundary are always `Dose` and `Structure` objects — raw NumPy arrays are only used internally.
+For dose-plan functions, names encode whether a reference is required:
+
+- `compute_<metric>` characterizes one plan or summarizes an unordered plan collection.
+- `compare_<metric>` compares two plans and always accepts `(reference, evaluated, ...)`.
+
+Parameters at the public API boundary are `Dose` and `Structure` objects;
+raw NumPy arrays are used only where the operation itself produces or consumes
+a map, such as gamma statistics.
 
 ## Extension Pattern
 
@@ -194,7 +209,8 @@ Guidelines:
 - Return `float` for scalar metrics, `np.ndarray` for maps
 - Include a docstring with the formula, parameter definitions, and a literature reference
 - Add unit tests covering identical distributions, edge cases (zero dose, uniform dose), and numerical precision
-- Export from `dosemetrics.metrics.__init__` so users can import via `from dosemetrics.metrics import compute_new_index`
+- Keep the function in its domain module. `dosemetrics.metrics.__init__`
+  exports modules, not a flat function namespace.
 
 ## What Does Not Belong in Metrics
 

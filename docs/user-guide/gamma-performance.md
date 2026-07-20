@@ -5,7 +5,7 @@ The gamma index implementation in DoseMetrics is algorithmically correct and val
 ## How the Gamma Index Works
 
 ![Gamma Index](../images/gamma-index.png)
-*Gamma Index — for each voxel v, the index searches for the reference voxel v′ that minimises the combined spatial distance r(v, v′) / Δd and dose distance δ(v, v′) / ΔD. The voxel at 64 Gy (centre of the highlighted grid) fails because no reference neighbour within Δd = 3 mm matches its dose within ΔD. (Joseph Weibel, MSc Thesis Defense, University of Bern)*
+*Gamma Index — for each reference voxel v, the index searches evaluated voxels v′ for the minimum combined spatial distance r(v, v′) / Δd and dose distance δ(v, v′) / ΔD. The voxel at 64 Gy fails because no evaluated neighbour within Δd = 3 mm matches its dose within ΔD.*
 
 The gamma index at a point $v$ is:
 
@@ -28,7 +28,7 @@ The bottleneck is a triple-nested Python loop that accounts for ~99% of runtime.
 The 3D gamma computation is reliable for:
 
 - **Small volumes** (32³ to 64³): completes in < 10 seconds
-- **2D gamma** (`compute_2d_gamma()`): fast for per-slice QA
+- **2D gamma** (`compare_2d_gamma()`): fast for per-slice QA
 - **Research and batch processing** where runtime is not interactive
 
 The implementation handles all standard clinical criteria correctly:
@@ -46,7 +46,7 @@ Until the performance issues are resolved, these approaches make the current imp
 ```python
 from dosemetrics.metrics import gamma
 
-gamma_2d = gamma.compute_2d_gamma(
+gamma_2d = gamma.compare_2d_gamma(
     dose_ref_slice,
     dose_eval_slice,
     dose_criterion_percent=3.0,
@@ -70,7 +70,7 @@ dose_ref_downsampled = dose_ref.dose_array[::2, ::2, ::2]
 
 **5. Reduce the search radius:**
 ```python
-gamma_map = gamma.compute_gamma_index(
+gamma_map = gamma.compare_gamma_index(
     dose_ref, dose_eval,
     dose_criterion_percent=3.0,
     distance_criterion_mm=3.0,

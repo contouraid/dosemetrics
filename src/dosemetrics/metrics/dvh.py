@@ -1,19 +1,21 @@
-"""
-Dose-Volume Histogram (DVH) computation and analysis.
+"""Dose-volume histogram computation, metrics, and comparisons.
 
-This module provides functions for computing DVHs and extracting DVH-based
-metrics such as volume at dose (VX) and dose at volume (DX).
+``compute_*`` functions describe one dose plan or a collection of plans.
+``compare_*`` functions always accept ``reference`` before ``evaluated``.
+Keeping both in this module makes the DVH data model and all operations on it
+discoverable in one place.
 """
 
 from __future__ import annotations
 
-from typing import Tuple, Optional, Dict, TYPE_CHECKING
+from typing import Dict, Optional, Sequence, Tuple, TYPE_CHECKING, Union
 import numpy as np
 import pandas as pd
 
+from ..dose import Dose
+from ..structures import Structure
+
 if TYPE_CHECKING:
-    from ..dose import Dose
-    from ..structures import Structure
     from ..structure_set import StructureSet
 
 
@@ -447,55 +449,41 @@ def compute_median_dose(dose: Dose, structure: Structure) -> float:
     return float(np.median(dose_values)) if len(dose_values) > 0 else 0.0
 
 
-def compute_dvh_score(
-    dose_reference: Dose,
-    dose_evaluated: Dose,
-    structure: Structure,
+def compare_dvh_score(
+    reference: Dose,
+    evaluated: Dose,
+    targets: Union[Structure, Sequence[Structure]],
+    oars: Sequence[Structure] = (),
 ) -> float:
+    """Compare plans using the complete OpenKBP DVH score.
+
+    The score is the unweighted mean absolute error over D1, D95, and D99 for
+    every target and mean dose and D0.1cc for every OAR. It is reported in Gy.
     """
-    Compute DVH Score: average absolute difference in D1, D95, D99 between two dose distributions.
+    _validate_comparable_doses(reference, evaluated)
+    target_structures = (targets,) if isinstance(targets, Structure) else tuple(targets)
+    errors = []
 
-    DVH Score = (|D1_ref - D1_eval| + |D95_ref - D95_eval| + |D99_ref - D99_eval|) / 3
+    for target in target_structures:
+        for volume_percent in (1.0, 95.0, 99.0):
+            reference_value = compute_dose_at_volume(reference, target, volume_percent)
+            evaluated_value = compute_dose_at_volume(evaluated, target, volume_percent)
+            errors.append(abs(evaluated_value - reference_value))
 
-    Where DX means X% of the volume receives at least this dose. This metric
-    captures clinically relevant dose differences at near-maximum (D1),
-    near-minimum (D99), and dose coverage (D95) levels.
+    for oar in oars:
+        errors.append(
+            abs(compute_mean_dose(evaluated, oar) - compute_mean_dose(reference, oar))
+        )
+        errors.append(
+            abs(
+                compute_dose_at_volume_cc(evaluated, oar, 0.1)
+                - compute_dose_at_volume_cc(reference, oar, 0.1)
+            )
+        )
 
-    Lower values indicate better agreement between the two distributions.
-
-    Args:
-        dose_reference: Reference dose distribution
-        dose_evaluated: Evaluated dose distribution to compare
-        structure: Structure to restrict comparison to
-
-    Returns:
-        Average absolute DVH difference in Gy
-
-    References:
-        Adapted from GDP-HMM AAPM Challenge evaluation methodology.
-
-    Examples:
-        >>> score = compute_dvh_score(reference_dose, predicted_dose, ptv)
-        >>> print(f"DVH Score: {score:.3f} Gy")
-    """
-    ref_values = dose_reference.get_dose_in_structure(structure)
-    eval_values = dose_evaluated.get_dose_in_structure(structure)
-
-    if len(ref_values) == 0 or len(eval_values) == 0:
-        return float("nan")
-
-    # DX: X% of volume receives at least this dose → (100-X)th percentile of dose array
-    d1_ref = float(np.percentile(ref_values, 99))  # D1: near-max
-    d95_ref = float(np.percentile(ref_values, 5))  # D95: coverage
-    d99_ref = float(np.percentile(ref_values, 1))  # D99: near-min
-
-    d1_eval = float(np.percentile(eval_values, 99))
-    d95_eval = float(np.percentile(eval_values, 5))
-    d99_eval = float(np.percentile(eval_values, 1))
-
-    return (
-        abs(d1_ref - d1_eval) + abs(d95_ref - d95_eval) + abs(d99_ref - d99_eval)
-    ) / 3.0
+    if not errors:
+        raise ValueError("At least one target or OAR criterion is required")
+    return float(np.mean(errors))
 
 
 def compute_dvh_auc(
@@ -606,3 +594,246 @@ def compute_dose_percentile(
     # DX means X% receives AT LEAST this dose
     # This is the (100-X)th percentile of the dose array
     return float(np.percentile(dose_values, 100 - percentile))
+
+
+# Plan comparisons
+
+
+def _validate_comparable_doses(reference: Dose, evaluated: Dose) -> None:
+    """Validate geometry shared by all reference-based DVH comparisons."""
+    if reference.shape != evaluated.shape:
+        raise ValueError(
+            f"Dose shapes must match: {reference.shape} vs {evaluated.shape}"
+        )
+    if not np.allclose(reference.spacing, evaluated.spacing):
+        raise ValueError(
+            f"Dose spacings must match: {reference.spacing} vs {evaluated.spacing}"
+        )
+    if not np.allclose(reference.origin, evaluated.origin, rtol=1e-5, atol=1e-3):
+        raise ValueError(
+            f"Dose origins must match: {reference.origin} vs {evaluated.origin}"
+        )
+
+
+def _common_dvh_grid(
+    reference: Dose,
+    evaluated: Dose,
+    structure: Structure,
+    step_size: float = 0.1,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return two cumulative DVHs interpolated onto one dose grid."""
+    if step_size <= 0:
+        raise ValueError("step_size must be positive")
+    _validate_comparable_doses(reference, evaluated)
+    reference_bins, reference_volume = compute_dvh(
+        reference, structure, step_size=step_size
+    )
+    evaluated_bins, evaluated_volume = compute_dvh(
+        evaluated, structure, step_size=step_size
+    )
+    max_dose = max(float(reference_bins[-1]), float(evaluated_bins[-1]))
+    bins = np.arange(0.0, max_dose + step_size, step_size)
+    return (
+        bins,
+        np.interp(bins, reference_bins, reference_volume),
+        np.interp(bins, evaluated_bins, evaluated_volume),
+    )
+
+
+def compare_dvh_wasserstein(
+    reference: Dose,
+    evaluated: Dose,
+    structure: Structure,
+) -> float:
+    """Return the Wasserstein distance between structure dose samples, in Gy."""
+    from scipy.stats import wasserstein_distance
+
+    _validate_comparable_doses(reference, evaluated)
+    reference_values = reference.get_dose_in_structure(structure)
+    evaluated_values = evaluated.get_dose_in_structure(structure)
+    if len(reference_values) == 0:
+        return float("nan")
+    return float(wasserstein_distance(reference_values, evaluated_values))
+
+
+def compare_dvh_area(
+    reference: Dose,
+    evaluated: Dose,
+    structure: Structure,
+    norm: str = "l1",
+    step_size: float = 0.1,
+) -> float:
+    """Compare two cumulative DVHs using an integrated L1 or L2 distance.
+
+    ``norm="l1"`` integrates the pointwise absolute separation. ``norm="l2"``
+    returns the square root of the integrated squared separation.
+    """
+    norm = norm.lower()
+    if norm not in {"l1", "l2"}:
+        raise ValueError("norm must be 'l1' or 'l2'")
+    bins, reference_volume, evaluated_volume = _common_dvh_grid(
+        reference, evaluated, structure, step_size
+    )
+    difference = evaluated_volume - reference_volume
+    integrand = np.abs(difference) if norm == "l1" else difference**2
+    integral = float(np.trapz(integrand, bins))
+    return integral if norm == "l1" else float(np.sqrt(integral))
+
+
+def compare_dvh_chi_square(
+    reference: Dose,
+    evaluated: Dose,
+    structure: Structure,
+    step_size: float = 0.1,
+) -> Tuple[float, float]:
+    """Compare differential DVHs with a chi-square goodness-of-fit test."""
+    from scipy.stats import chisquare
+
+    _, reference_volume, evaluated_volume = _common_dvh_grid(
+        reference, evaluated, structure, step_size
+    )
+    expected = np.maximum(-np.diff(np.append(reference_volume, 0.0)), 0.0)
+    observed = np.maximum(-np.diff(np.append(evaluated_volume, 0.0)), 0.0)
+    expected += np.finfo(float).eps
+    observed *= np.sum(expected) / max(np.sum(observed), np.finfo(float).eps)
+    statistic, p_value = chisquare(observed, expected)
+    return float(statistic), float(p_value)
+
+
+def compare_dvh_ks(
+    reference: Dose,
+    evaluated: Dose,
+    structure: Structure,
+) -> Tuple[float, float]:
+    """Compare structure dose samples with a two-sample KS test."""
+    from scipy.stats import ks_2samp
+
+    _validate_comparable_doses(reference, evaluated)
+    reference_values = reference.get_dose_in_structure(structure)
+    evaluated_values = evaluated.get_dose_in_structure(structure)
+    if len(reference_values) == 0:
+        return float("nan"), float("nan")
+    statistic, p_value = ks_2samp(reference_values, evaluated_values)
+    return float(statistic), float(p_value)
+
+
+def _aligned_dvhs(
+    doses: Sequence[Dose],
+    structure: Structure,
+    step_size: float,
+) -> Tuple[np.ndarray, np.ndarray]:
+    if not doses:
+        raise ValueError("At least one dose is required")
+    if step_size <= 0:
+        raise ValueError("step_size must be positive")
+    dvhs = [compute_dvh(dose, structure, step_size=step_size) for dose in doses]
+    max_dose = max(float(bins[-1]) for bins, _ in dvhs)
+    common_bins = np.arange(0.0, max_dose + step_size, step_size)
+    aligned = np.asarray(
+        [np.interp(common_bins, bins, volume) for bins, volume in dvhs]
+    )
+    return common_bins, aligned
+
+
+def compute_dvh_confidence_interval(
+    doses: Sequence[Dose],
+    structure: Structure,
+    confidence: float = 0.95,
+    step_size: float = 0.1,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Summarize a collection of plans with mean DVH and percentile interval."""
+    if not 0 < confidence < 1:
+        raise ValueError("confidence must be between 0 and 1")
+    bins, dvhs = _aligned_dvhs(doses, structure, step_size)
+    tail = (1.0 - confidence) * 50.0
+    return (
+        bins,
+        np.mean(dvhs, axis=0),
+        np.percentile(dvhs, tail, axis=0),
+        np.percentile(dvhs, 100.0 - tail, axis=0),
+    )
+
+
+def compute_dvh_bandwidth(
+    doses: Sequence[Dose],
+    structure: Structure,
+    step_size: float = 0.1,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Return dose bins and the pointwise max-minus-min DVH bandwidth."""
+    bins, dvhs = _aligned_dvhs(doses, structure, step_size)
+    return bins, np.max(dvhs, axis=0) - np.min(dvhs, axis=0)
+
+
+def compare_dvh_similarity(
+    reference: Dose,
+    evaluated: Dose,
+    structure: Structure,
+    method: str = "dice",
+    step_size: float = 0.1,
+) -> float:
+    """Compare two DVHs using Dice, Jaccard, correlation, or cosine similarity."""
+    method = method.lower()
+    if method not in {"dice", "jaccard", "correlation", "cosine"}:
+        raise ValueError("method must be 'dice', 'jaccard', 'correlation', or 'cosine'")
+    _, reference_volume, evaluated_volume = _common_dvh_grid(
+        reference, evaluated, structure, step_size
+    )
+    intersection = np.minimum(reference_volume, evaluated_volume)
+    if method == "dice":
+        denominator = np.sum(reference_volume + evaluated_volume)
+        return float(2.0 * np.sum(intersection) / denominator) if denominator else 0.0
+    if method == "jaccard":
+        union = np.sum(np.maximum(reference_volume, evaluated_volume))
+        return float(np.sum(intersection) / union) if union else 0.0
+    if method == "correlation":
+        correlation = np.corrcoef(reference_volume, evaluated_volume)[0, 1]
+        return float(correlation) if np.isfinite(correlation) else 0.0
+    denominator = np.linalg.norm(reference_volume) * np.linalg.norm(evaluated_volume)
+    return (
+        float(np.dot(reference_volume, evaluated_volume) / denominator)
+        if denominator
+        else 0.0
+    )
+
+
+def compare_oar_dvh_auc(
+    reference: Dose,
+    evaluated: Dose,
+    oar: Structure,
+    num_bins: int = 100,
+) -> float:
+    """Return ``|AUC_evaluated - AUC_reference|`` for one OAR, in Gy."""
+    _validate_comparable_doses(reference, evaluated)
+    if num_bins < 2:
+        raise ValueError("num_bins must be at least 2")
+    reference_values = reference.get_dose_in_structure(oar)
+    evaluated_values = evaluated.get_dose_in_structure(oar)
+    if len(reference_values) == 0:
+        return float("nan")
+    min_dose = float(min(np.min(reference_values), np.min(evaluated_values)))
+    max_dose = float(max(np.max(reference_values), np.max(evaluated_values)))
+    if np.isclose(min_dose, max_dose):
+        return 0.0
+    bins = np.linspace(min_dose, max_dose, num_bins)
+    reference_dvh = np.asarray([np.mean(reference_values >= d) for d in bins])
+    evaluated_dvh = np.asarray([np.mean(evaluated_values >= d) for d in bins])
+    return float(abs(np.trapz(evaluated_dvh, bins) - np.trapz(reference_dvh, bins)))
+
+
+def compare_mean_oar_dvh_auc(
+    reference: Dose,
+    evaluated: Dose,
+    oars: Sequence[Structure],
+    num_bins: int = 100,
+) -> float:
+    """Average the per-OAR absolute AUC differences."""
+    if not oars:
+        raise ValueError("At least one OAR is required")
+    return float(
+        np.mean(
+            [
+                compare_oar_dvh_auc(reference, evaluated, oar, num_bins=num_bins)
+                for oar in oars
+            ]
+        )
+    )

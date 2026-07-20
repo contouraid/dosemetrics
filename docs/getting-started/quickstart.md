@@ -96,25 +96,28 @@ Compare predicted vs. actual dose distributions:
 
 ```python
 from dosemetrics.io import read_from_nifti
-from dosemetrics.metrics.comparison import compute_dose_difference, compute_gamma_index
+from dosemetrics.metrics import dose_comparison, gamma
 
 # Load two dose distributions
-dose_tps = read_from_nifti("path/to/tps_dose.nii.gz")
-dose_predicted = read_from_nifti("path/to/predicted_dose.nii.gz")
+reference = read_from_nifti("path/to/tps_dose.nii.gz")
+evaluated = read_from_nifti("path/to/predicted_dose.nii.gz")
 
 # Compute absolute difference
-diff = compute_dose_difference(dose_tps, dose_predicted, method="absolute")
-
-# Compute gamma index (3%/3mm criteria)
-gamma = compute_gamma_index(
-    dose_tps, 
-    dose_predicted, 
-    dose_threshold=3.0,  # 3% dose difference
-    distance_threshold=3.0,  # 3mm distance to agreement
-    dose_cutoff=0.1  # Ignore doses below 10% of prescription
+diff = dose_comparison.compare_dose_difference_map(
+    reference, evaluated, absolute=True
 )
 
-print(f"Gamma pass rate: {gamma.mean():.1f}%")
+# Compute gamma index (3%/3mm criteria)
+gamma_map = gamma.compare_gamma_index(
+    reference,
+    evaluated,
+    dose_criterion_percent=3.0,
+    distance_criterion_mm=3.0,
+    dose_threshold_percent=10.0,
+)
+passing_rate = gamma.compute_gamma_passing_rate(gamma_map)
+
+print(f"Gamma pass rate: {passing_rate:.1f}%")
 ```
 
 ## Export Results

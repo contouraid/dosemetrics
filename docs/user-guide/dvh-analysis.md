@@ -96,39 +96,46 @@ print(f"EUD (cord, a=8):  {eud_cord:.1f} Gy")
 
 ## Comparing Two DVH Curves
 
-### Area Between Curves (`compute_area_between_dvh_curves`)
+### Pointwise area between curves (`dvh.compare_dvh_area`)
 
 ![DVH Area Between Curves](../images/area-between-curves.png)
-*DVH Area Between Curves — the shaded region between the target (solid red) and predicted (dashed) DVH curves is integrated to produce the ABC metric. A larger shaded area means greater overall disagreement in dose coverage across the full DVH. (Joseph Weibel, MSc Thesis Defense, University of Bern)*
+*Pointwise DVH area between curves — the shaded region between the reference (solid red) and evaluated (dashed) DVH curves is integrated. A larger shaded area means greater disagreement across the full DVH.*
+
+!!! warning "Two ABC definitions"
+    `dvh.compare_dvh_area` integrates pointwise curve separation. The clinical
+    OAR DVH ABC is instead
+    \(\lvert\mathrm{AUC}_{eval}-\mathrm{AUC}_{ref}\rvert\) on a common
+    100-bin grid. See [Plan Comparison Metrics](plan-comparison-metrics.md#oar-dvh-area-between-curves).
 
 The **Area Between DVH Curves (ABC)** integrates the absolute vertical difference between two cumulative DVH curves:
 
-$$\text{AUC}_{\text{plan}} = \int_{D_{\min}}^{D_{\max}} V(D)\, \mathrm{d}D$$
-
-$$\text{ABC} = \left|\text{AUC}_{\text{pred}} - \text{AUC}_{\text{target}}\right|$$
+$$\text{ABC}_{L1} =
+\int_{D_{\min}}^{D_{\max}}
+\left|V_{\text{evaluated}}(D)-V_{\text{reference}}(D)\right|\,\mathrm{d}D$$
 
 - **0 Gy·%:** the two DVH curves are identical
 - **Higher values:** greater disagreement in dose coverage across the full DVH
 
 ```python
-from dosemetrics.metrics.advanced_dvh import compute_area_between_dvh_curves
+from dosemetrics.metrics import dvh
 
-abc = compute_area_between_dvh_curves(dose_target, dose_pred, oar_structure)
+abc = dvh.compare_dvh_area(reference, evaluated, oar_structure, norm="l1")
 print(f"DVH Area Between Curves: {abc:.2f} Gy·%")
 ```
 
-### DVH Score — D₁ / D₉₅ / D₉₉ (`compute_dvh_score`)
+### DVH score
 
-See the [Quality Metrics](quality-metrics.md#dvh-score-compute_dvh_score) guide for a full description.
+See [Plan Comparison Metrics](plan-comparison-metrics.md#global-dvh-score) for
+the single complete definition exposed as `comparison.compare_dvh_score`.
 
-### Wasserstein Distance (`compute_dvh_wasserstein_distance`)
+### Wasserstein distance (`dvh.compare_dvh_wasserstein`)
 
 The Wasserstein (earth-mover's) distance between two DVH curves, treating each as a probability distribution over dose values:
 
 ```python
-from dosemetrics.metrics.advanced_dvh import compute_dvh_wasserstein_distance
+from dosemetrics.metrics import dvh
 
-wd = compute_dvh_wasserstein_distance(dose_target, dose_pred, ptv)
+wd = dvh.compare_dvh_wasserstein(reference, evaluated, ptv)
 print(f"Wasserstein distance: {wd:.2f} Gy")
 ```
 
@@ -160,18 +167,15 @@ These functions apply classical statistical tests to detect whether two DVH curv
 
 | Function | Test | Use case |
 |---|---|---|
-| `compute_dvh_ks_test` | Kolmogorov–Smirnov | Sensitive to shape differences anywhere along the DVH |
-| `compute_dvh_chi_square` | Chi-square | Discrete bin-wise comparison |
-| `compute_dvh_similarity_index` | Custom similarity | Normalised to [0, 1] |
+| `dvh.compare_dvh_ks` | Kolmogorov–Smirnov | Sensitive to shape differences anywhere along the DVH |
+| `dvh.compare_dvh_chi_square` | Chi-square | Discrete bin-wise comparison |
+| `dvh.compare_dvh_similarity` | Custom similarity | Normalised to [0, 1] |
 
 ```python
-from dosemetrics.metrics.advanced_dvh import (
-    compute_dvh_ks_test,
-    compute_dvh_similarity_index,
-)
+from dosemetrics.metrics import dvh
 
-ks_stat, p_value = compute_dvh_ks_test(dose_target, dose_pred, ptv)
-similarity = compute_dvh_similarity_index(dose_target, dose_pred, ptv)
+ks_stat, p_value = dvh.compare_dvh_ks(reference, evaluated, ptv)
+similarity = dvh.compare_dvh_similarity(reference, evaluated, ptv)
 
 print(f"KS statistic: {ks_stat:.3f}  p={p_value:.4f}")
 print(f"DVH Similarity: {similarity:.3f}")   # 1.0 = identical
@@ -185,5 +189,5 @@ print(f"DVH Similarity: {similarity:.3f}")   # 1.0 = identical
 |---|---|
 | DVH definition | Drzymala RE et al., *Int J Radiat Oncol Biol Phys*, 1991;21(1):71-78 |
 | EUD | Niemierko A, *Med Phys*, 1997;24(1):103-110 |
-| DVH Area Between Curves | Weibel J, *MSc Thesis Defense*, University of Bern, 2024 |
-| DVH Score | GDP-HMM AAPM Challenge, Gao et al. |
+| DVH Area Between Curves | Explicit formula documented above |
+| DVH Score | Babier et al., OpenKBP, *Medical Physics*, 2021 |

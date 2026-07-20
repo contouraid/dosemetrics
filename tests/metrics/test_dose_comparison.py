@@ -48,17 +48,17 @@ class TestMSE:
 
     def test_mse_identical(self, identical_dose):
         """Test MSE=0 for identical doses."""
-        mse = dose_comparison.compute_mse(identical_dose, identical_dose)
+        mse = dose_comparison.compare_mse(identical_dose, identical_dose)
         assert mse == 0.0
 
     def test_mse_different(self, simple_dose1, simple_dose2):
         """Test MSE>0 for different doses."""
-        mse = dose_comparison.compute_mse(simple_dose1, simple_dose2)
+        mse = dose_comparison.compare_mse(simple_dose1, simple_dose2)
         assert mse > 0.0
 
     def test_mse_with_structure(self, simple_dose1, simple_dose2, simple_structure):
         """Test MSE within structure."""
-        mse = dose_comparison.compute_mse(simple_dose1, simple_dose2, simple_structure)
+        mse = dose_comparison.compare_mse(simple_dose1, simple_dose2, simple_structure)
         assert mse > 0.0
         assert isinstance(mse, float)
 
@@ -68,7 +68,7 @@ class TestMSE:
             np.ones((10, 10, 5)) * 50.0, (2.0, 2.0, 3.0), (0.0, 0.0, 0.0)
         )
         with pytest.raises(ValueError, match="shape"):
-            dose_comparison.compute_mse(simple_dose1, different_shape)
+            dose_comparison.compare_mse(simple_dose1, different_shape)
 
 
 class TestMAE:
@@ -76,17 +76,17 @@ class TestMAE:
 
     def test_mae_identical(self, identical_dose):
         """Test MAE=0 for identical doses."""
-        mae = dose_comparison.compute_mae(identical_dose, identical_dose)
+        mae = dose_comparison.compare_mae(identical_dose, identical_dose)
         assert mae == 0.0
 
     def test_mae_different(self, simple_dose1, simple_dose2):
         """Test MAE>0 for different doses."""
-        mae = dose_comparison.compute_mae(simple_dose1, simple_dose2)
+        mae = dose_comparison.compare_mae(simple_dose1, simple_dose2)
         assert mae > 0.0
 
     def test_mae_with_structure(self, simple_dose1, simple_dose2, simple_structure):
         """Test MAE within structure."""
-        mae = dose_comparison.compute_mae(simple_dose1, simple_dose2, simple_structure)
+        mae = dose_comparison.compare_mae(simple_dose1, simple_dose2, simple_structure)
         assert mae > 0.0
         assert isinstance(mae, float)
 
@@ -96,18 +96,18 @@ class TestPSNR:
 
     def test_psnr_identical(self, identical_dose):
         """Test PSNR=inf for identical doses."""
-        psnr = dose_comparison.compute_psnr(identical_dose, identical_dose)
+        psnr = dose_comparison.compare_psnr(identical_dose, identical_dose)
         assert np.isinf(psnr)
 
     def test_psnr_different(self, simple_dose1, simple_dose2):
         """Test PSNR is finite for different doses."""
-        psnr = dose_comparison.compute_psnr(simple_dose1, simple_dose2)
+        psnr = dose_comparison.compare_psnr(simple_dose1, simple_dose2)
         assert np.isfinite(psnr)
         assert psnr > 0
 
     def test_psnr_with_data_range(self, simple_dose1, simple_dose2):
         """Test PSNR with specified data range."""
-        psnr = dose_comparison.compute_psnr(
+        psnr = dose_comparison.compare_psnr(
             simple_dose1, simple_dose2, data_range=100.0
         )
         assert np.isfinite(psnr)
@@ -118,12 +118,12 @@ class TestSSIM:
 
     def test_ssim_identical(self, identical_dose):
         """Test SSIM=1 for identical doses."""
-        ssim = dose_comparison.compute_ssim(identical_dose, identical_dose)
+        ssim = dose_comparison.compare_ssim(identical_dose, identical_dose)
         assert 0.99 <= ssim <= 1.0  # Close to 1 for identical
 
     def test_ssim_different(self, simple_dose1, simple_dose2):
         """Test SSIM in valid range for different doses."""
-        ssim = dose_comparison.compute_ssim(simple_dose1, simple_dose2)
+        ssim = dose_comparison.compare_ssim(simple_dose1, simple_dose2)
         assert -1 <= ssim <= 1
         assert ssim > 0  # Should be positive for similar doses
 
@@ -133,7 +133,7 @@ class TestNCC:
 
     def test_ncc_identical(self, identical_dose):
         """Test NCC=1 for identical doses."""
-        ncc = dose_comparison.compute_normalized_cross_correlation(
+        ncc = dose_comparison.compare_normalized_cross_correlation(
             identical_dose, identical_dose
         )
         # For uniform doses, NCC returns 0 (no variation)
@@ -141,7 +141,7 @@ class TestNCC:
 
     def test_ncc_different(self, simple_dose1, simple_dose2):
         """Test NCC in valid range."""
-        ncc = dose_comparison.compute_normalized_cross_correlation(
+        ncc = dose_comparison.compare_normalized_cross_correlation(
             simple_dose1, simple_dose2
         )
         assert -1 <= ncc <= 1.01  # Allow small floating point error
@@ -153,15 +153,15 @@ class TestMutualInformation:
 
     def test_mi_positive(self, simple_dose1, simple_dose2):
         """Test MI is positive for related doses."""
-        mi = dose_comparison.compute_mutual_information(simple_dose1, simple_dose2)
+        mi = dose_comparison.compare_mutual_information(simple_dose1, simple_dose2)
         assert mi >= 0
 
     def test_mi_with_bins(self, simple_dose1, simple_dose2):
         """Test MI with different bin counts."""
-        mi_256 = dose_comparison.compute_mutual_information(
+        mi_256 = dose_comparison.compare_mutual_information(
             simple_dose1, simple_dose2, bins=256
         )
-        mi_128 = dose_comparison.compute_mutual_information(
+        mi_128 = dose_comparison.compare_mutual_information(
             simple_dose1, simple_dose2, bins=128
         )
         assert mi_256 >= 0
@@ -173,21 +173,21 @@ class TestDoseDifferenceMap:
 
     def test_difference_map_shape(self, simple_dose1, simple_dose2):
         """Test difference map has correct shape."""
-        diff_dose = dose_comparison.compute_dose_difference_map(
+        diff_dose = dose_comparison.compare_dose_difference_map(
             simple_dose1, simple_dose2
         )
         assert diff_dose.dose_array.shape == simple_dose1.dose_array.shape
 
     def test_difference_map_absolute(self, simple_dose1, simple_dose2):
         """Test absolute difference map."""
-        diff_dose = dose_comparison.compute_dose_difference_map(
+        diff_dose = dose_comparison.compare_dose_difference_map(
             simple_dose1, simple_dose2, absolute=True
         )
         assert np.all(diff_dose.dose_array >= 0)
 
     def test_difference_map_signed(self, simple_dose1, simple_dose2):
         """Test signed difference map."""
-        diff_dose = dose_comparison.compute_dose_difference_map(
+        diff_dose = dose_comparison.compare_dose_difference_map(
             simple_dose1, simple_dose2, absolute=False
         )
         # Some differences should be negative
@@ -220,9 +220,7 @@ class TestComprehensiveMetrics:
 
     def test_all_metrics(self, simple_dose1, simple_dose2):
         """Test that all metrics are computed."""
-        metrics = dose_comparison.compute_dose_comparison_metrics(
-            simple_dose1, simple_dose2
-        )
+        metrics = dose_comparison.compare_dose(simple_dose1, simple_dose2)
 
         assert "mse" in metrics
         assert "mae" in metrics
@@ -233,7 +231,7 @@ class TestComprehensiveMetrics:
 
     def test_metrics_with_structure(self, simple_dose1, simple_dose2, simple_structure):
         """Test metrics within structure."""
-        metrics = dose_comparison.compute_dose_comparison_metrics(
+        metrics = dose_comparison.compare_dose(
             simple_dose1, simple_dose2, simple_structure
         )
         assert all(
@@ -287,25 +285,25 @@ class TestNormalizedMAE:
     """Test Normalized MAE with threshold masking."""
 
     def test_identical_doses_returns_zero(self, identical_dose):
-        nmae = dose_comparison.compute_normalized_mae(identical_dose, identical_dose)
+        nmae = dose_comparison.compare_normalized_mae(identical_dose, identical_dose)
         assert nmae == pytest.approx(0.0, abs=1e-10)
 
     def test_without_normalization_equals_mae(self, simple_dose1, simple_dose2):
-        nmae = dose_comparison.compute_normalized_mae(simple_dose1, simple_dose2)
-        mae = dose_comparison.compute_mae(simple_dose1, simple_dose2)
+        nmae = dose_comparison.compare_normalized_mae(simple_dose1, simple_dose2)
+        mae = dose_comparison.compare_mae(simple_dose1, simple_dose2)
         assert nmae == pytest.approx(mae, rel=1e-6)
 
     def test_normalization_scales_result(self, simple_dose1, simple_dose2):
-        mae = dose_comparison.compute_mae(simple_dose1, simple_dose2)
-        nmae = dose_comparison.compute_normalized_mae(
+        mae = dose_comparison.compare_mae(simple_dose1, simple_dose2)
+        nmae = dose_comparison.compare_normalized_mae(
             simple_dose1, simple_dose2, normalization_value=60.0
         )
         assert nmae == pytest.approx(mae / 60.0, rel=1e-6)
 
     def test_threshold_excludes_low_dose_voxels(self, simple_dose1, simple_dose2):
         # With high threshold, fewer voxels used → may differ from global MAE
-        nmae_global = dose_comparison.compute_normalized_mae(simple_dose1, simple_dose2)
-        nmae_thresh = dose_comparison.compute_normalized_mae(
+        nmae_global = dose_comparison.compare_normalized_mae(simple_dose1, simple_dose2)
+        nmae_thresh = dose_comparison.compare_normalized_mae(
             simple_dose1, simple_dose2, dose_threshold_gy=55.0
         )
         # Threshold removes low-dose background voxels (50 Gy < threshold 55 Gy)
@@ -313,13 +311,13 @@ class TestNormalizedMAE:
         assert nmae_thresh != pytest.approx(nmae_global, rel=1e-3)
 
     def test_threshold_above_all_voxels_returns_nan(self, simple_dose1, simple_dose2):
-        nmae = dose_comparison.compute_normalized_mae(
+        nmae = dose_comparison.compare_normalized_mae(
             simple_dose1, simple_dose2, dose_threshold_gy=1000.0
         )
         assert np.isnan(nmae)
 
     def test_with_structure(self, simple_dose1, simple_dose2, simple_structure):
-        nmae = dose_comparison.compute_normalized_mae(
+        nmae = dose_comparison.compare_normalized_mae(
             simple_dose1, simple_dose2, structure=simple_structure
         )
         assert isinstance(nmae, float)

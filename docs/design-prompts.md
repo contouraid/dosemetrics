@@ -349,7 +349,7 @@ All graphics should match the aesthetic of the existing slide illustrations:
 
 ---
 
-### 8b. 2D Gamma — `compute_2d_gamma`
+### 8b. 2D Gamma — `compare_2d_gamma`
 
 **Prompt:**
 
@@ -368,7 +368,7 @@ All graphics should match the aesthetic of the existing slide illustrations:
 
 ## Group 9 — Voxel-Based Dose Comparison
 
-### 9a. Mean Absolute Error (MAE) — `compute_mae`
+### 9a. Mean Absolute Error (MAE) — `compare_mae`
 
 **Prompt:**
 
@@ -385,7 +385,7 @@ All graphics should match the aesthetic of the existing slide illustrations:
 
 ---
 
-### 9b. Structural Similarity Index (SSIM) — `compute_ssim`
+### 9b. Structural Similarity Index (SSIM) — `compare_ssim`
 
 **Prompt:**
 
@@ -413,7 +413,7 @@ All graphics should match the aesthetic of the existing slide illustrations:
 
 ---
 
-### 9c. Dose Difference Map — `compute_dose_difference_map`
+### 9c. Dose Difference Map — `compare_dose_difference_map`
 
 **Prompt:**
 
@@ -457,7 +457,7 @@ All graphics should match the aesthetic of the existing slide illustrations:
 
 ## Group 10 — Advanced DVH Statistical Metrics
 
-### 10a. DVH Wasserstein Distance — `compute_dvh_wasserstein_distance`
+### 10a. DVH Wasserstein Distance — `compare_dvh_wasserstein`
 
 **Prompt:**
 
@@ -499,7 +499,7 @@ All graphics should match the aesthetic of the existing slide illustrations:
 
 ---
 
-### 10c. Mutual Information — `compute_mutual_information`
+### 10c. Mutual Information — `compare_mutual_information`
 
 **Prompt:**
 
@@ -523,7 +523,7 @@ All graphics should match the aesthetic of the existing slide illustrations:
 
 ---
 
-### 10d. KS Test and Chi-Square on DVH — `compute_dvh_ks_test` / `compute_dvh_chi_square`
+### 10d. KS Test and Chi-Square on DVH — `compare_dvh_ks` / `compare_dvh_chi_square`
 
 **Prompt:**
 

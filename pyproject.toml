@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dosemetrics"
-version = "0.3.0"
+version = "0.4.0"
 description = "Measuring radiotherapy doses - plotting visualizations"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -86,6 +86,11 @@ include = ["dosemetrics*", "dosemetrics_cli*"]
 
 [tool.setuptools.package-dir]
 "" = "src"
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: performance and stress tests that are excluded from the standard CI suite",
+]
 
 [project.scripts]
 dosemetrics = "dosemetrics_cli.__main__:main"

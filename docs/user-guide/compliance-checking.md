@@ -15,13 +15,15 @@ Compliance checking determines whether a treatment plan satisfies a set of dose 
 ## OAR Constraint Disagreement
 
 ![OAR Constraint Disagreement](../images/oar-constraint-disagreement.png)
-*OAR Constraint Disagreement — each cell in the grid corresponds to one OAR constraint. Dark red = violated by both plans (agreement on violation). White = satisfied by both (agreement on satisfaction). Light red with border = disagreement between the two plans on pass/fail. (Joseph Weibel, MSc Thesis Defense, University of Bern)*
+*OAR Constraint Disagreement — each cell in the grid corresponds to one OAR constraint. Dark red = violated by both plans (agreement on violation). White = satisfied by both (agreement on satisfaction). Light red with border = disagreement between the two plans on pass/fail.*
 
 The **OAR Constraint Disagreement** metric quantifies how often a predicted dose distribution and a reference (clinical) dose distribution reach different pass/fail conclusions for the same set of constraints:
 
 $$\text{Disagreement} = \frac{1}{N} \sum_{c=1}^{N} \mathbf{1}\!\left[S_{\text{pred}}(c) \neq S_{\text{target}}(c)\right]$$
 
-where $S(c) \in \{0, 1\}$ is the binary pass/fail status of constraint $c$ and $N$ is the total number of constraints evaluated.
+where $S(c) \in \{0, 1\}$ is the binary pass/fail status of constraint $c$.
+The head-and-neck comparison protocol evaluates \(N=38\) constraints selected
+from [CORSAIR](https://doi.org/10.3390/curroncol29100552).
 
 - **0.0:** perfect agreement — the predicted plan makes the same pass/fail decision as the reference on every constraint
 - **1.0:** complete disagreement — every constraint flips status between the two plans
@@ -38,39 +40,14 @@ where $S(c) \in \{0, 1\}$ is the binary pass/fail status of constraint $c$ and $
 ### Example
 
 ```python
-from dosemetrics.metrics.conformity import compute_coverage, compute_prescription_mae
-from dosemetrics.metrics.dvh import compute_dose_at_volume
+from dosemetrics.metrics import comparison
 
-# Define constraints as (structure, metric_fn, threshold, direction) tuples
-constraints = [
-    ("PTV",         lambda d, s: compute_coverage(d, s, 60.0),           0.95, ">="),
-    ("SpinalCord",  lambda d, s: compute_dose_at_volume(d, s, 0.0),      45.0, "<="),
-    ("Parotid_L",   lambda d, s: compute_dose_at_volume(d, s, 50.0),     26.0, "<="),
-]
-
-def evaluate_constraints(dose, structures):
-    results = {}
-    for name, fn, threshold, direction in constraints:
-        value = fn(dose, structures[name])
-        if direction == ">=":
-            results[name] = value >= threshold
-        else:
-            results[name] = value <= threshold
-    return results
-
-status_target = evaluate_constraints(dose_target, structures)
-status_pred   = evaluate_constraints(dose_pred,   structures)
-
-disagreements = sum(
-    status_target[c] != status_pred[c] for c in status_target
+# Both mappings contain the same 38 resolved CORSAIR-derived constraint IDs.
+disagreement_rate = comparison.compare_oar_constraints(
+    reference_satisfaction,
+    evaluated_satisfaction,
 )
-disagreement_rate = disagreements / len(constraints)
-
-print(f"Constraint Disagreement: {disagreement_rate:.2f}")
-for name in status_target:
-    match = "OK" if status_target[name] == status_pred[name] else "DISAGREE"
-    print(f"  {name}: target={'PASS' if status_target[name] else 'FAIL'}, "
-          f"pred={'PASS' if status_pred[name] else 'FAIL'}  [{match}]")
+print(f"Constraint Disagreement: {disagreement_rate:.2%}")
 ```
 
 ---
@@ -115,5 +92,5 @@ print(f"PTV D95:            {ptv_d95:.1f} Gy  (target ≥ 57 Gy = 95% of 60 Gy)"
 
 | Metric | Reference |
 |---|---|
-| OAR Constraint Disagreement | Weibel J, *MSc Thesis Defense*, University of Bern, 2024 |
+| OAR Constraint Disagreement constraint source | Bisello et al. (CORSAIR), *Current Oncology*, 2022 |
 | DVH constraint evaluation | QUANTEC Working Group, *Int J Radiat Oncol Biol Phys*, 2010;76(3 Suppl) |

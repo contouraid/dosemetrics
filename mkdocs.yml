@@ -118,6 +118,7 @@ nav:
     - Overview: user-guide/overview.md
     - DVH Analysis: user-guide/dvh-analysis.md
     - Quality Metrics: user-guide/quality-metrics.md
+    - Plan Metrics and Comparisons: user-guide/plan-comparison-metrics.md
     - Compliance Checking: user-guide/compliance-checking.md
     - Visualizations: user-guide/visualizations.md
     - Geometric Analysis: user-guide/geometric-analysis.md

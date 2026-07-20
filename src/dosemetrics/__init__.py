@@ -96,7 +96,7 @@ def create_structure_set_from_masks(
 
 
 # Version information
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 # Public API
 __all__ = [

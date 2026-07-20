@@ -1,8 +1,9 @@
 """
 Dose distribution comparison metrics beyond DVH.
 
-This module provides image-based metrics for comparing 3D dose distributions,
-including SSIM, MSE, MAE, and other similarity measures.
+This module provides image-based metrics for comparing 3D dose distributions.
+All ``compare_*`` functions accept ``reference`` before ``evaluated``;
+``compute_*`` functions characterize one dose distribution.
 
 Future Implementation TODOs:
     - Structural Similarity Index (SSIM) for dose volumes
@@ -16,17 +17,15 @@ Future Implementation TODOs:
 import numpy as np
 from typing import Tuple, Dict, Optional
 import warnings
-from scipy import ndimage
-from scipy.stats import entropy
 from skimage.metrics import structural_similarity
 
 from ..dose import Dose
 from ..structures import Structure
 
 
-def compute_ssim(
-    dose1: Dose,
-    dose2: Dose,
+def compare_ssim(
+    reference: Dose,
+    evaluated: Dose,
     structure: Optional[Structure] = None,
     window_size: int = 11,
     k1: float = 0.01,
@@ -41,10 +40,10 @@ def compute_ssim(
 
     Parameters
     ----------
-    dose1 : Dose
+    reference : Dose
         Reference dose distribution.
-    dose2 : Dose
-        Comparison dose distribution.
+    evaluated : Dose
+        Evaluated dose distribution.
     structure : Structure, optional
         If provided, compute SSIM only within structure volume.
         If None, compute for entire dose grid.
@@ -80,7 +79,7 @@ def compute_ssim(
 
     Examples
     --------
-    >>> ssim = compute_ssim(planned_dose, delivered_dose, ptv)
+    >>> ssim = compare_ssim(planned_dose, delivered_dose, ptv)
     >>> print(f"Dose SSIM: {ssim:.3f}")
     >>> if ssim > 0.95:
     ...     print("Excellent agreement")
@@ -93,8 +92,8 @@ def compute_ssim(
         If dose distributions have incompatible geometry.
     """
     # Get dose arrays
-    arr1 = dose1.dose_array
-    arr2 = dose2.dose_array
+    arr1 = reference.dose_array
+    arr2 = evaluated.dose_array
 
     # Check shapes match
     if arr1.shape != arr2.shape:
@@ -144,18 +143,18 @@ def compute_ssim(
     return float(ssim_value)
 
 
-def compute_mse(
-    dose1: Dose, dose2: Dose, structure: Optional[Structure] = None
+def compare_mse(
+    reference: Dose, evaluated: Dose, structure: Optional[Structure] = None
 ) -> float:
     """
     Compute Mean Squared Error between two dose distributions.
 
     Parameters
     ----------
-    dose1 : Dose
+    reference : Dose
         Reference dose.
-    dose2 : Dose
-        Comparison dose.
+    evaluated : Dose
+        Evaluated dose.
     structure : Structure, optional
         If provided, compute MSE only within structure.
 
@@ -170,8 +169,8 @@ def compute_mse(
         If dose distributions have incompatible shapes.
     """
     # Get dose arrays
-    arr1 = dose1.dose_array
-    arr2 = dose2.dose_array
+    arr1 = reference.dose_array
+    arr2 = evaluated.dose_array
 
     # Check shapes match
     if arr1.shape != arr2.shape:
@@ -188,18 +187,18 @@ def compute_mse(
     return float(mse)
 
 
-def compute_mae(
-    dose1: Dose, dose2: Dose, structure: Optional[Structure] = None
+def compare_mae(
+    reference: Dose, evaluated: Dose, structure: Optional[Structure] = None
 ) -> float:
     """
     Compute Mean Absolute Error between two dose distributions.
 
     Parameters
     ----------
-    dose1 : Dose
+    reference : Dose
         Reference dose.
-    dose2 : Dose
-        Comparison dose.
+    evaluated : Dose
+        Evaluated dose.
     structure : Structure, optional
         If provided, compute MAE only within structure.
 
@@ -219,8 +218,8 @@ def compute_mae(
         If dose distributions have incompatible shapes.
     """
     # Get dose arrays
-    arr1 = dose1.dose_array
-    arr2 = dose2.dose_array
+    arr1 = reference.dose_array
+    arr2 = evaluated.dose_array
 
     # Check shapes match
     if arr1.shape != arr2.shape:
@@ -237,9 +236,9 @@ def compute_mae(
     return float(mae)
 
 
-def compute_psnr(
-    dose1: Dose,
-    dose2: Dose,
+def compare_psnr(
+    reference: Dose,
+    evaluated: Dose,
     structure: Optional[Structure] = None,
     data_range: Optional[float] = None,
 ) -> float:
@@ -248,10 +247,10 @@ def compute_psnr(
 
     Parameters
     ----------
-    dose1 : Dose
+    reference : Dose
         Reference dose.
-    dose2 : Dose
-        Comparison dose.
+    evaluated : Dose
+        Evaluated dose.
     structure : Structure, optional
         If provided, compute PSNR only within structure.
     data_range : float, optional
@@ -273,15 +272,15 @@ def compute_psnr(
         If dose distributions have incompatible shapes or MSE is zero.
     """
     # Compute MSE
-    mse = compute_mse(dose1, dose2, structure)
+    mse = compare_mse(reference, evaluated, structure)
 
     if mse == 0:
         return float("inf")  # Perfect match
 
     # Determine data range
     if data_range is None:
-        arr1 = dose1.dose_array
-        arr2 = dose2.dose_array
+        arr1 = reference.dose_array
+        arr2 = evaluated.dose_array
         if structure is not None:
             mask = structure.mask
             arr1 = arr1[mask]
@@ -293,18 +292,21 @@ def compute_psnr(
     return float(psnr)
 
 
-def compute_mutual_information(
-    dose1: Dose, dose2: Dose, structure: Optional[Structure] = None, bins: int = 256
+def compare_mutual_information(
+    reference: Dose,
+    evaluated: Dose,
+    structure: Optional[Structure] = None,
+    bins: int = 256,
 ) -> float:
     """
     Compute Mutual Information between two dose distributions.
 
     Parameters
     ----------
-    dose1 : Dose
-        First dose distribution.
-    dose2 : Dose
-        Second dose distribution.
+    reference : Dose
+        Reference dose distribution.
+    evaluated : Dose
+        Evaluated dose distribution.
     structure : Structure, optional
         If provided, compute MI only within structure.
     bins : int, optional
@@ -326,12 +328,12 @@ def compute_mutual_information(
         If dose distributions have incompatible shapes.
     """
     # Get dose arrays
-    arr1 = dose1.dose_array.flatten()
-    arr2 = dose2.dose_array.flatten()
+    arr1 = reference.dose_array.flatten()
+    arr2 = evaluated.dose_array.flatten()
 
     # Check shapes match
     if arr1.shape != arr2.shape:
-        raise ValueError(f"Dose shapes must match")
+        raise ValueError("Dose shapes must match")
 
     # Apply structure mask if provided
     if structure is not None:
@@ -363,18 +365,18 @@ def compute_mutual_information(
     return float(mi)
 
 
-def compute_normalized_cross_correlation(
-    dose1: Dose, dose2: Dose, structure: Optional[Structure] = None
+def compare_normalized_cross_correlation(
+    reference: Dose, evaluated: Dose, structure: Optional[Structure] = None
 ) -> float:
     """
     Compute Normalized Cross-Correlation between two dose distributions.
 
     Parameters
     ----------
-    dose1 : Dose
-        First dose distribution.
-    dose2 : Dose
-        Second dose distribution.
+    reference : Dose
+        Reference dose distribution.
+    evaluated : Dose
+        Evaluated dose distribution.
     structure : Structure, optional
         If provided, compute NCC only within structure.
 
@@ -394,12 +396,12 @@ def compute_normalized_cross_correlation(
         If dose distributions have incompatible shapes.
     """
     # Get dose arrays
-    arr1 = dose1.dose_array.flatten()
-    arr2 = dose2.dose_array.flatten()
+    arr1 = reference.dose_array.flatten()
+    arr2 = evaluated.dose_array.flatten()
 
     # Check shapes match
     if arr1.shape != arr2.shape:
-        raise ValueError(f"Dose shapes must match")
+        raise ValueError("Dose shapes must match")
 
     # Apply structure mask if provided
     if structure is not None:
@@ -422,18 +424,18 @@ def compute_normalized_cross_correlation(
     return float(ncc)
 
 
-def compute_dose_difference_map(
-    dose1: Dose, dose2: Dose, absolute: bool = False
+def compare_dose_difference_map(
+    reference: Dose, evaluated: Dose, absolute: bool = False
 ) -> Dose:
     """
     Compute voxel-wise dose difference map.
 
     Parameters
     ----------
-    dose1 : Dose
+    reference : Dose
         Reference dose.
-    dose2 : Dose
-        Comparison dose.
+    evaluated : Dose
+        Evaluated dose.
     absolute : bool, optional
         If True, return absolute differences (default: False).
 
@@ -452,40 +454,41 @@ def compute_dose_difference_map(
         If dose distributions have incompatible shapes.
     """
     # Check shapes match
-    if dose1.dose_array.shape != dose2.dose_array.shape:
+    if reference.dose_array.shape != evaluated.dose_array.shape:
         raise ValueError(
-            f"Dose shapes must match: {dose1.dose_array.shape} vs {dose2.dose_array.shape}"
+            f"Dose shapes must match: {reference.dose_array.shape} vs "
+            f"{evaluated.dose_array.shape}"
         )
 
     # Compute difference
     if absolute:
-        diff_grid = np.abs(dose1.dose_array - dose2.dose_array)
+        diff_grid = np.abs(reference.dose_array - evaluated.dose_array)
     else:
-        diff_grid = dose1.dose_array - dose2.dose_array
+        diff_grid = reference.dose_array - evaluated.dose_array
 
     # Create new Dose object with difference
     diff_dose = Dose(
         dose_array=diff_grid,
-        spacing=dose1.spacing,
-        origin=dose1.origin,
-        name=f"{dose1.name}_diff",
+        spacing=reference.spacing,
+        origin=reference.origin,
+        name=f"{reference.name}_diff",
     )
 
     return diff_dose
 
 
-def compute_dose_comparison_metrics(
-    dose1: Dose, dose2: Dose, structure: Optional[Structure] = None
+def compare_dose(
+    reference: Dose, evaluated: Dose, structure: Optional[Structure] = None
 ) -> Dict[str, float]:
     """
     Compute comprehensive set of dose comparison metrics.
 
     Parameters
     ----------
-    dose1 : Dose
+    reference : Dose
         Reference dose.
-    dose2 : Dose
-        Comparison dose.
+    evaluated : Dose
+        Evaluated dose.
     structure : Structure, optional
         If provided, compute metrics only within structure.
 
@@ -502,7 +505,7 @@ def compute_dose_comparison_metrics(
 
     Examples
     --------
-    >>> metrics = compute_dose_comparison_metrics(dose1, dose2, ptv)
+    >>> metrics = compare_dose(reference, evaluated, ptv)
     >>> print(f"SSIM: {metrics['ssim']:.3f}")
     >>> print(f"MAE: {metrics['mae']:.2f} Gy")
 
@@ -514,37 +517,39 @@ def compute_dose_comparison_metrics(
     metrics = {}
 
     try:
-        metrics["mse"] = compute_mse(dose1, dose2, structure)
+        metrics["mse"] = compare_mse(reference, evaluated, structure)
     except Exception as e:
         warnings.warn(f"MSE computation failed: {e}")
         metrics["mse"] = np.nan
 
     try:
-        metrics["mae"] = compute_mae(dose1, dose2, structure)
+        metrics["mae"] = compare_mae(reference, evaluated, structure)
     except Exception as e:
         warnings.warn(f"MAE computation failed: {e}")
         metrics["mae"] = np.nan
 
     try:
-        metrics["psnr"] = compute_psnr(dose1, dose2, structure)
+        metrics["psnr"] = compare_psnr(reference, evaluated, structure)
     except Exception as e:
         warnings.warn(f"PSNR computation failed: {e}")
         metrics["psnr"] = np.nan
 
     try:
-        metrics["ssim"] = compute_ssim(dose1, dose2, structure)
+        metrics["ssim"] = compare_ssim(reference, evaluated, structure)
     except Exception as e:
         warnings.warn(f"SSIM computation failed: {e}")
         metrics["ssim"] = np.nan
 
     try:
-        metrics["ncc"] = compute_normalized_cross_correlation(dose1, dose2, structure)
+        metrics["ncc"] = compare_normalized_cross_correlation(
+            reference, evaluated, structure
+        )
     except Exception as e:
         warnings.warn(f"NCC computation failed: {e}")
         metrics["ncc"] = np.nan
 
     try:
-        metrics["mi"] = compute_mutual_information(dose1, dose2, structure)
+        metrics["mi"] = compare_mutual_information(reference, evaluated, structure)
     except Exception as e:
         warnings.warn(f"MI computation failed: {e}")
         metrics["mi"] = np.nan
@@ -649,9 +654,9 @@ def compute_variance_of_laplacian(
     return float(np.mean(slice_variances)) if slice_variances else float("nan")
 
 
-def compute_normalized_mae(
-    dose_reference: Dose,
-    dose_evaluated: Dose,
+def compare_normalized_mae(
+    reference: Dose,
+    evaluated: Dose,
     structure: Optional[Structure] = None,
     normalization_value: Optional[float] = None,
     dose_threshold_gy: Optional[float] = None,
@@ -668,12 +673,12 @@ def compute_normalized_mae(
     use with arbitrary structures and normalization values.
 
     Args:
-        dose_reference: Reference dose distribution
-        dose_evaluated: Evaluated dose distribution to compare
+        reference: Reference dose distribution
+        evaluated: Evaluated dose distribution to compare
         structure: If provided, restrict computation to this structure. Uses the
             full dose volume if None.
         normalization_value: Value to normalize the MAE by (e.g., prescription dose).
-            If None, returns un-normalized MAE (equivalent to compute_mae).
+            If None, returns un-normalized MAE (equivalent to compare_mae).
         dose_threshold_gy: If provided, only include voxels where the reference
             dose exceeds this threshold in Gy. Useful for focusing on high-dose
             regions and ignoring low-dose areas outside the treatment field.
@@ -687,7 +692,7 @@ def compute_normalized_mae(
 
     Examples:
         >>> # Normalized by prescription dose (60 Gy), only high-dose region
-        >>> nMAE = compute_normalized_mae(
+        >>> nMAE = compare_normalized_mae(
         ...     reference_dose, predicted_dose,
         ...     structure=body,
         ...     normalization_value=60.0,
@@ -696,11 +701,11 @@ def compute_normalized_mae(
         >>> print(f"Normalized MAE: {nMAE:.4f}")
     """
     if structure is not None:
-        ref_arr = dose_reference.get_dose_in_structure(structure)
-        eval_arr = dose_evaluated.get_dose_in_structure(structure)
+        ref_arr = reference.get_dose_in_structure(structure)
+        eval_arr = evaluated.get_dose_in_structure(structure)
     else:
-        ref_arr = dose_reference.dose_array.flatten()
-        eval_arr = dose_evaluated.dose_array.flatten()
+        ref_arr = reference.dose_array.flatten()
+        eval_arr = evaluated.dose_array.flatten()
 
     if len(ref_arr) == 0:
         return float("nan")
@@ -722,15 +727,15 @@ def compute_normalized_mae(
 
 
 __all__ = [
-    "compute_ssim",
-    "compute_mse",
-    "compute_mae",
-    "compute_psnr",
-    "compute_mutual_information",
-    "compute_normalized_cross_correlation",
-    "compute_dose_difference_map",
-    "compute_dose_comparison_metrics",
+    "compare_ssim",
+    "compare_mse",
+    "compare_mae",
+    "compare_psnr",
+    "compare_mutual_information",
+    "compare_normalized_cross_correlation",
+    "compare_dose_difference_map",
+    "compare_dose",
     "compute_3d_dose_gradient",
     "compute_variance_of_laplacian",
-    "compute_normalized_mae",
+    "compare_normalized_mae",
 ]

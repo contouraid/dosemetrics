@@ -17,8 +17,6 @@ References:
 
 import pytest
 import numpy as np
-from typing import Tuple
-
 from dosemetrics.dose import Dose
 from dosemetrics.metrics import gamma
 
@@ -44,7 +42,7 @@ class TestGammaIndexFormula:
         eval_dose = Dose(dose_array_eval, (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
 
         # 3%/3mm criteria with global normalization
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             ref_dose,
             eval_dose,
             dose_criterion_percent=3.0,
@@ -58,9 +56,9 @@ class TestGammaIndexFormula:
         valid_gamma = gamma_result[~np.isnan(gamma_result)]
 
         # All points should have gamma = 1.0 (within numerical tolerance)
-        assert np.allclose(
-            valid_gamma, 1.0, atol=0.01
-        ), f"Expected gamma=1.0, got mean={np.mean(valid_gamma):.3f}, std={np.std(valid_gamma):.3f}"
+        assert np.allclose(valid_gamma, 1.0, atol=0.01), (
+            f"Expected gamma=1.0, got mean={np.mean(valid_gamma):.3f}, std={np.std(valid_gamma):.3f}"
+        )
 
     def test_gamma_formula_pure_spatial_shift(self):
         """
@@ -83,7 +81,7 @@ class TestGammaIndexFormula:
         eval_dose = Dose(dose_array_eval, (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
 
         # 3%/3mm criteria
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             ref_dose,
             eval_dose,
             dose_criterion_percent=3.0,
@@ -100,9 +98,9 @@ class TestGammaIndexFormula:
         if len(valid_central) > 0:
             mean_gamma = np.mean(valid_central)
             # Should be less than 1 since shift (2mm) < criterion (3mm)
-            assert (
-                mean_gamma < 1.0
-            ), f"Spatial shift of 2mm with 3mm criterion should give gamma < 1.0, got {mean_gamma:.3f}"
+            assert mean_gamma < 1.0, (
+                f"Spatial shift of 2mm with 3mm criterion should give gamma < 1.0, got {mean_gamma:.3f}"
+            )
 
     def test_gamma_formula_combined_dose_and_distance(self):
         """
@@ -121,7 +119,7 @@ class TestGammaIndexFormula:
         eval_dose = Dose(dose_array_eval, (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
 
         # 3%/3mm criteria - pure 2% dose difference
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             ref_dose,
             eval_dose,
             dose_criterion_percent=3.0,
@@ -135,9 +133,9 @@ class TestGammaIndexFormula:
         # Expected gamma for 2% dose difference with 3% criterion
         expected_gamma = 2.0 / 3.0  # ≈ 0.67
 
-        assert np.allclose(
-            valid_gamma, expected_gamma, atol=0.05
-        ), f"Expected gamma≈{expected_gamma:.2f}, got mean={np.mean(valid_gamma):.3f}"
+        assert np.allclose(valid_gamma, expected_gamma, atol=0.05), (
+            f"Expected gamma≈{expected_gamma:.2f}, got mean={np.mean(valid_gamma):.3f}"
+        )
 
 
 class TestGammaIndexProperties:
@@ -149,7 +147,7 @@ class TestGammaIndexProperties:
         dose1 = Dose(dose_array, (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
         dose2 = Dose(dose_array.copy(), (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
 
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             dose1,
             dose2,
             dose_threshold_percent=5.0,
@@ -158,9 +156,9 @@ class TestGammaIndexProperties:
         valid_gamma = gamma_result[~np.isnan(gamma_result)]
 
         # Gamma should be very close to 0 for identical distributions
-        assert (
-            np.max(valid_gamma) < 0.01
-        ), f"Gamma for identical distributions should be ~0, got max={np.max(valid_gamma):.4f}"
+        assert np.max(valid_gamma) < 0.01, (
+            f"Gamma for identical distributions should be ~0, got max={np.max(valid_gamma):.4f}"
+        )
 
     def test_gamma_symmetry(self):
         """
@@ -179,8 +177,8 @@ class TestGammaIndexProperties:
         dose2 = Dose(dose_array2, (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
 
         # Compute gamma in both directions
-        gamma_1to2 = gamma.compute_gamma_index(dose1, dose2, dose_threshold_percent=5.0)
-        gamma_2to1 = gamma.compute_gamma_index(dose2, dose1, dose_threshold_percent=5.0)
+        gamma_1to2 = gamma.compare_gamma_index(dose1, dose2, dose_threshold_percent=5.0)
+        gamma_2to1 = gamma.compare_gamma_index(dose2, dose1, dose_threshold_percent=5.0)
 
         # The gamma distributions should be different (not symmetric)
         # At least some values should differ
@@ -201,7 +199,7 @@ class TestGammaIndexProperties:
         eval_dose = Dose(dose_array_eval, (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
 
         # 3%/3mm criteria
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             ref_dose,
             eval_dose,
             dose_criterion_percent=3.0,
@@ -212,9 +210,9 @@ class TestGammaIndexProperties:
         passing_rate = gamma.compute_gamma_passing_rate(gamma_result, threshold=1.0)
 
         # Should be at the threshold, so passing rate should be ~100%
-        assert (
-            passing_rate > 99.0
-        ), f"At exactly the dose criterion, passing rate should be ~100%, got {passing_rate:.1f}%"
+        assert passing_rate > 99.0, (
+            f"At exactly the dose criterion, passing rate should be ~100%, got {passing_rate:.1f}%"
+        )
 
 
 class TestGammaNormalization:
@@ -238,7 +236,7 @@ class TestGammaNormalization:
         eval_dose = Dose(dose_array_eval, (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
 
         # Global normalization: 1 Gy / 60 Gy = 1.67% (should pass 3% criterion)
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             ref_dose,
             eval_dose,
             dose_criterion_percent=3.0,
@@ -250,9 +248,9 @@ class TestGammaNormalization:
         valid_gamma = gamma_result[~np.isnan(gamma_result)]
 
         # All points should have gamma < 1.0 since 1.67% < 3%
-        assert np.all(
-            valid_gamma < 1.0
-        ), f"Global norm: 1 Gy diff / 60 Gy max = 1.67% should pass 3% criterion"
+        assert np.all(valid_gamma < 1.0), (
+            "Global norm: 1 Gy diff / 60 Gy max = 1.67% should pass 3% criterion"
+        )
 
     def test_local_normalization(self):
         """
@@ -274,7 +272,7 @@ class TestGammaNormalization:
         eval_dose = Dose(dose_array_eval, (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
 
         # Local normalization: both regions should have gamma ≈ 1.0
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             ref_dose,
             eval_dose,
             dose_criterion_percent=3.0,
@@ -293,12 +291,12 @@ class TestGammaNormalization:
 
         if len(high_dose_valid) > 0 and len(low_dose_valid) > 0:
             # Both should be close to 1.0 with local normalization
-            assert (
-                np.abs(np.mean(high_dose_valid) - 1.0) < 0.1
-            ), f"High dose region should have gamma≈1.0, got {np.mean(high_dose_valid):.3f}"
-            assert (
-                np.abs(np.mean(low_dose_valid) - 1.0) < 0.1
-            ), f"Low dose region should have gamma≈1.0, got {np.mean(low_dose_valid):.3f}"
+            assert np.abs(np.mean(high_dose_valid) - 1.0) < 0.1, (
+                f"High dose region should have gamma≈1.0, got {np.mean(high_dose_valid):.3f}"
+            )
+            assert np.abs(np.mean(low_dose_valid) - 1.0) < 0.1, (
+                f"Low dose region should have gamma≈1.0, got {np.mean(low_dose_valid):.3f}"
+            )
 
 
 class TestGammaThreshold:
@@ -315,7 +313,7 @@ class TestGammaThreshold:
         eval_dose = Dose(dose_array * 1.1, (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
 
         # 10% threshold (6 Gy)
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             ref_dose,
             eval_dose,
             dose_threshold_percent=10.0,  # 10% of 60 Gy = 6 Gy
@@ -327,9 +325,9 @@ class TestGammaThreshold:
 
         # High dose region should have values
         high_dose_region = gamma_result[6:9, 6:9, 5]
-        assert not np.all(
-            np.isnan(high_dose_region)
-        ), "Doses above threshold should have gamma values"
+        assert not np.all(np.isnan(high_dose_region)), (
+            "Doses above threshold should have gamma values"
+        )
 
     def test_zero_threshold_includes_all(self):
         """Test that zero threshold includes all non-zero doses."""
@@ -337,7 +335,7 @@ class TestGammaThreshold:
         ref_dose = Dose(dose_array, (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
         eval_dose = Dose(dose_array * 1.05, (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
 
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             ref_dose,
             eval_dose,
             dose_threshold_percent=0.0,  # No threshold
@@ -347,9 +345,9 @@ class TestGammaThreshold:
         valid_points = np.sum(~np.isnan(gamma_result))
         total_points = np.prod(gamma_result.shape)
 
-        assert (
-            valid_points == total_points
-        ), f"With 0% threshold, all points should be evaluated: {valid_points}/{total_points}"
+        assert valid_points == total_points, (
+            f"With 0% threshold, all points should be evaluated: {valid_points}/{total_points}"
+        )
 
 
 class TestGammaEdgeCases:
@@ -363,16 +361,16 @@ class TestGammaEdgeCases:
 
         eval_dose = Dose(dose_array_ref.copy(), (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
 
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             ref_dose,
             eval_dose,
             dose_threshold_percent=5.0,
         )
 
         # Should handle zero doses gracefully (excluded by threshold)
-        assert not np.any(
-            np.isinf(gamma_result)
-        ), "Gamma result should not contain inf values"
+        assert not np.any(np.isinf(gamma_result)), (
+            "Gamma result should not contain inf values"
+        )
 
     def test_high_gradient_region(self):
         """
@@ -394,7 +392,7 @@ class TestGammaEdgeCases:
             dose_array_shifted[i, :, :] = (i + 1) * 2.0
         eval_dose = Dose(dose_array_shifted, (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
 
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             ref_dose,
             eval_dose,
             dose_criterion_percent=3.0,
@@ -413,7 +411,7 @@ class TestGammaEdgeCases:
         ref_dose = Dose(dose_array, (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
         eval_dose = Dose(dose_array * 1.01, (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
 
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             ref_dose,
             eval_dose,
             dose_threshold_percent=0.0,
@@ -448,7 +446,7 @@ class TestGammaCriteria:
         dose_array_eval = dose_array_ref * 1.01  # 1% difference
         eval_dose = Dose(dose_array_eval, (2.0, 2.0, 2.0), (0.0, 0.0, 0.0))
 
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             ref_dose,
             eval_dose,
             dose_criterion_percent=dose_crit,
@@ -459,9 +457,9 @@ class TestGammaCriteria:
         passing_rate = gamma.compute_gamma_passing_rate(gamma_result)
 
         # 1% dose difference should pass all these criteria
-        assert (
-            passing_rate > 99.0
-        ), f"{description}: 1% dose diff should pass, got {passing_rate:.1f}%"
+        assert passing_rate > 99.0, (
+            f"{description}: 1% dose diff should pass, got {passing_rate:.1f}%"
+        )
 
 
 class TestGamma2D:
@@ -471,7 +469,7 @@ class TestGamma2D:
         """Test 2D gamma with identical slices."""
         slice_array = np.random.rand(20, 20) * 50.0 + 10.0
 
-        gamma_result = gamma.compute_2d_gamma(
+        gamma_result = gamma.compare_2d_gamma(
             slice_array,
             slice_array.copy(),
             dose_criterion_percent=3.0,
@@ -486,7 +484,7 @@ class TestGamma2D:
         ref_slice = np.full((20, 20), 60.0)
         eval_slice = np.full((20, 20), 61.8)  # 3% difference
 
-        gamma_result = gamma.compute_2d_gamma(
+        gamma_result = gamma.compare_2d_gamma(
             ref_slice,
             eval_slice,
             dose_criterion_percent=3.0,
@@ -494,9 +492,9 @@ class TestGamma2D:
         )
 
         # Should have gamma ≈ 1.0 everywhere
-        assert np.allclose(
-            gamma_result, 1.0, atol=0.05
-        ), f"3% dose diff with 3% criterion should give gamma≈1.0"
+        assert np.allclose(gamma_result, 1.0, atol=0.05), (
+            "3% dose diff with 3% criterion should give gamma≈1.0"
+        )
 
     def test_2d_gamma_shape_validation(self):
         """Test 2D gamma input validation."""
@@ -504,11 +502,11 @@ class TestGamma2D:
         eval_slice = np.ones((20, 21))  # Different shape
 
         with pytest.raises(ValueError, match="must match"):
-            gamma.compute_2d_gamma(ref_slice, eval_slice)
+            gamma.compare_2d_gamma(ref_slice, eval_slice)
 
         # Test non-2D input
         with pytest.raises(ValueError, match="must be 2D"):
-            gamma.compute_2d_gamma(np.ones((20, 20, 5)), np.ones((20, 20, 5)))
+            gamma.compare_2d_gamma(np.ones((20, 20, 5)), np.ones((20, 20, 5)))
 
 
 class TestGammaStatistics:
@@ -523,9 +521,9 @@ class TestGammaStatistics:
 
         # 4 out of 5 valid values are <= 1.0 (0.5, 0.8, 1.0, 0.3 pass; 1.2 fails)
         expected_rate = 4.0 / 5.0 * 100.0
-        assert (
-            abs(passing_rate - expected_rate) < 0.01
-        ), f"Expected {expected_rate}%, got {passing_rate}%"
+        assert abs(passing_rate - expected_rate) < 0.01, (
+            f"Expected {expected_rate}%, got {passing_rate}%"
+        )
 
     def test_gamma_statistics_comprehensive(self):
         """Test comprehensive gamma statistics."""

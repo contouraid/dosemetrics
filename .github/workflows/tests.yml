@@ -51,4 +51,4 @@ jobs:
     
     - name: Run Tests
       run: |
-        uv run pytest -v
+        uv run pytest -v --ignore=tests/metrics/test_gamma_performance.py

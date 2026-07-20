@@ -165,7 +165,7 @@ def measure_gamma_performance(
 
     # Warm-up run (to avoid cold start effects)
     print("Performing warm-up calculation...")
-    _ = gamma.compute_gamma_index(
+    _ = gamma.compare_gamma_index(
         ref_dose,
         eval_dose,
         dose_criterion_percent=dose_criterion,
@@ -177,7 +177,7 @@ def measure_gamma_performance(
     print("Performing timed calculation...")
     start_time = time.perf_counter()
 
-    gamma_result = gamma.compute_gamma_index(
+    gamma_result = gamma.compare_gamma_index(
         ref_dose,
         eval_dose,
         dose_criterion_percent=dose_criterion,
@@ -223,9 +223,9 @@ class TestGammaPerformance:
         print(f"  Passing rate: {results['passing_rate']:.1f}%")
 
         # Should be fast for small volumes
-        assert (
-            results["runtime_seconds"] < 5.0
-        ), f"Small volume took {results['runtime_seconds']:.2f}s (expected < 5s)"
+        assert results["runtime_seconds"] < 5.0, (
+            f"Small volume took {results['runtime_seconds']:.2f}s (expected < 5s)"
+        )
 
     def test_medium_volume_128x128x128(self):
         """Test performance on medium volume (128x128x128) - critical size."""
@@ -286,9 +286,9 @@ class TestGammaPerformance:
         print(f"  Passing rate: {results['passing_rate']:.1f}%")
 
         # Rectangular volumes are common in clinical practice
-        assert (
-            results["runtime_seconds"] < 10.0
-        ), f"Typical CT volume took {results['runtime_seconds']:.2f}s (expected < 10s)"
+        assert results["runtime_seconds"] < 10.0, (
+            f"Typical CT volume took {results['runtime_seconds']:.2f}s (expected < 10s)"
+        )
 
     def test_performance_with_different_patterns(self):
         """Test performance with different dose patterns."""
@@ -308,9 +308,9 @@ class TestGammaPerformance:
 
         # Check all patterns complete reasonably
         for pattern, result in results.items():
-            assert (
-                result["runtime_seconds"] < 10.0
-            ), f"Pattern '{pattern}' took {result['runtime_seconds']:.2f}s (expected < 10s)"
+            assert result["runtime_seconds"] < 10.0, (
+                f"Pattern '{pattern}' took {result['runtime_seconds']:.2f}s (expected < 10s)"
+            )
 
     def test_performance_with_different_criteria(self):
         """Test performance with different gamma criteria."""
@@ -333,7 +333,7 @@ class TestGammaPerformance:
             print(f"\nCriteria: {label}")
 
             start_time = time.perf_counter()
-            gamma_result = gamma.compute_gamma_index(
+            gamma_result = gamma.compare_gamma_index(
                 ref_dose,
                 eval_dose,
                 dose_criterion_percent=dose_crit,
@@ -346,9 +346,9 @@ class TestGammaPerformance:
             print(f"  Runtime: {runtime:.3f}s")
             print(f"  Passing rate: {stats['passing_rate_1_0']:.1f}%")
 
-            assert (
-                runtime < 10.0
-            ), f"Criteria {label} took {runtime:.2f}s (expected < 10s)"
+            assert runtime < 10.0, (
+                f"Criteria {label} took {runtime:.2f}s (expected < 10s)"
+            )
 
     def test_performance_scaling(self):
         """Test how performance scales with volume size."""
@@ -389,9 +389,9 @@ class TestGammaPerformance:
 
         # Check that largest size still meets threshold
         largest_result = results[-1]
-        assert (
-            largest_result["runtime_seconds"] < 10.0
-        ), f"Largest test volume took {largest_result['runtime_seconds']:.2f}s (threshold: 10s)"
+        assert largest_result["runtime_seconds"] < 10.0, (
+            f"Largest test volume took {largest_result['runtime_seconds']:.2f}s (threshold: 10s)"
+        )
 
 
 class TestGammaPerformanceEdgeCases:
@@ -410,7 +410,7 @@ class TestGammaPerformanceEdgeCases:
         # Global normalization
         print("\nGlobal normalization:")
         start_time = time.perf_counter()
-        gamma_global = gamma.compute_gamma_index(
+        gamma_global = gamma.compare_gamma_index(
             ref_dose, eval_dose, global_normalization=True
         )
         runtime_global = time.perf_counter() - start_time
@@ -419,19 +419,19 @@ class TestGammaPerformanceEdgeCases:
         # Local normalization
         print("\nLocal normalization:")
         start_time = time.perf_counter()
-        gamma_local = gamma.compute_gamma_index(
+        gamma_local = gamma.compare_gamma_index(
             ref_dose, eval_dose, global_normalization=False
         )
         runtime_local = time.perf_counter() - start_time
         print(f"  Runtime: {runtime_local:.3f}s")
 
         # Both should be reasonable
-        assert (
-            runtime_global < 10.0
-        ), f"Global normalization took {runtime_global:.2f}s (expected < 10s)"
-        assert (
-            runtime_local < 10.0
-        ), f"Local normalization took {runtime_local:.2f}s (expected < 10s)"
+        assert runtime_global < 10.0, (
+            f"Global normalization took {runtime_global:.2f}s (expected < 10s)"
+        )
+        assert runtime_local < 10.0, (
+            f"Local normalization took {runtime_local:.2f}s (expected < 10s)"
+        )
 
     def test_performance_with_high_threshold(self):
         """Test performance when most voxels are excluded by threshold."""
@@ -446,7 +446,7 @@ class TestGammaPerformanceEdgeCases:
         # High threshold - excludes more points
         print("\nHigh threshold (50%):")
         start_time = time.perf_counter()
-        gamma_result = gamma.compute_gamma_index(
+        gamma_result = gamma.compare_gamma_index(
             ref_dose,
             eval_dose,
             dose_threshold_percent=50.0,  # High threshold
@@ -459,13 +459,13 @@ class TestGammaPerformanceEdgeCases:
         print(f"  Runtime: {runtime:.3f}s")
         print(
             f"  Valid points: {valid_points}/{total_points} "
-            f"({100*valid_points/total_points:.1f}%)"
+            f"({100 * valid_points / total_points:.1f}%)"
         )
 
         # Should be faster with fewer points to evaluate
-        assert (
-            runtime < 10.0
-        ), f"High threshold case took {runtime:.2f}s (expected < 10s)"
+        assert runtime < 10.0, (
+            f"High threshold case took {runtime:.2f}s (expected < 10s)"
+        )
 
 
 if __name__ == "__main__":

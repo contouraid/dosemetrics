@@ -9,7 +9,6 @@ import numpy as np
 from io import BytesIO
 
 from dosemetrics_app.utils import read_byte_data
-from dosemetrics import Dose
 from dosemetrics.metrics import gamma as gamma_module
 from dosemetrics_app.utils import get_example_datasets, load_example_files
 
@@ -182,7 +181,7 @@ def panel():
                 reference, _ = read_byte_data(dose_file1, [])
                 evaluated, _ = read_byte_data(dose_file2, [])
 
-                gamma_map = gamma_module.compute_gamma_index(
+                gamma_map = gamma_module.compare_gamma_index(
                     reference,
                     evaluated,
                     dose_criterion_percent=dose_criteria,
@@ -194,12 +193,18 @@ def panel():
 
             st.session_state["gamma_map"] = gamma_map
             st.session_state["gamma_stats"] = gamma_stats
-            st.session_state["gamma_criteria"] = (dose_criteria, distance_criteria, threshold)
+            st.session_state["gamma_criteria"] = (
+                dose_criteria,
+                distance_criteria,
+                threshold,
+            )
 
         if "gamma_map" in st.session_state:
             gamma_map = st.session_state["gamma_map"]
             gamma_stats = st.session_state["gamma_stats"]
-            dose_criteria, distance_criteria, threshold = st.session_state["gamma_criteria"]
+            dose_criteria, distance_criteria, threshold = st.session_state[
+                "gamma_criteria"
+            ]
 
             st.success("Gamma analysis computed successfully")
 
@@ -309,9 +314,9 @@ def panel():
 
             Gamma analysis with **{dose_criteria}%/{distance_criteria}mm** criteria:
 
-            - **Passing Rate**: {gamma_stats['passing_rate_1_0']:.2f}% of points have gamma ≤ 1.0
-            - **Mean Gamma**: {gamma_stats['mean_gamma']:.3f}
-            - **Maximum Gamma**: {gamma_stats['max_gamma']:.3f}
+            - **Passing Rate**: {gamma_stats["passing_rate_1_0"]:.2f}% of points have gamma ≤ 1.0
+            - **Mean Gamma**: {gamma_stats["mean_gamma"]:.3f}
+            - **Maximum Gamma**: {gamma_stats["max_gamma"]:.3f}
 
             ### Interpretation
 

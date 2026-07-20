@@ -9,10 +9,9 @@ This module provides functions for creating publication-ready plots at different
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Union, Tuple, Any
+from typing import Dict, List, Optional, Union, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import patches
 from pathlib import Path
 import pandas as pd
 
@@ -698,11 +697,10 @@ def plot_dose_slice(
             # Get contour on this slice
             # Note: This is a simplified version - actual implementation would need
             # proper coordinate transformation and contour extraction
-            color = DEFAULT_COLORS[i % len(DEFAULT_COLORS)]
-
             # Placeholder for contour plotting
             # In practice, you'd extract the contour points for this slice
             # and plot them using ax.plot()
+            pass
 
     ax.set_xlabel("X (pixels)", fontsize=12)
     ax.set_ylabel("Y (pixels)", fontsize=12)
@@ -797,7 +795,7 @@ def plot_dvh_score_breakdown(
     ... )
     >>> plt.show()
     """
-    from ..metrics.dvh import compute_dvh, compute_dvh_score
+    from ..metrics.dvh import compare_dvh_score
 
     fig, ax = plt.subplots(figsize=figsize)
 
@@ -853,7 +851,7 @@ def plot_dvh_score_breakdown(
             bbox=dict(boxstyle="round,pad=0.2", facecolor="white", alpha=0.7),
         )
 
-    dvh_score = compute_dvh_score(dose_reference, dose_evaluated, structure)
+    dvh_score = compare_dvh_score(dose_reference, dose_evaluated, structure)
     ax.set_title(
         f"DVH Score: {structure.name} — DVH Score = {dvh_score:.2f} Gy",
         fontsize=13,

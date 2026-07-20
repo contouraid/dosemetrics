@@ -10,7 +10,7 @@ from pathlib import Path
 from huggingface_hub import snapshot_download
 
 from dosemetrics.dose import Dose
-from dosemetrics.structures import Target, OAR
+from dosemetrics.structures import Target
 from dosemetrics.metrics import dvh
 
 
@@ -414,64 +414,6 @@ class TestEdgeCases:
 
         with pytest.raises(ValueError):
             dvh.compute_dvh(sample_dose, incompatible)
-
-
-class TestDVHScore:
-    """Test DVH Score: D1/D95/D99 comparison between two dose distributions."""
-
-    @pytest.fixture
-    def reference_dose(self):
-        dose_array = np.zeros((30, 30, 20))
-        dose_array[10:20, 10:20, 5:15] = 60.0
-        return Dose(dose_array, (2.0, 2.0, 3.0), (0.0, 0.0, 0.0))
-
-    @pytest.fixture
-    def evaluated_dose_close(self):
-        dose_array = np.zeros((30, 30, 20))
-        dose_array[10:20, 10:20, 5:15] = 61.0
-        return Dose(dose_array, (2.0, 2.0, 3.0), (0.0, 0.0, 0.0))
-
-    @pytest.fixture
-    def evaluated_dose_far(self):
-        dose_array = np.zeros((30, 30, 20))
-        dose_array[10:20, 10:20, 5:15] = 50.0
-        return Dose(dose_array, (2.0, 2.0, 3.0), (0.0, 0.0, 0.0))
-
-    @pytest.fixture
-    def ptv(self):
-        mask = np.zeros((30, 30, 20), dtype=bool)
-        mask[10:20, 10:20, 5:15] = True
-        return Target("PTV", mask, (2.0, 2.0, 3.0), (0.0, 0.0, 0.0))
-
-    def test_identical_distributions(self, reference_dose, ptv):
-        score = dvh.compute_dvh_score(reference_dose, reference_dose, ptv)
-        assert score == pytest.approx(0.0, abs=1e-6)
-
-    def test_close_distributions_lower_than_far(
-        self, reference_dose, evaluated_dose_close, evaluated_dose_far, ptv
-    ):
-        score_close = dvh.compute_dvh_score(reference_dose, evaluated_dose_close, ptv)
-        score_far = dvh.compute_dvh_score(reference_dose, evaluated_dose_far, ptv)
-        assert score_close < score_far
-
-    def test_returns_float(self, reference_dose, evaluated_dose_close, ptv):
-        score = dvh.compute_dvh_score(reference_dose, evaluated_dose_close, ptv)
-        assert isinstance(score, float)
-
-    def test_known_uniform_difference(self, reference_dose, evaluated_dose_far, ptv):
-        # ref=60 Gy uniform in PTV, eval=50 Gy uniform → D1=D95=D99=10 Gy diff
-        score = dvh.compute_dvh_score(reference_dose, evaluated_dose_far, ptv)
-        assert score == pytest.approx(10.0, abs=0.5)
-
-    def test_empty_structure_returns_nan(self, reference_dose):
-        empty = Target(
-            "Empty",
-            np.zeros((30, 30, 20), dtype=bool),
-            (2.0, 2.0, 3.0),
-            (0.0, 0.0, 0.0),
-        )
-        score = dvh.compute_dvh_score(reference_dose, reference_dose, empty)
-        assert np.isnan(score)
 
 
 class TestDVHAUC:

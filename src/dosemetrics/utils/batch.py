@@ -319,7 +319,7 @@ def compare_doses_batch(
     >>> pred_data = load_dataset('/data/predicted')
     >>> comparison = compare_doses_batch(
     ...     tps_data, pred_data,
-    ...     dose_comparison.compute_mae
+    ...     dose_comparison.compare_mae
     ... )
     """
     results = []
