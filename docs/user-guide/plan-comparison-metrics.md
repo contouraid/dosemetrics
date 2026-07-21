@@ -11,6 +11,11 @@ one plan use `compute_` and live in their clinical modules, such as
 `dvh.compute_dvh_auc`, `conformity.compute_paddick_conformity_index`, and
 `homogeneity.compute_homogeneity_index`.
 
+The equations below preserve the prediction/target notation in
+`local/metrics.tex`: `target` is the realisable reference/ground-truth dose
+and `pred` is the model prediction or evaluated dose. Consequently, the
+Python arguments map as `reference = target` and `evaluated = pred`.
+
 The comparison API compares an evaluated dose with a physically realisable reference
 dose. Plan-quality indices and PTV mean dose are therefore reported as
 absolute distances between the two plans, not as the evaluated plan's raw
@@ -33,17 +38,17 @@ dependent—from being confused with a distance whose ideal value is 0.
 
 ## Metric catalogue
 
-| Category | Metric | Dose prediction | Dose calculation | Better |
-|---|---|:---:|:---:|---|
-| Global | DVH Score | Yes | — | Lower |
-| Voxel-based | Body-masked RMSE | — | Yes | Lower |
-| Voxel-based | Gamma Index passing rate | — | Yes | Higher |
-| PTV coverage | PTV Dose Distance | Yes | Yes | Lower |
-| PTV coverage | Paddick Conformity Index Distance (PCID) | Yes | Yes | Lower |
-| PTV Homogeneity | Homogeneity Index Distance (HID) | — | Yes | Lower |
-| OAR sparing | Paddick Gradient Index Distance (PGID) | Yes | Yes | Lower |
-| OAR sparing | OAR Constraint Disagreement | Yes | Yes | Lower |
-| OAR sparing | OAR DVH Area Between Curves | Yes | Yes | Lower |
+| Clinical question | Metric | Dose prediction | Dose calculation | Reporting role | Better |
+|---|---|:---:|:---:|---|---|
+| Global dose-volume agreement | DVH Score | Yes | — | Primary | Lower |
+| Global accuracy | Body-mask RMSE | — | Yes | Primary | Lower |
+| Global accuracy | Gamma Index passing rate | — | Yes | Primary | Higher |
+| Target coverage | PTV Dose Distance | Yes | Yes | Primary | Lower |
+| Target conformity | Paddick Conformity Index Distance (PCID) | Yes | Yes | PTV-specific; coverage-gated | Lower |
+| Dose homogeneity | Homogeneity Index Distance (HID) | — | Yes | PTV-specific; coverage-gated | Lower |
+| OAR sparing | Paddick Gradient Index Distance (PGID) | Yes | Yes | PTV-specific; coverage-gated | Lower |
+| OAR sparing | OAR Constraint Disagreement | Yes | Yes | Primary | Lower |
+| OAR sparing | OAR DVH Area Between Curves | Yes | Yes | Primary | Lower |
 
 This categorisation is available programmatically:
 
@@ -54,6 +59,13 @@ for metric in comparison.COMPARISON_METRICS:
     tasks = ", ".join(task.value for task in metric.tasks)
     print(metric.category.value, metric.name, tasks)
 ```
+
+The benchmark reports four primary dose-prediction metrics: OAR Constraint
+Disagreement, OAR DVH ABC, DVH Score, and PTV Dose Distance. Its two
+PTV-specific prediction metrics are PCID and PGID. For dose calculation, the
+five primary metrics are OAR Constraint Disagreement, OAR DVH ABC, RMSE,
+Gamma Index passing rate, and PTV Dose Distance; HID, PCID, and PGID are the
+three PTV-specific metrics.
 
 Dose calculation has one physically determined result for a fully specified
 plan, so voxel-wise comparison is meaningful. Dose prediction from anatomy
@@ -71,7 +83,7 @@ number of available criteria,
 $$
 \mathrm{DVH\ Score}
 = \frac{1}{M}\sum_{m=1}^{M}
-  \left|m_{\mathrm{evaluated}}-m_{\mathrm{reference}}\right|.
+  \left|m_{\mathrm{pred}}-m_{\mathrm{target}}\right|.
 $$
 
 The result is an unweighted mean in Gy. OpenKBP defines \(D_x\) as the dose
@@ -115,7 +127,7 @@ dvh_score = comparison.compare_dvh_score(
 $$
 \mathrm{RMSE}
 = \sqrt{\frac{1}{N}\sum_{i=1}^{N}
-  \left(D_{\mathrm{evaluated},i}-D_{\mathrm{reference},i}\right)^2}.
+  \left(D_{\mathrm{pred},i}-D_{\mathrm{target},i}\right)^2}.
 $$
 
 It returns Gy and gives larger errors more weight than MAE.
@@ -145,7 +157,8 @@ $$
 $$
 
 Here \(r\) is physical distance and \(\delta\) is dose difference. The metric
-is the percentage of evaluated voxels with \(\gamma\leq1\).
+is the percentage of reference voxels with \(\gamma(v)\leq1\). The benchmark
+criteria are \((\Delta d,\Delta D)=(3\ \mathrm{mm},3\%)\).
 `comparison.compare_gamma` defaults to global 3%/3 mm gamma and no
 low-dose exclusion. Supplying `body` restricts the reported rate to the body.
 
@@ -169,6 +182,11 @@ threshold; the plan-comparison wrapper deliberately defaults to 0%.
 
 ### PTV Dose Distance
 
+![PTV Dose Distance](../images/PTV_dose_distance.png)
+*PTV Dose Distance — the mean dose is computed over the same high-dose PTV in
+the target and prediction. The illustrated values, 58.3 Gy and 55.1 Gy, give
+an absolute distance of 3.2 Gy.*
+
 For the selected high-dose PTV \(V_{\mathrm{PTV}}\),
 
 $$
@@ -176,10 +194,10 @@ $$
 = \frac{1}{|V_{\mathrm{PTV}}|}
   \sum_{v\in V_{\mathrm{PTV}}}D(v),
 \qquad
-\mathrm{PTVDD}
+\text{PTV Dose Distance}
 = \left|
-  \bar D_{\mathrm{PTV,evaluated}}
-  -\bar D_{\mathrm{PTV,reference}}
+  \bar D_{\mathrm{PTV,pred}}
+  -\bar D_{\mathrm{PTV,target}}
   \right|.
 $$
 
@@ -194,6 +212,11 @@ the fraction of the target receiving prescription dose.
 
 ### Paddick Conformity Index Distance
 
+![Paddick Conformity Index Distance](../images/paddick_conformity_distance.png)
+*Paddick Conformity Index Distance — each plan's CI combines PTV coverage and
+prescription-isodose purity. The illustrated target and prediction indices,
+0.86 and 0.65, give PCID = 0.21.*
+
 Let \(V_{\mathrm{PIV}}\) be the prescription-isodose volume and
 \(V_{\mathrm{PTV,PIV}}\) its intersection with the PTV. The
 [Paddick index](https://doi.org/10.3171/jns.2000.93.supplement) is
@@ -205,8 +228,8 @@ $$
 \qquad
 \mathrm{PCID}
 = \left|
-  \mathrm{CI}_{\mathrm{evaluated}}
-  -\mathrm{CI}_{\mathrm{reference}}
+  \mathrm{CI}_{\mathrm{pred}}
+  -\mathrm{CI}_{\mathrm{target}}
   \right|.
 $$
 
@@ -243,8 +266,8 @@ $$
 \qquad
 \mathrm{HID}
 = \left|
-  \mathrm{HI}_{\mathrm{evaluated}}
-  -\mathrm{HI}_{\mathrm{reference}}
+  \mathrm{HI}_{\mathrm{pred}}
+  -\mathrm{HI}_{\mathrm{target}}
   \right|.
 $$
 
@@ -282,6 +305,11 @@ The coefficient-of-variation definition used by SP-DiffDose,
 
 ### Paddick Gradient Index Distance
 
+![Paddick Gradient Index Distance](../images/paddick_gradient_index_distance.png)
+*Paddick Gradient Index Distance — full- and half-prescription threshold
+volumes are measured over the dose grid for each plan. The illustrated
+indices, 3.20 and 4.11, give PGID = 0.91.*
+
 The [Paddick–Lippitz gradient
 index](https://doi.org/10.3171/sup.2006.105.7.194) is
 
@@ -290,8 +318,8 @@ $$
 \qquad
 \mathrm{PGID}
 = \left|
-  \mathrm{GI}_{\mathrm{evaluated}}
-  -\mathrm{GI}_{\mathrm{reference}}
+  \mathrm{GI}_{\mathrm{pred}}
+  -\mathrm{GI}_{\mathrm{target}}
   \right|.
 $$
 
@@ -309,7 +337,13 @@ pgid = comparison.compare_paddick_gradient_index(
 
 ### OAR Constraint Disagreement
 
-For binary satisfaction states \(s_c,\hat s_c\in\{0,1\}\),
+![OAR Constraint Disagreement](../images/oar_constraint_disagreement.png)
+*OAR Constraint Disagreement — target and predicted binary satisfaction
+states are aligned for all 38 CORSAIR-derived constraints. Five illustrated
+state mismatches give a disagreement fraction of 5/38 = 0.13.*
+
+For target/reference satisfaction \(s_c\in\{0,1\}\) and predicted
+satisfaction \(\hat s_c\in\{0,1\}\),
 
 $$
 \mathrm{Disagreement}
@@ -349,8 +383,8 @@ $$
 \qquad
 \mathrm{ABC}
 = \left|
-  \mathrm{AUC}_{\mathrm{evaluated}}
-  -\mathrm{AUC}_{\mathrm{reference}}
+  \mathrm{AUC}_{\mathrm{pred}}
+  -\mathrm{AUC}_{\mathrm{target}}
   \right|.
 $$
 
@@ -370,7 +404,7 @@ mean_abc = comparison.compare_mean_oar_dvh_auc(
 ```
 
 This definition is not the pointwise L1 area
-\(\int|V_{\mathrm{evaluated}}(D)-V_{\mathrm{reference}}(D)|\,dD\), and it is
+\(\int|V_{\mathrm{pred}}(D)-V_{\mathrm{target}}(D)|\,dD\), and it is
 not the L2 curve distance. Those useful variants remain available through
 `dosemetrics.metrics.dvh.compare_dvh_area`.
 

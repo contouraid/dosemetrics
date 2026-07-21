@@ -151,7 +151,11 @@ vol = dose_comparison.compute_variance_of_laplacian(dose)
 ### `metrics/comparison.py` — Clinical Plan Comparisons
 
 The canonical reference-based API. Every function accepts `reference` before
-`evaluated`; raw single-plan indices remain in their domain modules.
+`evaluated`; these map to `target` and `pred` in the benchmark equations.
+Raw single-plan indices remain in their domain modules. The module exposes the
+nine task-specific metrics defined in `local/metrics.tex`: PTV Dose Distance,
+PCID, PGID, OAR Constraint Disagreement, OAR DVH ABC, HID, body-mask RMSE,
+gamma passing rate, and the complete OpenKBP DVH Score.
 
 ```python
 from dosemetrics.metrics import comparison

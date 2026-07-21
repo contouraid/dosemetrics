@@ -105,14 +105,25 @@ else:
 
 ### Paddick Conformity Index (`compute_paddick_conformity_index`)
 
-![Paddick Conformity Index Distance](../images/pcid.png)
-*Paddick Conformity Index Distance (PCID) — the prescription isodose volume (dashed red) overlaps the PTV mask (solid black). CI is the product of target coverage and target conformity; PCID is the absolute difference in CI between two plans.*
+![Paddick Conformity Index Distance](../images/paddick_conformity_distance.png)
+*Paddick Conformity Index Distance (PCID) — CI is the product of target
+coverage and prescription-isodose purity in each plan; PCID is the absolute
+prediction–target difference between those indices.*
 
 $$\text{CI}_{\text{Paddick}} = \frac{V_{\text{target\_rx}}^2}{V_{\text{target}} \times V_{\text{rx}}}$$
 
 Proposed by Paddick (2000) as a single metric that simultaneously penalises both undercoverage and dose spillage. It is the product of target coverage and target conformity:
 
 $$\text{CI}_{\text{Paddick}} = \underbrace{\frac{V_{\text{target\_rx}}}{V_{\text{target}}}}_{\text{coverage}} \times \underbrace{\frac{V_{\text{target\_rx}}}{V_{\text{rx}}}}_{\text{conformity}}$$
+
+In the benchmark notation, these volumes are
+\(V_{\mathrm{PTV,PIV}}\), \(V_{\mathrm{PTV}}\), and
+\(V_{\mathrm{PIV}}\). The reference-based comparison is
+
+$$
+\mathrm{PCID}
+=\left|\mathrm{CI}_{\mathrm{pred}}-\mathrm{CI}_{\mathrm{target}}\right|.
+$$
 
 - **Ideal value:** 1.0 (only when coverage = 1 *and* conformity = 1)
 - **< 1.0:** either part of the target is missed, or dose spills into normal tissue, or both
@@ -206,6 +217,13 @@ Homogeneity indices measure the uniformity of dose *within* the target volume. A
 
 $$\text{HI} = \frac{D_2 - D_{98}}{D_{50}}$$
 
+The calculation-task comparison is
+
+$$
+\mathrm{HID}
+=\left|\mathrm{HI}_{\mathrm{pred}}-\mathrm{HI}_{\mathrm{target}}\right|.
+$$
+
 Where $D_X$ is the dose received by at least $X\%$ of the target volume ($D_2$ ≈ near-maximum, $D_{98}$ ≈ near-minimum). Defined in ICRU Report 83 (2010).
 
 - **Ideal value:** 0.0 (perfectly uniform dose)
@@ -232,10 +250,20 @@ else:
 
 ### Gradient Index — Paddick & Lippitz (`compute_gradient_index`)
 
-![Paddick Gradient Index Distance](../images/paddick-gradient-index-distance.png)
-*Paddick Gradient Index Distance (PGID) — the ratio of the half-prescription isodose volume (outer dashed region) to the full-prescription isodose volume (inner dashed region) measures how steeply dose falls off outside the PTV. PGID is the absolute difference in GI between two plans.*
+![Paddick Gradient Index Distance](../images/paddick_gradient_index_distance.png)
+*Paddick Gradient Index Distance (PGID) — the half- and full-prescription
+threshold volumes are measured over the dose grid. PGID is the absolute
+prediction–target difference between the resulting gradient indices.*
 
 $$\text{GI} = \frac{V_{50\%}}{V_{100\%}}$$
+
+Equivalently, the benchmark writes
+\(\mathrm{GI}=V_{D_{\mathrm{Rx}}/2}/V_{D_{\mathrm{Rx}}}\) and reports
+
+$$
+\mathrm{PGID}
+=\left|\mathrm{GI}_{\mathrm{pred}}-\mathrm{GI}_{\mathrm{target}}\right|.
+$$
 
 Where $V_{100\%}$ is the volume receiving ≥ prescription dose and $V_{50\%}$ is the volume receiving ≥ half the prescription dose. Proposed by Paddick and Lippitz (2006) to quantify how steeply dose falls off *outside* the target.
 
@@ -292,13 +320,13 @@ These metrics compare two dose distributions by summarising differences in their
 ### DVH score (`comparison.compare_dvh_score`)
 
 ![DVH Score](../images/dvh-score.png)
-*Target DVH criteria — D₁, D₉₅, and D₉₉ are read from both the reference and evaluated curves. OAR mean dose and D₀.₁cc criteria complete the score.*
+*Target DVH criteria — D₁, D₉₅, and D₉₉ are read from both the target/reference and prediction curves. OAR mean dose and D₀.₁cc criteria complete the score.*
 
 $$\text{DVH Score} =
 \frac{1}{M}\sum_{m=1}^{M}
-\left|m_{\text{evaluated}}-m_{\text{reference}}\right|$$
+\left|m_{\mathrm{pred}}-m_{\mathrm{target}}\right|$$
 
-The average absolute difference in three clinically important DVH dose points:
+For each target, the score includes three clinically important DVH dose points:
 
 | Point | Meaning |
 |---|---|
@@ -364,7 +392,7 @@ print(f"Cord DVH-AUC: {cord_auc:.1f} Gy·%")
 These metrics compare two dose distributions voxel-by-voxel across the full 3D volume, making them sensitive to localised dose differences that DVH-based metrics can miss.
 
 ![Gamma Index](../images/gamma-index.png)
-*Gamma Index — for each voxel v, the index finds the evaluated voxel v′ that minimises the combined spatial distance r(v, v′) / Δd and dose distance δ(v, v′) / ΔD. A voxel passes when γ ≤ 1.*
+*Gamma Index — for each reference voxel v, the index finds the prediction voxel v′ that minimises the combined spatial distance r(v, v′) / Δd and dose distance δ(v, v′) / ΔD. A voxel passes when γ ≤ 1.*
 
 ### Normalized MAE (`compare_normalized_mae`)
 

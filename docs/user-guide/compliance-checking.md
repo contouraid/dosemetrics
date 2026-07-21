@@ -14,20 +14,27 @@ Compliance checking determines whether a treatment plan satisfies a set of dose 
 
 ## OAR Constraint Disagreement
 
-![OAR Constraint Disagreement](../images/oar-constraint-disagreement.png)
-*OAR Constraint Disagreement — each cell in the grid corresponds to one OAR constraint. Dark red = violated by both plans (agreement on violation). White = satisfied by both (agreement on satisfaction). Light red with border = disagreement between the two plans on pass/fail.*
+![OAR Constraint Disagreement](../images/oar_constraint_disagreement.png)
+*OAR Constraint Disagreement — target and predicted binary satisfaction
+states are compared for the 38 CORSAIR-derived constraints. Highlighted rows
+are mismatches; the illustrated result is 5/38 = 0.13.*
 
 The **OAR Constraint Disagreement** metric quantifies how often a predicted dose distribution and a reference (clinical) dose distribution reach different pass/fail conclusions for the same set of constraints:
 
-$$\text{Disagreement} = \frac{1}{N} \sum_{c=1}^{N} \mathbf{1}\!\left[S_{\text{pred}}(c) \neq S_{\text{target}}(c)\right]$$
+$$
+\mathrm{Disagreement}
+= \frac{1}{N}\sum_{c=1}^{N}
+\mathbb{I}\!\left[\hat{s}_c\ne s_c\right],
+\qquad N=38.
+$$
 
-where $S(c) \in \{0, 1\}$ is the binary pass/fail status of constraint $c$.
-The head-and-neck comparison protocol evaluates \(N=38\) constraints selected
-from [CORSAIR](https://doi.org/10.3390/curroncol29100552).
+Here $s_c,\hat{s}_c\in\{0,1\}$ are the target/reference and predicted
+satisfaction states for constraint $c$. The head-and-neck comparison protocol
+evaluates the 38 organ-dose constraints selected from
+[CORSAIR](https://doi.org/10.3390/curroncol29100552).
 
 - **0.0:** perfect agreement — the predicted plan makes the same pass/fail decision as the reference on every constraint
 - **1.0:** complete disagreement — every constraint flips status between the two plans
-- **Typical clinical threshold:** < 0.05 (fewer than 5% of constraints disagreeing)
 
 ### Use Cases
 

@@ -104,7 +104,7 @@ print(f"Prescription MAE: {rx_mae:.2f} Gy")
 ```python
 from dosemetrics.metrics import comparison, dose_comparison, dvh
 
-# DVH Score: average |D1|, |D95|, |D99| difference (Gy)
+# Complete OpenKBP DVH Score: target D1/D95/D99 and OAR mean/D0.1cc
 score = comparison.compare_dvh_score(
     reference,
     evaluated,

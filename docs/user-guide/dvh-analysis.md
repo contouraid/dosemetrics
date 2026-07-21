@@ -23,8 +23,12 @@ from dosemetrics.metrics.dvh import compute_dvh
 
 dvh_doses, dvh_volumes = compute_dvh(dose, ptv)
 # dvh_doses   — 1D array of dose values (Gy)
-# dvh_volumes — 1D array of cumulative volume fractions (0–1)
+# dvh_volumes — 1D array of cumulative volume percentages (0–100)
 ```
+
+The mathematical definition above uses a fraction in \([0,1]\), while
+`compute_dvh` returns the equivalent percentage in \([0,100]\). The canonical
+OAR DVH AUC comparison converts voxel counts to fractions internally.
 
 ---
 
@@ -104,7 +108,7 @@ print(f"EUD (cord, a=8):  {eud_cord:.1f} Gy")
 !!! warning "Two ABC definitions"
     `dvh.compare_dvh_area` integrates pointwise curve separation. The clinical
     OAR DVH ABC is instead
-    \(\lvert\mathrm{AUC}_{eval}-\mathrm{AUC}_{ref}\rvert\) on a common
+    \(\lvert\mathrm{AUC}_{pred}-\mathrm{AUC}_{target}\rvert\) on a common
     100-bin grid. See [Plan Comparison Metrics](plan-comparison-metrics.md#oar-dvh-area-between-curves).
 
 The **Area Between DVH Curves (ABC)** integrates the absolute vertical difference between two cumulative DVH curves:

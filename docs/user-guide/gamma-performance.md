@@ -7,11 +7,20 @@ The gamma index implementation in DoseMetrics is algorithmically correct and val
 ![Gamma Index](../images/gamma-index.png)
 *Gamma Index — for each reference voxel v, the index searches evaluated voxels v′ for the minimum combined spatial distance r(v, v′) / Δd and dose distance δ(v, v′) / ΔD. The voxel at 64 Gy fails because no evaluated neighbour within Δd = 3 mm matches its dose within ΔD.*
 
-The gamma index at a point $v$ is:
+For each reference voxel $v$, the gamma index is:
 
-$$\gamma(v) = \min_{v'} \sqrt{\frac{r^2(v, v')}{(\Delta d)^2} + \frac{\delta^2(v, v')}{(\Delta D)^2}} \leq 1$$
+$$
+\gamma(v) = \min_{v'}
+\sqrt{
+\frac{r^2(v,v')}{\Delta d^2}
++\frac{\delta^2(v,v')}{\Delta D^2}
+}.
+$$
 
-where $r(v,v')$ is the Euclidean distance between voxels, $\delta(v,v')$ is the absolute dose difference, $\Delta d$ is the distance-to-agreement criterion (e.g. 3 mm), and $\Delta D$ is the dose-difference criterion (e.g. 3% of prescription). A voxel **passes** when $\gamma \leq 1$.
+Here $r(v,v')$ is the spatial distance, $\delta(v,v')$ is the dose
+difference, and the benchmark criteria are
+$(\Delta d,\Delta D)=(3\ \mathrm{mm},3\%)$. The reported metric is the
+percentage of reference voxels satisfying $\gamma(v)\leq1$.
 
 ## Current Performance
 
