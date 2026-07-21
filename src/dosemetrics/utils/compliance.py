@@ -1,19 +1,8 @@
-"""
-Compliance checking and quality indices for dose constraints.
-
-This module provides functions to check compliance with dose constraints
-and compute quality indices for treatment plan evaluation.
-"""
+"""Compliance checking for dose constraints."""
 
 from __future__ import annotations
 
 import pandas as pd
-import numpy as np
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ..dose import Dose
-    from ..structures import Structure
 
 
 def get_custom_constraints():
@@ -153,61 +142,3 @@ def check_compliance(df, constraint):
                 # ] = f"Volume dose is within constraint! "
 
     return compliance_df
-
-
-def quality_index(
-    dose: Dose,
-    structure: Structure,
-    constraint_type: str,
-    constraint_level: float,
-) -> float:
-    """
-    Compute the quality index of a dose distribution relative to a constraint.
-
-    Quality index interpretation:
-    - Positive values: Constraint is met (higher is better, 1.0 is ideal)
-    - Negative values: Constraint is violated (magnitude indicates severity)
-
-    Args:
-        dose: Dose distribution object
-        structure: Structure to evaluate
-        constraint_type: Type of constraint ('max', 'mean', or 'min')
-        constraint_level: Constraint value in Gy
-
-    Returns:
-        Quality index (-1 to 1)
-
-    Examples:
-        >>> from dosemetrics.dose import Dose
-        >>> from dosemetrics.utils.compliance import quality_index
-        >>>
-        >>> dose = Dose.from_dicom("rtdose.dcm")
-        >>> brainstem = structures.get_structure("Brainstem")
-        >>>
-        >>> # Check max dose constraint
-        >>> qi = quality_index(dose, brainstem, "max", 54.0)
-        >>> if qi < 0:
-        ...     print("Constraint violated!")
-    """
-    from ..metrics import dvh
-
-    if constraint_level <= 0:
-        raise ValueError("constraint_level must be positive")
-
-    if constraint_type == "mean":
-        actual = dvh.compute_mean_dose(dose, structure)
-        margin = (constraint_level - actual) / constraint_level
-        return float(np.clip(margin, -1.0, 1.0))
-
-    if constraint_type == "max":
-        actual = dvh.compute_max_dose(dose, structure)
-        margin = (constraint_level - actual) / constraint_level
-        return float(np.clip(margin, -1.0, 1.0))
-
-    if constraint_type == "min":
-        actual = dvh.compute_min_dose(dose, structure)
-        margin = (actual - constraint_level) / constraint_level
-        return float(np.clip(margin, -1.0, 1.0))
-
-    # Default return
-    return 0.0

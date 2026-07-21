@@ -5,21 +5,15 @@ DoseMetrics 0.4.0 provides data containers, I/O, metrics, comparisons, and visua
 ## Quick example
 
 ```python
-from dosemetrics import Dose
-from dosemetrics.io import load_structure_set
 from dosemetrics.metrics import dvh
-from dosemetrics.utils.plot import plot_dvh
+from dosemetrics.utils import load_example_study, plot_dvh
 
-patient_dir = "path/to/patient"
-dose = Dose.from_nifti(f"{patient_dir}/Dose.nii.gz")
-structures = load_structure_set(patient_dir)
+dose, structures = load_example_study("test_subject")
 ptv = structures["PTV"]
 
-dose_bins, volume_percent = dvh.compute_dvh(dose, ptv)
-stats = dvh.compute_dose_statistics(dose, ptv)
+dose_bins, volume_percent = dvh.compute_dvh(dose, ptv, verbose=True)
+stats = dvh.compute_dose_statistics(dose, ptv, verbose=True)
 fig, ax = plot_dvh(dose, ptv, label="PTV")
-
-print(f"Mean: {stats['mean_dose']:.2f} Gy; D95: {stats['D95']:.2f} Gy")
 ```
 
 ## What is included
@@ -38,7 +32,9 @@ print(f"Mean: {stats['mean_dose']:.2f} Gy; D95: {stats['D95']:.2f} Gy")
 - `dosemetrics.metrics` contains computations grouped by clinical domain.
 - `dosemetrics.utils` contains plotting, compliance, batch, and cohort helpers.
 
-Metric functions are not flattened into the package root. Import the relevant domain module, for example `from dosemetrics.metrics import dvh, conformity`.
+Import reference-free computations from their domain module, for example
+`from dosemetrics.metrics import dvh, conformity`. Named plan comparisons are
+available directly, for example `from dosemetrics.metrics import compare_ptv_dose`.
 
 ## Start here
 
@@ -49,3 +45,9 @@ Metric functions are not flattened into the package root. Import the relevant do
 5. [Browse the API reference](api/index.md)
 
 [:material-rocket-launch: Try the live demo](https://huggingface.co/spaces/contouraid/dosemetrics){ .md-button .md-button--primary target="_blank" }
+
+## Project information
+
+- [Contributing](contributing.md)
+- [Changelog](changelog.md)
+- [License](license.md)

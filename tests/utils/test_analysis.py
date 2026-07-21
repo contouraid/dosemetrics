@@ -79,6 +79,35 @@ class TestAnalysisFunctions(unittest.TestCase):
         self.assertIn('mean_dose', results.columns)
         self.assertIn('max_dose', results.columns)
         self.assertEqual(len(results), 2)  # 2 subjects
+
+    def test_dose_statistics_table(self):
+        results = analysis.dose_statistics_table(
+            self.dose, self.structures, ["PTV", "OAR"]
+        )
+        self.assertEqual(list(results.index), ["PTV", "OAR"])
+        self.assertIn("Mean dose (Gy)", results.columns)
+        self.assertIn("D95 (Gy)", results.columns)
+
+    def test_compare_dose_statistics(self):
+        evaluated = Dose(
+            self.dose.dose_array + 1.0,
+            spacing=self.dose.spacing,
+            origin=self.dose.origin,
+        )
+        results = analysis.compare_dose_statistics(
+            self.dose,
+            evaluated,
+            self.structures,
+            structure_names=["PTV"],
+        )
+        self.assertAlmostEqual(results.loc["PTV", "Mean dose change (Gy)"], 1.0)
+
+    def test_compare_structure_geometry(self):
+        results = analysis.compare_structure_geometry(
+            self.structures, self.structures, ["PTV"]
+        )
+        self.assertAlmostEqual(results.loc["PTV", "Dice"], 1.0)
+        self.assertAlmostEqual(results.loc["PTV", "Volume change (%)"], 0.0)
     
     def test_analyze_by_subject(self):
         """Test subject-level analysis."""

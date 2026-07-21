@@ -27,23 +27,19 @@ make setup
 The current API keeps dose data, structure geometry, and metric computation separate:
 
 ```python
-from dosemetrics import Dose
-from dosemetrics.io import load_structure_set
 from dosemetrics.metrics import conformity, dvh, homogeneity
-from dosemetrics.utils.plot import plot_subject_dvhs
+from dosemetrics.utils import load_example_study, plot_subject_dvhs
 
-patient_dir = "path/to/patient"
-dose = Dose.from_nifti(f"{patient_dir}/Dose.nii.gz", name="Clinical")
-structures = load_structure_set(patient_dir)
+dose, structures = load_example_study("test_subject")
 ptv = structures["PTV"]
 
-dose_bins, volume_percent = dvh.compute_dvh(dose, ptv)
-stats = dvh.compute_dose_statistics(dose, ptv)
+dose_bins, volume_percent = dvh.compute_dvh(dose, ptv, verbose=True)
+stats = dvh.compute_dose_statistics(dose, ptv, verbose=True)
 ci = conformity.compute_paddick_conformity_index(dose, ptv, prescription_dose=60.0)
 hi = homogeneity.compute_homogeneity_index(dose, ptv)
 fig, ax = plot_subject_dvhs(dose, structures)
 
-print(f"D95: {stats['D95']:.2f} Gy; Paddick CI: {ci:.3f}; HI: {hi:.3f}")
+print(f"Paddick CI: {ci:.3f}; HI: {hi:.3f}")
 ```
 
 A NIfTI patient folder places `Dose.nii.gz` and one binary mask per structure in the same directory. `load_structure_set()` loads only geometry; load the dose independently with `Dose.from_nifti()`.
@@ -54,25 +50,25 @@ All reference-based functions accept `reference` first and `evaluated` second:
 
 ```python
 from dosemetrics import Dose
-from dosemetrics.metrics import comparison, dose_comparison, gamma
+from dosemetrics.metrics import compare_ptv_dose, dose_comparison, gamma
 
 reference = Dose.from_nifti("reference.nii.gz")
 evaluated = Dose.from_nifti("evaluated.nii.gz")
 
-mae_gy = dose_comparison.compare_mae(reference, evaluated)
+mae_gy = dose_compare_mae(reference, evaluated)
 gamma_map = gamma.compare_gamma_index(reference, evaluated)
 gamma_pass = gamma.compute_gamma_passing_rate(gamma_map)
-ptv_dose_distance = comparison.compare_ptv_dose(reference, evaluated, ptv)
+ptv_dose_distance = compare_ptv_dose(reference, evaluated, ptv)
 ```
 
 ## Public package layout
 
 - `dosemetrics`: `Dose`, structure classes, `StructureSet`, and high-level loaders
 - `dosemetrics.io`: unified NIfTI/DICOM loading plus format-specific modules
-- `dosemetrics.metrics`: `dvh`, `conformity`, `homogeneity`, `geometric`, `gamma`, `dose_comparison`, and `comparison`
+- `dosemetrics.metrics`: domain modules such as `dvh`, `conformity`, `homogeneity`, `geometric`, `gamma`, and `dose_comparison`, plus direct named `compare_*` functions
 - `dosemetrics.utils`: plotting, compliance, batch processing, and cohort analysis
 
-Metrics are intentionally exposed through domain modules rather than flattened into the package root.
+Reference-free metrics remain grouped in domain modules. Named clinical plan comparisons are imported directly from `dosemetrics.metrics`.
 
 ## Command line
 

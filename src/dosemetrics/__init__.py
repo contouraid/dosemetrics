@@ -34,7 +34,7 @@ from .structures import (
     AvoidanceStructure,
 )
 from .structure_set import StructureSet
-from .utils.compliance import quality_index, get_default_constraints, check_compliance
+from .utils.compliance import get_default_constraints, check_compliance
 import numpy as np
 
 # Metrics subpackage (use: from dosemetrics.metrics import dvh, conformity, etc.)
@@ -63,7 +63,7 @@ def create_structure_set_from_masks(
     structure_types: dict = None,
     dose_volume: np.ndarray = None,
     name: str = "StructureSet",
-):
+) -> StructureSet:
     """Create a StructureSet from mask dictionaries.
 
     Args:
@@ -126,6 +126,5 @@ __all__ = [
     "utils",
     # Convenience exports from utils
     "check_compliance",
-    "quality_index",
     "get_default_constraints",
 ]

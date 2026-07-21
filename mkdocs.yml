@@ -6,6 +6,19 @@ repo_url: https://github.com/contouraid/dosemetrics
 repo_name: contouraid/dosemetrics
 edit_uri: edit/main/docs/
 
+# Internal design and implementation notes live in the repository but are not
+# part of the public documentation site.
+exclude_docs: |
+  architecture/
+  design-prompts.md
+  examples/
+  user-guide/gamma-performance.md
+  user-guide/geometric-analysis.md
+  user-guide/migration-v0.2-v0.3.md
+  user-guide/plan-comparison-metrics.md
+  user-guide/structure-set.md
+  user-guide/visualizations.md
+
 theme:
   name: material
   palette:
@@ -80,6 +93,8 @@ plugins:
 
 markdown_extensions:
   - admonition
+  - pymdownx.arithmatex:
+      generic: true
   - pymdownx.details
   - pymdownx.superfences:
       custom_fences:
@@ -107,28 +122,31 @@ markdown_extensions:
       permalink: true
       toc_depth: 3
 
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
 nav:
   - Home: index.md
-  - Getting Started:
-    - Installation: getting-started/installation.md
-    - Quick Start: getting-started/quickstart.md
-    - Your Own Data: notebooks/04-getting-started-own-data.ipynb
-    - File Formats: getting-started/file-formats.md
   - User Guide:
+    - Getting Started:
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quickstart.md
+      - File Formats: getting-started/file-formats.md
     - Overview: user-guide/overview.md
-    - DVH Analysis: user-guide/dvh-analysis.md
-    - Quality Metrics: user-guide/quality-metrics.md
-    - Plan Metrics and Comparisons: user-guide/plan-comparison-metrics.md
+    - Data Inputs and Containers: user-guide/data-structures.md
+    - Metric Framework:
+      - Overview: user-guide/quality-metrics.md
+      - DVH Metrics: user-guide/dvh-analysis.md
+      - Conformity Metrics: user-guide/conformity-metrics.md
+      - Homogeneity Metrics: user-guide/homogeneity-metrics.md
     - Compliance Checking: user-guide/compliance-checking.md
-    - Visualizations: user-guide/visualizations.md
-    - Geometric Analysis: user-guide/geometric-analysis.md
-    - StructureSet: user-guide/structure-set.md
-    - Gamma Index Performance: user-guide/gamma-performance.md
-    - Migration to v0.4: user-guide/migration-v0.2-v0.3.md
-  - Architecture:
-    - Overview: architecture/index.md
-    - Dose Architecture: architecture/dose-architecture.md
-    - Metrics Architecture: architecture/metrics-architecture.md
+  - API Reference:
+    - Overview: api/index.md
+    - Metrics: api/metrics.md
+    - I/O: api/io.md
+    - Utils: api/utils.md
+    - Data Structures: api/data.md
   - Examples:
     - 1. Basic Usage: notebooks/01-basic-usage.ipynb
     - 2. NIfTI I/O: notebooks/02-nifti-io.ipynb
@@ -137,18 +155,6 @@ nav:
     - 5. Computing Metrics: notebooks/05-computing-metrics.ipynb
     - 6. Comparing Plans: notebooks/06-comparing-plans.ipynb
     - 7. Exporting Results: notebooks/07-exporting-results.ipynb
-    - Comparing Plans: examples/comparing-plans.md
-    - Batch Processing: examples/batch-processing.md
-  - API Reference:
-    - Overview: api/index.md
-    - Metrics: api/metrics.md
-    - I/O: api/io.md
-    - Utils: api/utils.md
-    - Data Structures: api/data.md
-  - Contributing: contributing.md
-  - Changelog: changelog.md
-  - License: license.md
-  - Design Prompts: design-prompts.md
 
 extra:
   social:
@@ -176,4 +182,4 @@ extra:
             Thanks for your feedback! Help us improve by
             <a href="https://github.com/contouraid/dosemetrics/issues" target="_blank" rel="noopener">opening an issue</a>.
 
-copyright: Copyright &copy; 2024-2025 Amith Kamath. Licensed under CC BY-SA-NC 4.0
+copyright: Copyright &copy; 2026 Amith Kamath. Licensed under CC BY-SA-NC 4.0

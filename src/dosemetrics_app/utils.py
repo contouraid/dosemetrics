@@ -5,14 +5,16 @@ Utility functions for loading example data from HuggingFace in the Streamlit app
 import streamlit as st
 from pathlib import Path
 from huggingface_hub import snapshot_download
+from io import BytesIO
 import tempfile
-import shutil
 import numpy as np
 import pandas as pd
-from typing import Tuple, Dict, Optional
+import pydicom
+from typing import Tuple, Dict, Optional, Union
 
 import dosemetrics
 from dosemetrics import Dose, Target, OAR, Structure
+from dosemetrics.io import dicom_io
 from dosemetrics.metrics import dvh
 
 
@@ -87,6 +89,19 @@ def get_example_datasets():
     return datasets
 
 
+def get_example_dicom_dataset():
+    """Return the DICOM example folder from the hosted dataset, if available."""
+    data_path = download_example_data()
+    if data_path is None:
+        return None
+
+    dicom_path = data_path / "dicom"
+    required_folders = (dicom_path / "RTDOSE", dicom_path / "RTSTRUCT")
+    if all(folder.exists() for folder in required_folders):
+        return dicom_path
+    return None
+
+
 def load_example_files(dataset_path):
     """
     Load dose and mask files from an example dataset.
@@ -140,6 +155,9 @@ def read_byte_data(
         - dose_object: Dose object with dose distribution
         - structures_dict: Dictionary mapping structure names to Structure objects
     """
+    if isinstance(dose_file, Dose):
+        return dose_file, dict(mask_files)
+
     # Create temporary directory for file operations
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
@@ -224,6 +242,188 @@ def read_byte_data(
             structures[struct_name] = structure
 
     return dose, structures
+
+
+def load_dicom_analysis_data(
+    dicom_path: Union[Path, str],
+    dose_file: Optional[Union[Path, str]] = None,
+) -> Tuple[Dose, Dict[str, Structure]]:
+    """Load an RTDOSE and rasterize its RTSTRUCT directly on the dose grid.
+
+    Rasterizing on the selected dose grid makes the returned structures immediately
+    usable by the metric functions, even when the accompanying CT has a different
+    resolution.
+    """
+    dicom_path = Path(dicom_path)
+    dose_files = sorted((dicom_path / "RTDOSE").glob("*.dcm"))
+    structure_files = sorted((dicom_path / "RTSTRUCT").glob("*.dcm"))
+
+    if dose_file is None:
+        if not dose_files:
+            raise ValueError("No RTDOSE file was found.")
+        dose_path = dose_files[0]
+    else:
+        dose_path = Path(dose_file)
+    if not structure_files:
+        raise ValueError("No RTSTRUCT file was found.")
+
+    dose = Dose.from_dicom(dose_path)
+    reference_grid = (dose.shape, dose.spacing, dose.origin)
+    raw_structures = dicom_io.read_dicom_rtstruct(
+        structure_files[0], reference_image=reference_grid
+    )
+
+    structures: Dict[str, Structure] = {}
+    for name, values in raw_structures.items():
+        mask = values.get("mask")
+        if mask is None:
+            continue
+        structure_class = Target if infer_structure_type(name) == "target" else OAR
+        structures[name] = structure_class(
+            name=name,
+            mask=mask,
+            spacing=dose.spacing,
+            origin=dose.origin,
+        )
+
+    if not structures:
+        raise ValueError("The RTSTRUCT did not contain any rasterizable structures.")
+    return dose, structures
+
+
+def load_uploaded_dicom_data(uploaded_files) -> Tuple[Dose, Dict[str, Structure]]:
+    """Load uploaded DICOM files after rebuilding modality subfolders."""
+    if not uploaded_files:
+        raise ValueError("Upload at least one RTDOSE and one RTSTRUCT file.")
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        root = Path(temp_dir)
+        modality_counts: Dict[str, int] = {}
+
+        for uploaded_file in uploaded_files:
+            if hasattr(uploaded_file, "getvalue"):
+                contents = uploaded_file.getvalue()
+            else:
+                contents = uploaded_file.read()
+            header = pydicom.dcmread(
+                BytesIO(contents), stop_before_pixels=True, force=True
+            )
+            modality = str(getattr(header, "Modality", "UNKNOWN")).upper()
+            if modality not in {"CT", "RTDOSE", "RTSTRUCT", "RTPLAN"}:
+                continue
+
+            modality_dir = root / modality
+            modality_dir.mkdir(exist_ok=True)
+            count = modality_counts.get(modality, 0)
+            modality_counts[modality] = count + 1
+            original_name = Path(getattr(uploaded_file, "name", "upload.dcm")).name
+            if not original_name.lower().endswith(".dcm"):
+                original_name = f"{original_name}.dcm"
+            destination = modality_dir / f"{count:04d}_{original_name}"
+            destination.write_bytes(contents)
+
+        if modality_counts.get("RTDOSE", 0) == 0:
+            raise ValueError("The upload does not contain an RTDOSE object.")
+        if modality_counts.get("RTSTRUCT", 0) == 0:
+            raise ValueError("The upload does not contain an RTSTRUCT object.")
+
+        return load_dicom_analysis_data(root)
+
+
+def request_analysis_data(
+    instruction_text: str, key: str = "analysis"
+) -> Tuple[Optional[Dose], Dict[str, Structure]]:
+    """Render the shared hosted/NIfTI/DICOM selector used by the live demo."""
+    st.markdown(instruction_text)
+    st.caption(
+        "Start with a hosted study from contouraid/dosemetrics-data, or upload "
+        "your own NIfTI or DICOM-RT files."
+    )
+    source = st.radio(
+        "Data source",
+        ["Hosted example", "Upload NIfTI", "Upload DICOM"],
+        horizontal=True,
+        key=f"{key}_source",
+    )
+
+    try:
+        if source == "Hosted example":
+            data_format = st.radio(
+                "Example format",
+                ["NIfTI", "DICOM"],
+                horizontal=True,
+                key=f"{key}_example_format",
+            )
+            if data_format == "NIfTI":
+                datasets = get_example_datasets()
+                if not datasets:
+                    return None, {}
+                names = list(datasets)
+                selected = st.selectbox(
+                    "Study",
+                    names,
+                    index=names.index("test_subject") if "test_subject" in names else 0,
+                    key=f"{key}_nifti_study",
+                )
+                dose_path, mask_paths = load_example_files(datasets[selected])
+                if dose_path is None:
+                    raise ValueError(f"No Dose.nii.gz found in {selected}.")
+                with st.spinner(f"Loading hosted NIfTI study “{selected}”…"):
+                    dose, structures = read_byte_data(dose_path, mask_paths)
+                st.success(f"Loaded {selected}: {len(structures)} structures")
+                return dose, structures
+
+            dicom_path = get_example_dicom_dataset()
+            if dicom_path is None:
+                raise ValueError("The hosted DICOM example is unavailable.")
+            dose_files = sorted((dicom_path / "RTDOSE").glob("*.dcm"))
+            selected_name = st.selectbox(
+                "RTDOSE object",
+                [path.name for path in dose_files],
+                key=f"{key}_dicom_dose",
+            )
+            selected_dose = next(path for path in dose_files if path.name == selected_name)
+            with st.spinner(f"Loading hosted DICOM study with {selected_name}…"):
+                dose, structures = load_dicom_analysis_data(dicom_path, selected_dose)
+            st.success(
+                f"Loaded {selected_name}: {len(structures)} RTSTRUCT regions on the dose grid"
+            )
+            return dose, structures
+
+        if source == "Upload NIfTI":
+            dose_file = st.file_uploader(
+                "Dose volume", type=["nii", "gz"], key=f"{key}_nifti_dose"
+            )
+            mask_files = st.file_uploader(
+                "Structure masks",
+                type=["nii", "gz"],
+                accept_multiple_files=True,
+                key=f"{key}_nifti_masks",
+            )
+            if dose_file is None or not mask_files:
+                st.info("Upload one dose volume and at least one binary structure mask.")
+                return None, {}
+            with st.spinner("Loading uploaded NIfTI data…"):
+                return read_byte_data(dose_file, mask_files)
+
+        uploaded_files = st.file_uploader(
+            "DICOM-RT files",
+            accept_multiple_files=True,
+            help=(
+                "Select at least one RTDOSE and one RTSTRUCT file. CT and RTPLAN "
+                "files may be included; files are identified by their DICOM modality, "
+                "so extensionless DICOM files are supported."
+            ),
+            key=f"{key}_dicom_files",
+        )
+        if not uploaded_files:
+            st.info("Upload an RTDOSE and RTSTRUCT to begin. CT images are optional.")
+            return None, {}
+        with st.spinner("Loading uploaded DICOM-RT data…"):
+            return load_uploaded_dicom_data(uploaded_files)
+    except Exception as exc:
+        st.error(f"Could not load the selected data: {exc}")
+        return None, {}
 
 
 def dvh_by_structure(dose: Dose, structures: Dict[str, Structure]) -> pd.DataFrame:

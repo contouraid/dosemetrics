@@ -12,7 +12,7 @@ one plan use `compute_` and live in their clinical modules, such as
 `homogeneity.compute_homogeneity_index`.
 
 The equations below preserve the prediction/target notation in
-`local/metrics.tex`: `target` is the realisable reference/ground-truth dose
+In the equations below, `target` is the realisable reference/ground-truth dose
 and `pred` is the model prediction or evaluated dose. Consequently, the
 Python arguments map as `reference = target` and `evaluated = pred`.
 
@@ -27,11 +27,11 @@ The raw quantity and its between-plan comparison are deliberately separate:
 
 | One-plan quantity | API | Reference-based metric | API |
 |---|---|---|---|
-| Mean PTV dose | `dvh.compute_mean_dose(plan, ptv)` | PTV Dose Distance | `comparison.compare_ptv_dose(reference, evaluated, ptv)` |
-| Paddick CI | `conformity.compute_paddick_conformity_index(plan, ptv, prescription)` | PCID | `comparison.compare_paddick_conformity_index(reference, evaluated, ptv, prescription)` |
-| Homogeneity index | `homogeneity.compute_homogeneity_index(plan, ptv)` | HID | `comparison.compare_homogeneity_index(reference, evaluated, ptv)` |
-| Paddick gradient index | `homogeneity.compute_gradient_index(plan, ptv, prescription)` | PGID | `comparison.compare_paddick_gradient_index(reference, evaluated, prescription)` |
-| DVH AUC | `dvh.compute_dvh_auc(plan, structure)` | OAR DVH ABC | `comparison.compare_oar_dvh_auc(reference, evaluated, oar)` |
+| Mean PTV dose | `dvh.compute_mean_dose(plan, ptv)` | PTV Dose Distance | `compare_ptv_dose(reference, evaluated, ptv)` |
+| Paddick CI | `conformity.compute_paddick_conformity_index(plan, ptv, prescription)` | PCID | `compare_paddick_conformity_index(reference, evaluated, ptv, prescription)` |
+| Homogeneity index | `homogeneity.compute_homogeneity_index(plan, ptv)` | HID | `compare_homogeneity_index(reference, evaluated, ptv)` |
+| Paddick gradient index | `homogeneity.compute_gradient_index(plan, ptv, prescription)` | PGID | `compare_paddick_gradient_index(reference, evaluated, prescription)` |
+| DVH AUC | `dvh.compute_dvh_auc(plan, structure)` | OAR DVH ABC | `compare_oar_dvh_auc(reference, evaluated, oar)` |
 
 This prevents a raw index—whose ideal value may be 0, 1, or context
 dependent—from being confused with a distance whose ideal value is 0.
@@ -53,7 +53,14 @@ dependent—from being confused with a distance whose ideal value is 0.
 This categorisation is available programmatically:
 
 ```python
-from dosemetrics.metrics import comparison
+from dosemetrics.metrics import (
+    comparison,
+    compare_body_rmse, compare_dvh_score, compare_gamma,
+    compare_homogeneity_index, compare_mean_oar_dvh_auc,
+    compare_oar_constraints, compare_oar_dvh_auc,
+    compare_paddick_conformity_index, compare_paddick_gradient_index,
+    compare_ptv_dose,
+)
 
 for metric in comparison.COMPARISON_METRICS:
     tasks = ", ".join(task.value for task in metric.tasks)
@@ -75,7 +82,7 @@ when PTV Dose Distance first shows adequate target-dose agreement.
 
 ## Global: DVH Score
 
-`comparison.compare_dvh_score` implements the complete OpenKBP definition. For targets it
+`compare_dvh_score` implements the complete OpenKBP definition. For targets it
 uses \(D_1\), \(D_{95}\), and \(D_{99}\); for OARs it uses
 \(D_{\mathrm{mean}}\) and \(D_{0.1\mathrm{cc}}\). If \(M\) is the total
 number of available criteria,
@@ -93,9 +100,16 @@ voxel dose. \(D_{0.1\mathrm{cc}}\) is the minimum dose in the hottest
 0.1 cubic centimetres of an OAR.
 
 ```python
-from dosemetrics.metrics import comparison
+from dosemetrics.metrics import (
+    comparison,
+    compare_body_rmse, compare_dvh_score, compare_gamma,
+    compare_homogeneity_index, compare_mean_oar_dvh_auc,
+    compare_oar_constraints, compare_oar_dvh_auc,
+    compare_paddick_conformity_index, compare_paddick_gradient_index,
+    compare_ptv_dose,
+)
 
-dvh_score = comparison.compare_dvh_score(
+dvh_score = compare_dvh_score(
     reference,
     evaluated,
     targets=[ptv_high, ptv_low],
@@ -122,7 +136,7 @@ dvh_score = comparison.compare_dvh_score(
 
 ### Body-masked RMSE
 
-`comparison.compare_body_rmse` evaluates the \(N\) voxels in the supplied body mask:
+`compare_body_rmse` evaluates the \(N\) voxels in the supplied body mask:
 
 $$
 \mathrm{RMSE}
@@ -133,9 +147,16 @@ $$
 It returns Gy and gives larger errors more weight than MAE.
 
 ```python
-from dosemetrics.metrics import comparison
+from dosemetrics.metrics import (
+    comparison,
+    compare_body_rmse, compare_dvh_score, compare_gamma,
+    compare_homogeneity_index, compare_mean_oar_dvh_auc,
+    compare_oar_constraints, compare_oar_dvh_auc,
+    compare_paddick_conformity_index, compare_paddick_gradient_index,
+    compare_ptv_dose,
+)
 
-rmse = comparison.compare_body_rmse(reference, evaluated, body)
+rmse = compare_body_rmse(reference, evaluated, body)
 ```
 
 Do not confuse this with the OpenKBP *dose score*, which is voxel-wise MAE.
@@ -159,13 +180,20 @@ $$
 Here \(r\) is physical distance and \(\delta\) is dose difference. The metric
 is the percentage of reference voxels with \(\gamma(v)\leq1\). The benchmark
 criteria are \((\Delta d,\Delta D)=(3\ \mathrm{mm},3\%)\).
-`comparison.compare_gamma` defaults to global 3%/3 mm gamma and no
+`compare_gamma` defaults to global 3%/3 mm gamma and no
 low-dose exclusion. Supplying `body` restricts the reported rate to the body.
 
 ```python
-from dosemetrics.metrics import comparison
+from dosemetrics.metrics import (
+    comparison,
+    compare_body_rmse, compare_dvh_score, compare_gamma,
+    compare_homogeneity_index, compare_mean_oar_dvh_auc,
+    compare_oar_constraints, compare_oar_dvh_auc,
+    compare_paddick_conformity_index, compare_paddick_gradient_index,
+    compare_ptv_dose,
+)
 
-passing_rate = comparison.compare_gamma(
+passing_rate = compare_gamma(
     reference,
     evaluated,
     body=body,
@@ -202,9 +230,16 @@ $$
 $$
 
 ```python
-from dosemetrics.metrics import comparison
+from dosemetrics.metrics import (
+    comparison,
+    compare_body_rmse, compare_dvh_score, compare_gamma,
+    compare_homogeneity_index, compare_mean_oar_dvh_auc,
+    compare_oar_constraints, compare_oar_dvh_auc,
+    compare_paddick_conformity_index, compare_paddick_gradient_index,
+    compare_ptv_dose,
+)
 
-ptvdd = comparison.compare_ptv_dose(reference, evaluated, ptv_high)
+ptvdd = compare_ptv_dose(reference, evaluated, ptv_high)
 ```
 
 This is a between-plan distance. It is not prescription MAE, \(D_{95}\), or
@@ -234,9 +269,16 @@ $$
 $$
 
 ```python
-from dosemetrics.metrics import comparison
+from dosemetrics.metrics import (
+    comparison,
+    compare_body_rmse, compare_dvh_score, compare_gamma,
+    compare_homogeneity_index, compare_mean_oar_dvh_auc,
+    compare_oar_constraints, compare_oar_dvh_auc,
+    compare_paddick_conformity_index, compare_paddick_gradient_index,
+    compare_ptv_dose,
+)
 
-pcid = comparison.compare_paddick_conformity_index(
+pcid = compare_paddick_conformity_index(
     reference, evaluated, ptv_high, prescription_dose=70.0
 )
 ```
@@ -259,7 +301,7 @@ measures agreement with the reference plan.
 
 ### Homogeneity Index Distance
 
-`comparison.compare_homogeneity_index` uses
+`compare_homogeneity_index` uses
 
 $$
 \mathrm{HI}=\frac{D_2-D_{98}}{D_{50}},
@@ -275,9 +317,16 @@ $$
 percentiles in the PTV. Both HI and HID are dimensionless; lower is better.
 
 ```python
-from dosemetrics.metrics import comparison
+from dosemetrics.metrics import (
+    comparison,
+    compare_body_rmse, compare_dvh_score, compare_gamma,
+    compare_homogeneity_index, compare_mean_oar_dvh_auc,
+    compare_oar_constraints, compare_oar_dvh_auc,
+    compare_paddick_conformity_index, compare_paddick_gradient_index,
+    compare_ptv_dose,
+)
 
-hid = comparison.compare_homogeneity_index(
+hid = compare_homogeneity_index(
     reference, evaluated, ptv_high
 )
 ```
@@ -328,9 +377,16 @@ GI means steeper dose falloff; a lower PGID means closer agreement with the
 reference.
 
 ```python
-from dosemetrics.metrics import comparison
+from dosemetrics.metrics import (
+    comparison,
+    compare_body_rmse, compare_dvh_score, compare_gamma,
+    compare_homogeneity_index, compare_mean_oar_dvh_auc,
+    compare_oar_constraints, compare_oar_dvh_auc,
+    compare_paddick_conformity_index, compare_paddick_gradient_index,
+    compare_ptv_dose,
+)
 
-pgid = comparison.compare_paddick_gradient_index(
+pgid = compare_paddick_gradient_index(
     reference, evaluated, prescription_dose=70.0
 )
 ```
@@ -359,10 +415,17 @@ available structures, and clinical context, the function consumes resolved
 pass/fail states rather than guessing them from a dose alone.
 
 ```python
-from dosemetrics.metrics import comparison
+from dosemetrics.metrics import (
+    comparison,
+    compare_body_rmse, compare_dvh_score, compare_gamma,
+    compare_homogeneity_index, compare_mean_oar_dvh_auc,
+    compare_oar_constraints, compare_oar_dvh_auc,
+    compare_paddick_conformity_index, compare_paddick_gradient_index,
+    compare_ptv_dose,
+)
 
 # Each mapping contains the same 38 CORSAIR-derived constraint identifiers.
-disagreement = comparison.compare_oar_constraints(
+disagreement = compare_oar_constraints(
     reference_satisfaction,
     evaluated_satisfaction,
 )
@@ -389,16 +452,23 @@ $$
 $$
 
 The trapezoidal rule approximates each AUC. The result is reported per OAR in
-Gy; `comparison.compare_mean_oar_dvh_auc` provides an unweighted mean over
+Gy; `compare_mean_oar_dvh_auc` provides an unweighted mean over
 several OARs.
 
 ```python
-from dosemetrics.metrics import comparison
+from dosemetrics.metrics import (
+    comparison,
+    compare_body_rmse, compare_dvh_score, compare_gamma,
+    compare_homogeneity_index, compare_mean_oar_dvh_auc,
+    compare_oar_constraints, compare_oar_dvh_auc,
+    compare_paddick_conformity_index, compare_paddick_gradient_index,
+    compare_ptv_dose,
+)
 
-brainstem_abc = comparison.compare_oar_dvh_auc(
+brainstem_abc = compare_oar_dvh_auc(
     reference, evaluated, brainstem
 )
-mean_abc = comparison.compare_mean_oar_dvh_auc(
+mean_abc = compare_mean_oar_dvh_auc(
     reference, evaluated, oars
 )
 ```
@@ -411,34 +481,41 @@ not the L2 curve distance. Those useful variants remain available through
 ## Complete example
 
 ```python
-from dosemetrics.metrics import comparison
+from dosemetrics.metrics import (
+    comparison,
+    compare_body_rmse, compare_dvh_score, compare_gamma,
+    compare_homogeneity_index, compare_mean_oar_dvh_auc,
+    compare_oar_constraints, compare_oar_dvh_auc,
+    compare_paddick_conformity_index, compare_paddick_gradient_index,
+    compare_ptv_dose,
+)
 
 results = {
-    "dvh_score_gy": comparison.compare_dvh_score(
+    "dvh_score_gy": compare_dvh_score(
         reference, evaluated, targets=targets, oars=oars
     ),
-    "rmse_gy": comparison.compare_body_rmse(
+    "rmse_gy": compare_body_rmse(
         reference, evaluated, body
     ),
-    "gamma_pass_percent": comparison.compare_gamma(
+    "gamma_pass_percent": compare_gamma(
         reference, evaluated, body=body
     ),
-    "ptv_dose_distance_gy": comparison.compare_ptv_dose(
+    "ptv_dose_distance_gy": compare_ptv_dose(
         reference, evaluated, ptv_high
     ),
-    "pcid": comparison.compare_paddick_conformity_index(
+    "pcid": compare_paddick_conformity_index(
         reference, evaluated, ptv_high, prescription
     ),
-    "hid": comparison.compare_homogeneity_index(
+    "hid": compare_homogeneity_index(
         reference, evaluated, ptv_high
     ),
-    "pgid": comparison.compare_paddick_gradient_index(
+    "pgid": compare_paddick_gradient_index(
         reference, evaluated, prescription
     ),
-    "constraint_disagreement": comparison.compare_oar_constraints(
+    "constraint_disagreement": compare_oar_constraints(
         reference_satisfaction, evaluated_satisfaction
     ),
-    "mean_oar_dvh_abc_gy": comparison.compare_mean_oar_dvh_auc(
+    "mean_oar_dvh_abc_gy": compare_mean_oar_dvh_auc(
         reference, evaluated, oars
     ),
 }

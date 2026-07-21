@@ -119,7 +119,7 @@ The deployment script respects your `.gitignore` file and only copies:
 Following `.gitignore`, these are automatically excluded:
 - Large data files (`/data/` - except test files)
 - Results directory (`/results/`)
-- Local development files (`/local/`)
+- Internal development-only files
 - Python cache (`__pycache__/`, `*.pyc`)
 - Virtual environments (`.venv/`, `venv/`)
 - IDE files (`.vscode/`, `.idea/`)

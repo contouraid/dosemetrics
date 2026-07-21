@@ -5,13 +5,9 @@
 A patient folder should contain `Dose.nii.gz` and one binary NIfTI mask per structure.
 
 ```python
-from pathlib import Path
-from dosemetrics import Dose
-from dosemetrics.io import load_structure_set
+from dosemetrics.utils import load_example_study
 
-patient_dir = Path("path/to/patient")
-dose = Dose.from_nifti(patient_dir / "Dose.nii.gz", name="Clinical")
-structures = load_structure_set(patient_dir)
+dose, structures = load_example_study("test_subject")
 
 ptv = structures["PTV"]
 brainstem = structures["Brainstem"]
@@ -21,13 +17,18 @@ print(structures.structure_names)
 
 `StructureSet` contains geometry only. Keeping the dose independent lets the same structures be reused with multiple plans.
 
+For custom data, load the same containers with `Dose.from_nifti` and
+`load_structure_set` as shown in the [NIfTI example](../notebooks/02-nifti-io.ipynb).
+
 ## Compute DVHs and statistics
 
 ```python
 from dosemetrics.metrics import dvh
 
-dose_bins, volume_percent = dvh.compute_dvh(dose, ptv, step_size=0.1)
-stats = dvh.compute_dose_statistics(dose, ptv)
+dose_bins, volume_percent = dvh.compute_dvh(
+    dose, ptv, step_size=0.1, verbose=True
+)
+stats = dvh.compute_dose_statistics(dose, ptv, verbose=True)
 d95 = dvh.compute_dose_at_volume(dose, ptv, volume_percent=95)
 v20 = dvh.compute_volume_at_dose(dose, brainstem, dose_threshold=20.0)
 
@@ -62,7 +63,14 @@ print(f"Gradient index: {gradient_index:.3f}")
 ## Plot structures
 
 ```python
-from dosemetrics.utils.plot import plot_subject_dvhs, save_figure
+from dosemetrics.utils import plot_dose_slice, plot_subject_dvhs, save_figure
+
+plot_dose_slice(
+    dose,
+    structures=structures,
+    structure_names=["PTV", "Brainstem"],
+    cmap="turbo",
+)
 
 fig, ax = plot_subject_dvhs(
     dose,
@@ -76,13 +84,13 @@ save_figure(fig, "dvh", formats=["png", "pdf"])
 
 ```python
 from dosemetrics import Dose
-from dosemetrics.metrics import comparison, dose_comparison, gamma
+from dosemetrics.metrics import compare_ptv_dose, dose_comparison, gamma
 
 reference = Dose.from_nifti("reference.nii.gz")
 evaluated = Dose.from_nifti("evaluated.nii.gz")
 
 mae_gy = dose_comparison.compare_mae(reference, evaluated)
-ptv_distance_gy = comparison.compare_ptv_dose(reference, evaluated, ptv)
+ptv_distance_gy = compare_ptv_dose(reference, evaluated, ptv)
 gamma_map = gamma.compare_gamma_index(reference, evaluated)
 passing_rate = gamma.compute_gamma_passing_rate(gamma_map)
 
@@ -97,5 +105,5 @@ All comparison functions take `reference` before `evaluated` and require compati
 
 - [File formats](file-formats.md)
 - [DVH analysis](../user-guide/dvh-analysis.md)
-- [Plan comparison metrics](../user-guide/plan-comparison-metrics.md)
+- [Metric framework and plan comparisons](../user-guide/quality-metrics.md)
 - [Executable notebooks](../notebooks/01-basic-usage.ipynb)

@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Dose quality metrics** drawn from the radiotherapy literature:
 
-- `comparison.compare_dvh_score(reference, evaluated, targets, oars)` — Complete DVH-criterion mean absolute error over target D1/D95/D99 and OAR mean-dose/D0.1cc criteria.
+- `compare_dvh_score(reference, evaluated, targets, oars)` — Complete DVH-criterion mean absolute error over target D1/D95/D99 and OAR mean-dose/D0.1cc criteria.
 - `compute_dvh_auc(dose, structure, num_bins, normalize, dose_range)` — Area under the DVH curve via trapezoidal integration. Single-distribution metric; higher value = more volume at higher dose. *(metrics/dvh.py)*
 - `compute_rtog_conformity_index(dose, target, prescription_dose)` — RTOG CI = V_Rx / V_target. The ICRU/RTOG 90-05 standard conformity definition, distinct from the existing ICRU CI (V_target_rx / V_rx). *(metrics/conformity.py)*
 - `compute_prescription_mae(dose, target, prescription_dose)` — Mean absolute error between actual dose and prescription dose within the target; directly measures under/overdosing. *(metrics/conformity.py)*
@@ -34,11 +34,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING**: Consolidated `advanced_dvh.py` into `dvh.py`.
 - **BREAKING**: Replaced the flat metrics function namespace with domain
   modules. One-plan quantities use `compute_*`; reference-based plan metrics
-  use `comparison.compare_*` and accept `reference` before `evaluated`.
+  use direct `compare_*` imports and accept `reference` before `evaluated`.
 - **BREAKING**: Standardized image and gamma comparisons on the same
   `compare_*` naming and `(reference, evaluated, ...)` parameter order.
 - **BREAKING**: Removed the ambiguous target-only `compute_dvh_score`.
-  `comparison.compare_dvh_score` is the single complete definition and accepts
+  `compare_dvh_score` is the single complete definition and accepts
   a target-only invocation when that subset is deliberately required.
 
 ## [0.3.0] - 2025-12-28

@@ -81,9 +81,8 @@ def compute_gradient_index(
     """
     Compute Gradient Index (GI) for dose fall-off outside target.
     
-    Two calculation methods:
-    1. Half-prescription volume: GI = V_50% / V_100%
-    2. Distance-based: Ratio of volumes at specific distances
+    The implementation uses the half-prescription-volume definition:
+    GI = V_50% / V_100%.
     
     Where:
     - V_100% = volume receiving >= prescription dose
@@ -95,7 +94,8 @@ def compute_gradient_index(
         dose: Dose distribution object
         target: Target structure
         prescription_dose: Prescription dose in Gy
-        half_prescription_volume_method: Use V_50%/V_100% method (default True)
+        half_prescription_volume_method: Compatibility parameter. The current
+            implementation always uses V_50%/V_100%.
         
     Returns:
         Gradient index (dimensionless, typically 2-8)
@@ -161,7 +161,7 @@ def compute_uniformity_index(
     """
     Compute uniformity index.
     
-    UI = 1 - (D_max - D_min) / D_prescription
+    UI = 1 - (D_max - D_min) / D_ref
     
     Values closer to 1.0 indicate better uniformity.
     
@@ -173,8 +173,7 @@ def compute_uniformity_index(
         Uniformity index (0-1)
         
     Note:
-        Requires prescription dose in target metadata or as parameter.
-        Currently uses median dose as approximation.
+        The current implementation uses median target dose as D_ref.
         
     Examples:
         >>> ui = compute_uniformity_index(dose, ptv)

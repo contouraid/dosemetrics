@@ -119,6 +119,33 @@ class TestComputeDVH:
         assert volumes[0] >= 95.0
         assert np.all(volumes[1:] < 5.0)
 
+    def test_compute_dvh_verbose_is_opt_in(
+        self, sample_dose, sample_structure, capsys
+    ):
+        dvh.compute_dvh(sample_dose, sample_structure)
+        assert capsys.readouterr().out == ""
+
+        dvh.compute_dvh(sample_dose, sample_structure, verbose=True)
+        output = capsys.readouterr().out
+        assert "TestPTV DVH:" in output
+        assert "bins" in output
+        assert "% volume" in output
+
+
+class TestDoseStatistics:
+    def test_verbose_is_opt_in(self, sample_dose, sample_structure, capsys):
+        statistics = dvh.compute_dose_statistics(sample_dose, sample_structure)
+        assert capsys.readouterr().out == ""
+
+        reported = dvh.compute_dose_statistics(
+            sample_dose, sample_structure, verbose=True
+        )
+        output = capsys.readouterr().out
+        assert reported == statistics
+        assert "TestPTV dose statistics (Gy)" in output
+        assert "Mean" in output
+        assert "D95" in output
+
 
 class TestVolumeAtDose:
     """Test V_X (volume at dose) queries."""

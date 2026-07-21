@@ -20,6 +20,104 @@ from ..structures import Structure
 from ..structure_set import StructureSet
 
 
+def dose_statistics_table(
+    dose: Dose,
+    structures: StructureSet,
+    structure_names: Optional[List[str]] = None,
+) -> pd.DataFrame:
+    """Return common dose statistics for several structures.
+
+    The result is ready for display or CSV export and avoids repeating the
+    same metric loop in interactive analyses.
+    """
+    from ..metrics import dvh
+
+    names = structure_names or structures.structure_names
+    rows = []
+    for name in names:
+        if name not in structures:
+            continue
+        structure = structures[name]
+        stats = dvh.compute_dose_statistics(dose, structure)
+        rows.append(
+            {
+                "Structure": name,
+                "Volume (cc)": structure.volume_cc(),
+                "Mean dose (Gy)": stats["mean_dose"],
+                "Minimum dose (Gy)": stats["min_dose"],
+                "Maximum dose (Gy)": stats["max_dose"],
+                "D98 (Gy)": stats["D98"],
+                "D95 (Gy)": stats["D95"],
+                "D50 (Gy)": stats["D50"],
+                "D02 (Gy)": stats["D02"],
+            }
+        )
+    return pd.DataFrame(rows).set_index("Structure")
+
+
+def compare_dose_statistics(
+    reference_dose: Dose,
+    evaluated_dose: Dose,
+    reference_structures: StructureSet,
+    evaluated_structures: Optional[StructureSet] = None,
+    structure_names: Optional[List[str]] = None,
+    labels: Tuple[str, str] = ("Reference", "Evaluated"),
+) -> pd.DataFrame:
+    """Compare common dose statistics between two aligned studies."""
+    evaluated_structures = evaluated_structures or reference_structures
+    common = set(reference_structures.structure_names) & set(
+        evaluated_structures.structure_names
+    )
+    names = structure_names or sorted(common)
+    first = dose_statistics_table(reference_dose, reference_structures, names)
+    second = dose_statistics_table(evaluated_dose, evaluated_structures, names)
+
+    result = pd.DataFrame(index=first.index.intersection(second.index))
+    for metric in ("Mean dose (Gy)", "D95 (Gy)", "D02 (Gy)"):
+        short_name = metric.replace(" (Gy)", "")
+        result[f"{short_name} - {labels[0]} (Gy)"] = first.loc[result.index, metric]
+        result[f"{short_name} - {labels[1]} (Gy)"] = second.loc[result.index, metric]
+        result[f"{short_name} change (Gy)"] = (
+            second.loc[result.index, metric] - first.loc[result.index, metric]
+        )
+    return result
+
+
+def compare_structure_geometry(
+    reference_structures: StructureSet,
+    evaluated_structures: StructureSet,
+    structure_names: Optional[List[str]] = None,
+) -> pd.DataFrame:
+    """Compare overlap and volume for structures with matching names."""
+    from ..metrics import geometric
+
+    common = set(reference_structures.structure_names) & set(
+        evaluated_structures.structure_names
+    )
+    names = structure_names or sorted(common)
+    rows = []
+    for name in names:
+        if name not in common:
+            continue
+        reference = reference_structures[name]
+        evaluated = evaluated_structures[name]
+        reference_volume = reference.volume_cc()
+        volume_change = (
+            100.0 * (evaluated.volume_cc() - reference_volume) / reference_volume
+            if reference_volume
+            else np.nan
+        )
+        rows.append(
+            {
+                "Structure": name,
+                "Dice": geometric.compute_dice_coefficient(reference, evaluated),
+                "Jaccard": geometric.compute_jaccard_index(reference, evaluated),
+                "Volume change (%)": volume_change,
+            }
+        )
+    return pd.DataFrame(rows).set_index("Structure")
+
+
 def analyze_by_structure(
     dataset: Dict[str, Dict[str, Union[Dose, StructureSet]]],
     structure_name: str,

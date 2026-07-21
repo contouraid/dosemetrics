@@ -7,7 +7,6 @@ from .compliance import (
     get_custom_constraints,
     get_default_constraints,
     check_compliance,
-    quality_index,
 )
 
 # Batch processing
@@ -23,6 +22,9 @@ from .batch import (
 
 # Multi-level analysis
 from .analysis import (
+    dose_statistics_table,
+    compare_dose_statistics,
+    compare_structure_geometry,
     analyze_by_structure,
     analyze_by_subject,
     analyze_by_dataset,
@@ -40,7 +42,16 @@ from .plot import (
     plot_metric_boxplot,
     plot_metric_comparison,
     plot_dose_slice,
+    plot_metric_values,
+    plot_dose_difference,
     save_figure,
+)
+
+from .data import (
+    download_example_data,
+    load_example_study,
+    load_dicom_study,
+    load_dicom_ct_on_dose_grid,
 )
 
 __all__ = [
@@ -48,7 +59,6 @@ __all__ = [
     "get_custom_constraints",
     "get_default_constraints",
     "check_compliance",
-    "quality_index",
     # Batch processing
     "load_dataset",
     "load_multiple_doses",
@@ -58,6 +68,9 @@ __all__ = [
     "aggregate_results",
     "export_batch_results",
     # Multi-level analysis
+    "dose_statistics_table",
+    "compare_dose_statistics",
+    "compare_structure_geometry",
     "analyze_by_structure",
     "analyze_by_subject",
     "analyze_by_dataset",
@@ -72,5 +85,12 @@ __all__ = [
     "plot_metric_boxplot",
     "plot_metric_comparison",
     "plot_dose_slice",
+    "plot_metric_values",
+    "plot_dose_difference",
     "save_figure",
+    # Data workflows
+    "download_example_data",
+    "load_example_study",
+    "load_dicom_study",
+    "load_dicom_ct_on_dose_grid",
 ]

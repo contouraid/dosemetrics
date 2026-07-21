@@ -1,151 +1,134 @@
 # Metrics API
 
-The dose-plan API is organized by meaning:
+`dosemetrics.metrics` exposes domain modules for reference-free computations
+and direct `compare_*` functions for the named reference-based plan metrics.
 
-- `compute_*` functions characterize one plan (or summarize a collection).
-- `compare_*` functions require a `reference` followed by an `evaluated` plan.
-- Functions are accessed through their domain modules; the package does not
-  flatten similarly named indices and distances into one namespace.
+| Public module | Responsibility | Dose-reference convention |
+|---|---|---|
+| `conformity` | Single-plan coverage and conformity quantities | Reference-free |
+| `dose_comparison` | General image and voxel comparisons plus image descriptors | `compare_*` is reference-based; `compute_*` is reference-free |
+| `dvh` | DVH construction, queries, summaries, and comparisons | `compute_*` is reference-free; `compare_*` is reference-based |
+| `gamma` | Gamma maps, passing-rate summaries, and statistics | Gamma-map creation is reference-based |
+| `geometric` | Structure overlap, volume, and surface metrics | Structure geometry; no dose reference |
+| `homogeneity` | Single-plan target homogeneity and dose falloff | Reference-free |
 
-## DVH Module
+The generated sections below are the authoritative public signatures and
+defaults from the implementation. For clinical interpretation and reference
+semantics, see the [Metric Framework](../user-guide/quality-metrics.md).
 
-::: dosemetrics.metrics.dvh
+## Direct plan-comparison functions
+
+Import these functions without an additional module prefix:
+
+```python
+from dosemetrics.metrics import compare_ptv_dose
+
+distance_gy = compare_ptv_dose(reference, evaluated, ptv)
+```
+
+::: dosemetrics.metrics.compare_ptv_dose
     options:
       show_source: true
       heading_level: 3
 
-## Conformity Module
+::: dosemetrics.metrics.compare_paddick_conformity_index
+    options:
+      show_source: true
+      heading_level: 3
+
+::: dosemetrics.metrics.compare_paddick_gradient_index
+    options:
+      show_source: true
+      heading_level: 3
+
+::: dosemetrics.metrics.compare_homogeneity_index
+    options:
+      show_source: true
+      heading_level: 3
+
+::: dosemetrics.metrics.compare_body_rmse
+    options:
+      show_source: true
+      heading_level: 3
+
+::: dosemetrics.metrics.compare_gamma
+    options:
+      show_source: true
+      heading_level: 3
+
+::: dosemetrics.metrics.compare_oar_constraints
+    options:
+      show_source: true
+      heading_level: 3
+
+::: dosemetrics.metrics.compare_oar_dvh_auc
+    options:
+      show_source: true
+      heading_level: 3
+
+::: dosemetrics.metrics.compare_mean_oar_dvh_auc
+    options:
+      show_source: true
+      heading_level: 3
+
+::: dosemetrics.metrics.compare_dvh_score
+    options:
+      show_source: true
+      heading_level: 3
+
+The `dosemetrics.metrics.comparison` module remains importable for backward
+compatibility, but direct imports are the documented invocation style.
+
+## Comparison metadata
+
+::: dosemetrics.metrics.comparison
+    options:
+      members:
+        - COMPARISON_METRICS
+        - EvaluationTask
+        - MetricCategory
+        - MetricDefinition
+      show_source: false
+      heading_level: 3
+
+## `conformity`
 
 ::: dosemetrics.metrics.conformity
     options:
       show_source: true
       heading_level: 3
 
-## Homogeneity Module
-
-::: dosemetrics.metrics.homogeneity
-    options:
-      show_source: true
-      heading_level: 3
-
-## Geometric Module
-
-::: dosemetrics.metrics.geometric
-    options:
-      show_source: true
-      heading_level: 3
-
-## Gamma Module
-
-::: dosemetrics.metrics.gamma
-    options:
-      show_source: true
-      heading_level: 3
-
-## Dose Comparison Module
+## `dose_comparison`
 
 ::: dosemetrics.metrics.dose_comparison
     options:
       show_source: true
       heading_level: 3
 
-## Comparison Module
+## `dvh`
 
-::: dosemetrics.metrics.comparison
+::: dosemetrics.metrics.dvh
     options:
       show_source: true
       heading_level: 3
 
----
+## `gamma`
 
-## Usage Examples
+::: dosemetrics.metrics.gamma
+    options:
+      show_source: true
+      heading_level: 3
 
-### Computing a Basic DVH
+## `geometric`
 
-```python
-from dosemetrics import Dose, StructureType
-from dosemetrics.io import load_structure
-from dosemetrics.metrics import dvh
+::: dosemetrics.metrics.geometric
+    options:
+      show_source: true
+      heading_level: 3
 
-dose = Dose.from_nifti("dose.nii.gz")
-ptv = load_structure(
-    "ptv.nii.gz",
-    name="PTV",
-    structure_type=StructureType.TARGET,
-)
+## `homogeneity`
 
-dose_bins, volumes = dvh.compute_dvh(dose, ptv)
-```
-
-### Conformity and Homogeneity Metrics
-
-```python
-from dosemetrics.metrics import conformity, homogeneity
-
-prescription = 60.0  # Gy
-
-ci_icru = conformity.compute_conformity_index(dose, ptv, prescription)
-ci_rtog = conformity.compute_rtog_conformity_index(dose, ptv, prescription)
-ci_pad = conformity.compute_paddick_conformity_index(dose, ptv, prescription)
-hi = homogeneity.compute_homogeneity_index(dose, ptv)
-gi = homogeneity.compute_gradient_index(dose, ptv, prescription)
-rx_mae = conformity.compute_prescription_mae(dose, ptv, prescription)
-
-print(f"ICRU CI:        {ci_icru:.3f}")
-print(f"RTOG CI:        {ci_rtog:.3f}")
-print(f"Paddick CI:     {ci_pad:.3f}")
-print(f"HI (ICRU 83):   {hi:.3f}")
-print(f"Gradient Index: {gi:.2f}")
-print(f"Prescription MAE: {rx_mae:.2f} Gy")
-```
-
-### DVH Comparison Metrics
-
-```python
-from dosemetrics.metrics import comparison, dose_comparison, dvh
-
-# Complete OpenKBP DVH Score: target D1/D95/D99 and OAR mean/D0.1cc
-score = comparison.compare_dvh_score(
-    reference,
-    evaluated,
-    targets=[ptv],
-    oars=[brainstem, spinal_cord],
-)
-
-# DVH AUC: integral of DVH curve, normalised to [0, 1]
-auc = dvh.compute_dvh_auc(dose, ptv, normalize=True)
-
-# Normalized MAE with high-dose masking
-n_mae = dose_comparison.compare_normalized_mae(
-    reference,
-    evaluated,
-    normalization_value=60.0,
-    dose_threshold_gy=5.0,
-)
-
-# Dose sharpness (Variance of Laplacian)
-vol = dose_comparison.compute_variance_of_laplacian(dose)
-
-print(f"DVH Score:      {score:.2f} Gy")
-print(f"DVH AUC:        {auc:.3f}")
-print(f"Normalized MAE: {n_mae:.4f}")
-print(f"VoL (sharpness): {vol:.4f}")
-```
-
-### Dose Statistics
-
-```python
-from dosemetrics.metrics import dvh
-
-stats = dvh.compute_dose_statistics(dose, ptv)
-print(f"Mean dose: {stats['mean_dose']:.2f} Gy")
-print(f"D95:       {stats['D95']:.2f} Gy")
-print(f"D2 (near-max): {stats['D02']:.2f} Gy")
-```
-
-## See Also
-
-- [I/O Module](io.md) — Loading and saving data
-- [Utils Module](utils.md) — Plotting and compliance checking
-- [User Guide: Quality Metrics](../user-guide/quality-metrics.md)
-- [User Guide: DVH Analysis](../user-guide/dvh-analysis.md)
+::: dosemetrics.metrics.homogeneity
+    options:
+      show_source: true
+      heading_level: 3

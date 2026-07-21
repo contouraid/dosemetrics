@@ -1,7 +1,7 @@
 # Design Prompts for the Benchmark Metrics
 
 This document is the visual specification for the evaluation framework in
-`local/metrics.tex`. It contains exactly the nine metrics defined there. Do
+the canonical metric definitions. It contains exactly the nine named plan-comparison metrics. Do
 not add alternative formulas, clinical acceptance thresholds, normalisations,
 or similarly named library metrics to the generated designs.
 
@@ -58,7 +58,7 @@ ideal value, because the target is a physically realisable plan.
 - Put the canonical equation visibly in every design. Use the exact symbols
   and subscripts shown below.
 - Avoid example “good”, “acceptable”, or “clinical pass” cutoffs that are not
-  defined in `metrics.tex`.
+  defined in this document.
 
 ## 1. PTV Dose Distance — both tasks
 
@@ -280,7 +280,7 @@ Report the percentage of voxels satisfying
 > when \(\gamma(v)>1\). Report the passing rate as a percentage. Include
 > “dose calculation only” and “higher is better”. Use exactly the 3 mm / 3%
 > criteria. Do not add a 95% clinical acceptance line, a low-dose exclusion,
-> or a local/global normalisation claim; these are not specified by the
+> or a pointwise/global normalisation claim; these are not specified by the
 > canonical equation.
 
 ## 9. DVH Score — dose prediction only

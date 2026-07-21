@@ -131,14 +131,14 @@ Pixel/voxel-level comparison metrics between two dose grids, including image-qua
 from dosemetrics.metrics import dose_comparison
 
 # Standard image metrics
-mse  = dose_comparison.compare_mse(reference, evaluated)
-mae  = dose_comparison.compare_mae(reference, evaluated)
-ssim = dose_comparison.compare_ssim(reference, evaluated)
-psnr = dose_comparison.compare_psnr(reference, evaluated)
-ncc  = dose_comparison.compare_normalized_cross_correlation(reference, evaluated)
+mse  = dose_compare_mse(reference, evaluated)
+mae  = dose_compare_mae(reference, evaluated)
+ssim = dose_compare_ssim(reference, evaluated)
+psnr = dose_compare_psnr(reference, evaluated)
+ncc  = dose_compare_normalized_cross_correlation(reference, evaluated)
 
 # Normalized MAE with optional threshold masking (new in v0.4)
-n_mae = dose_comparison.compare_normalized_mae(
+n_mae = dose_compare_normalized_mae(
     reference, evaluated,
     normalization_value=60.0,
     dose_threshold_gy=5.0,
@@ -153,18 +153,22 @@ vol = dose_comparison.compute_variance_of_laplacian(dose)
 The canonical reference-based API. Every function accepts `reference` before
 `evaluated`; these map to `target` and `pred` in the benchmark equations.
 Raw single-plan indices remain in their domain modules. The module exposes the
-nine task-specific metrics defined in `local/metrics.tex`: PTV Dose Distance,
+nine named plan-comparison metrics: PTV Dose Distance,
 PCID, PGID, OAR Constraint Disagreement, OAR DVH ABC, HID, body-mask RMSE,
 gamma passing rate, and the complete OpenKBP DVH Score.
 
 ```python
-from dosemetrics.metrics import comparison
+from dosemetrics.metrics import (
+    compare_dvh_score,
+    compare_paddick_conformity_index,
+    compare_ptv_dose,
+)
 
-ptvdd = comparison.compare_ptv_dose(reference, evaluated, ptv)
-pcid = comparison.compare_paddick_conformity_index(
+ptvdd = compare_ptv_dose(reference, evaluated, ptv)
+pcid = compare_paddick_conformity_index(
     reference, evaluated, ptv, prescription
 )
-score = comparison.compare_dvh_score(
+score = compare_dvh_score(
     reference, evaluated, targets=targets, oars=oars
 )
 ```

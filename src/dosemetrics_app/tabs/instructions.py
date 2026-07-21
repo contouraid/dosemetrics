@@ -15,15 +15,21 @@ def panel():
         
         ## Getting Started
         
-        ### Option 1: Use Example Data
-        Select any analysis tab and choose "Use example data" to try the application with pre-loaded datasets:
-        - Local data: Test subject and longitudinal timepoints from your local installation
-        - HuggingFace data: Example datasets from contouraid/dosemetrics-data
+        ### Option 1: Use Hosted Example Data
+        Open **Dosimetric Analysis**, choose **Hosted example**, and select a study from
+        [contouraid/dosemetrics-data](https://huggingface.co/datasets/contouraid/dosemetrics-data):
+
+        - NIfTI: test subject or either longitudinal time point
+        - DICOM: select any of the included RTDOSE objects; the RTSTRUCT is rasterized on that dose grid
         
         ### Option 2: Upload Your Own Data
-        Upload your dose distribution and structure masks in NIfTI format (.nii.gz):
-        - Dose file: 3D dose distribution volume
-        - Structure masks: One file per anatomical structure (organs at risk, targets)
+        **Dosimetric Analysis** accepts either:
+
+        - NIfTI: one `.nii`/`.nii.gz` dose volume and one or more binary structure masks
+        - DICOM-RT: at least one RTDOSE and one RTSTRUCT; CT and RTPLAN files are optional
+
+        Uploaded DICOM objects are identified by their Modality tag, so their local filenames do not
+        need to follow a special convention.
         
         ## Available Analyses
         
@@ -53,7 +59,7 @@ def panel():
         - Start with example data to familiarize yourself with the interface
         - Ensure your structure files follow consistent naming conventions
         - Download results as CSV for further analysis
-        - All processing happens locally in your browser
+        - Uploaded files are processed in a temporary server-side directory that is deleted after loading
         
         ---
         

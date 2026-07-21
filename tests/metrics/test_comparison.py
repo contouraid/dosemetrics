@@ -6,7 +6,18 @@ import numpy as np
 import pytest
 
 from dosemetrics.dose import Dose
-from dosemetrics.metrics import comparison
+from dosemetrics.metrics import (
+    compare_body_rmse,
+    compare_dvh_score,
+    compare_gamma,
+    compare_homogeneity_index,
+    compare_oar_constraints,
+    compare_oar_dvh_auc,
+    compare_paddick_conformity_index,
+    compare_paddick_gradient_index,
+    compare_ptv_dose,
+    comparison,
+)
 from dosemetrics.structures import OAR, Target
 
 
@@ -57,7 +68,7 @@ def test_ptv_dose_distance_is_absolute_mean_difference():
     reference = make_dose(np.full((2, 2, 2), 60.0))
     evaluated = make_dose(np.full((2, 2, 2), 62.5))
 
-    result = comparison.compare_ptv_dose(reference, evaluated, ptv)
+    result = compare_ptv_dose(reference, evaluated, ptv)
 
     assert result == pytest.approx(2.5)
 
@@ -72,7 +83,7 @@ def test_paddick_conformity_index_distance_uses_index_difference():
     evaluated_array = reference_array.copy()
     evaluated_array[1, 1, 2] = 60.0
 
-    result = comparison.compare_paddick_conformity_index(
+    result = compare_paddick_conformity_index(
         make_dose(reference_array),
         make_dose(evaluated_array),
         ptv,
@@ -91,7 +102,7 @@ def test_paddick_gradient_index_distance_uses_half_to_full_volume_ratio():
     evaluated.flat[:2] = 60.0
     evaluated.flat[2:8] = 30.0  # GI = 8 / 2 = 4
 
-    result = comparison.compare_paddick_gradient_index(
+    result = compare_paddick_gradient_index(
         make_dose(reference), make_dose(evaluated), prescription_dose=60.0
     )
 
@@ -111,7 +122,7 @@ def test_homogeneity_index_distance_uses_d2_d98_over_d50():
         np.percentile(evaluated_values, 98) - np.percentile(evaluated_values, 2)
     ) / np.percentile(evaluated_values, 50)
 
-    result = comparison.compare_homogeneity_index(
+    result = compare_homogeneity_index(
         make_dose(reference_values), make_dose(evaluated_values), ptv
     )
 
@@ -126,7 +137,7 @@ def test_body_rmse_ignores_voxels_outside_body():
     evaluated = np.full((2, 2, 2), 100.0)
     evaluated.flat[:2] = (3.0, 4.0)
 
-    result = comparison.compare_body_rmse(
+    result = compare_body_rmse(
         make_dose(reference), make_dose(evaluated), body
     )
 
@@ -139,7 +150,7 @@ def test_gamma_index_passing_rate_defaults_to_three_percent_three_mm():
     reference = make_dose(np.full((3, 3, 3), 60.0))
     evaluated = make_dose(np.full((3, 3, 3), 60.0))
 
-    result = comparison.compare_gamma(reference, evaluated, body=body)
+    result = compare_gamma(reference, evaluated, body=body)
 
     assert result == pytest.approx(100.0)
 
@@ -151,7 +162,7 @@ def test_full_dvh_score_combines_target_and_oar_criteria():
     reference = make_dose(np.full((2, 2, 2), 10.0))
     evaluated = make_dose(np.full((2, 2, 2), 12.0))
 
-    result = comparison.compare_dvh_score(
+    result = compare_dvh_score(
         reference, evaluated, targets=[ptv], oars=[oar]
     )
 
@@ -163,17 +174,17 @@ def test_constraint_disagreement_supports_sequences_and_mappings():
     reference = [True, True, False, False]
     evaluated = [True, False, True, False]
 
-    assert comparison.compare_oar_constraints(
+    assert compare_oar_constraints(
         reference, evaluated, expected_count=None
     ) == pytest.approx(0.5)
-    assert comparison.compare_oar_constraints(
+    assert compare_oar_constraints(
         dict(zip("abcd", reference)),
         dict(zip("abcd", evaluated)),
         expected_count=None,
     ) == pytest.approx(0.5)
 
     with pytest.raises(ValueError, match="Expected 38"):
-        comparison.compare_oar_constraints(reference, evaluated)
+        compare_oar_constraints(reference, evaluated)
 
 
 def test_oar_dvh_area_is_absolute_difference_of_auc_not_l1_curve_area():
@@ -184,7 +195,7 @@ def test_oar_dvh_area_is_absolute_difference_of_auc_not_l1_curve_area():
     reference = make_dose(reference_values)
     evaluated = make_dose(evaluated_values)
 
-    result = comparison.compare_oar_dvh_auc(reference, evaluated, oar, num_bins=100)
+    result = compare_oar_dvh_auc(reference, evaluated, oar, num_bins=100)
 
     bins = np.linspace(0.0, 10.0, 100)
     reference_dvh = np.asarray([np.mean(reference_values >= dose) for dose in bins])
@@ -203,4 +214,4 @@ def test_geometry_mismatch_is_rejected():
     evaluated = Dose(np.zeros((2, 2, 2)), (2.0, 2.0, 2.0), ORIGIN)
 
     with pytest.raises(ValueError, match="spacings"):
-        comparison.compare_ptv_dose(reference, evaluated, ptv)
+        compare_ptv_dose(reference, evaluated, ptv)

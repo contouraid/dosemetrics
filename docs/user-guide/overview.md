@@ -1,14 +1,21 @@
 # User Guide Overview
 
-Welcome to the DoseMetrics user guide. This section provides comprehensive documentation for using DoseMetrics in your radiotherapy analysis workflow.
+The user guide focuses on clinical use. Exact function signatures and module
+members are kept in the [API reference](../api/index.md).
 
 ## Topics
 
-- **[DVH Analysis](dvh-analysis.md)** - Creating and analyzing dose-volume histograms
-- **[Quality Metrics](quality-metrics.md)** - Computing plan quality indices
-- **[Compliance Checking](compliance-checking.md)** - Evaluating dose constraints
-- **[Visualizations](visualizations.md)** - Creating publication-ready plots
-- **[Geometric Analysis](geometric-analysis.md)** - Analyzing spatial relationships
+- **[Data Inputs and Containers](data-structures.md)** — image volumes,
+  `Dose`, `Structure`, `StructureSet`, and spatial compatibility
+- **[Metric Framework](quality-metrics.md)** — metric classes and the
+  distinction between reference-free and reference-based APIs
+- **[DVH Metrics](dvh-analysis.md)** — dose-volume computations and comparisons
+- **[Conformity Metrics](conformity-metrics.md)** — target coverage and
+  prescription-isodose overlap
+- **[Homogeneity Metrics](homogeneity-metrics.md)** — target uniformity and
+  dose falloff
+- **[Compliance Checking](compliance-checking.md)** — evaluating resolved dose
+  constraints
 
 ## Try the Live Demo
 

@@ -1,8 +1,6 @@
-import numpy as np
-
 import dosemetrics
-from dosemetrics import Dose, OAR
-from dosemetrics.utils.compliance import quality_index
+import dosemetrics.metrics
+import dosemetrics.utils
 
 
 def test_all_declared_public_names_exist():
@@ -10,20 +8,23 @@ def test_all_declared_public_names_exist():
     assert missing == []
 
 
-def test_quality_index_uses_current_dvh_module():
-    dose = Dose(
-        np.full((3, 3, 3), 2.0),
-        spacing=(1.0, 1.0, 1.0),
-        origin=(0.0, 0.0, 0.0),
-    )
-    structure = OAR(
-        "OAR",
-        np.ones((3, 3, 3), dtype=bool),
-        spacing=dose.spacing,
-        origin=dose.origin,
-    )
+def test_nonstandard_quality_index_is_not_public():
+    assert not hasattr(dosemetrics, "quality_index")
+    assert not hasattr(dosemetrics.utils, "quality_index")
 
-    assert quality_index(dose, structure, "mean", 10.0) == 0.8
-    assert quality_index(dose, structure, "max", 10.0) == 0.8
-    assert quality_index(dose, structure, "min", 1.0) == 1.0
-    assert quality_index(dose, structure, "mean", 1.0) == -1.0
+
+def test_named_plan_comparisons_are_exported_directly():
+    expected = {
+        "compare_body_rmse",
+        "compare_dvh_score",
+        "compare_gamma",
+        "compare_homogeneity_index",
+        "compare_mean_oar_dvh_auc",
+        "compare_oar_constraints",
+        "compare_oar_dvh_auc",
+        "compare_paddick_conformity_index",
+        "compare_paddick_gradient_index",
+        "compare_ptv_dose",
+    }
+    assert expected <= set(dosemetrics.metrics.__all__)
+    assert all(hasattr(dosemetrics.metrics, name) for name in expected)

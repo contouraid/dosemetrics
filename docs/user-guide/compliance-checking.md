@@ -47,10 +47,10 @@ evaluates the 38 organ-dose constraints selected from
 ### Example
 
 ```python
-from dosemetrics.metrics import comparison
+from dosemetrics.metrics import compare_oar_constraints
 
 # Both mappings contain the same 38 resolved CORSAIR-derived constraint IDs.
-disagreement_rate = comparison.compare_oar_constraints(
+disagreement_rate = compare_oar_constraints(
     reference_satisfaction,
     evaluated_satisfaction,
 )

@@ -48,10 +48,10 @@ statistics_table = pd.DataFrame([
 ## Compare plans with a fixed direction
 
 ```python
-from dosemetrics.metrics import comparison, dose_comparison
+from dosemetrics.metrics import compare_ptv_dose, dose_comparison
 
-mae = dose_comparison.compare_mae(reference, evaluated)
-ptv_distance = comparison.compare_ptv_dose(reference, evaluated, ptv)
+mae = dose_compare_mae(reference, evaluated)
+ptv_distance = compare_ptv_dose(reference, evaluated, ptv)
 ```
 
 All `compare_*` functions now put `reference` before `evaluated`.

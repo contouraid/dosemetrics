@@ -22,3 +22,10 @@ Classes for managing dose distributions, structures, and structure sets.
     options:
       show_source: true
       heading_level: 3
+
+## Root construction helper
+
+::: dosemetrics.create_structure_set_from_masks
+    options:
+      show_source: true
+      heading_level: 3

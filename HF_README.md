@@ -23,16 +23,23 @@ A Streamlit application for analyzing radiotherapy dose distributions and creati
 ## Usage
 
 1. Select a task from the sidebar
-2. Upload your dose distribution (`.nii.gz` format) and structure masks
-3. View and download the analysis results
+2. Open **Dosimetric Analysis**
+3. Load a hosted NIfTI or DICOM example, or upload your own data
+4. Explore dose slices, DVHs, statistics, and target quality metrics
+5. Download tabular results as CSV
 
-**Note**: This app requires you to upload your own medical imaging data. No sample data files are included in the Space due to file size restrictions.
+Hosted examples are downloaded on demand from
+[`contouraid/dosemetrics-data`](https://huggingface.co/datasets/contouraid/dosemetrics-data)
+and cached by the Space.
 
 ## Data Format
 
-The app expects:
-- Dose files: NIfTI format (`.nii.gz`)
-- Structure masks: NIfTI format (`.nii.gz`)
+The app accepts:
+
+- **NIfTI**: one `.nii`/`.nii.gz` dose volume and one or more binary structure masks
+- **DICOM-RT**: at least one RTDOSE and one RTSTRUCT; CT and RTPLAN files are optional
+
+Uploaded DICOM files are classified by their Modality tags. Files are processed in a temporary directory that is deleted after loading.
 
 ## About
 
@@ -54,7 +61,7 @@ If you use DoseMetrics in your research, please cite:
 @software{dosemetrics,
   author = {Kamath, Amith},
   title = {DoseMetrics: Tools for Radiotherapy Dose Analysis},
-  year = {2024},
+  year = {2026},
   url = {https://github.com/contouraid/dosemetrics}
 }
 ```

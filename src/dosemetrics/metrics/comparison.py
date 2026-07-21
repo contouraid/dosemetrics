@@ -267,7 +267,7 @@ def compare_gamma(
     global_normalization: bool = True,
     max_search_distance_mm: Optional[float] = None,
 ) -> float:
-    """Compute the percentage of evaluated voxels with ``gamma <= 1``.
+    """Compute the percentage of reference voxels with ``gamma <= 1``.
 
     Defaults implement 3%/3 mm global gamma and evaluate every reference
     voxel. Pass ``body`` to restrict the reported passing rate to the body

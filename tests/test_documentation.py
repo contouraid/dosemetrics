@@ -58,6 +58,17 @@ def test_notebook_execution(notebook_path, notebook_name):
         notebook_executor.preprocess(
             nb, {"metadata": {"path": str(notebook_path.parent)}}
         )
+        stderr_outputs = []
+        for cell in nb.cells:
+            for output in cell.get("outputs", []):
+                if output.get("output_type") == "stream" and output.get("name") == "stderr":
+                    text = output.get("text", "").strip()
+                    if text:
+                        stderr_outputs.append(text)
+        assert not stderr_outputs, (
+            f"{notebook_name} emitted warnings or errors on stderr:\n"
+            + "\n".join(stderr_outputs)
+        )
         print(f"✓ {notebook_name} executed successfully")
     except CellExecutionError as e:
         pytest.fail(f"Notebook {notebook_name} failed with error: {str(e)}")
@@ -105,6 +116,45 @@ def test_notebook_structure():
             ), f"{notebook_path.name} first cell is not a title"
 
 
+def test_notebooks_commit_clean_rendered_outputs():
+    """Rendered examples should include current figures without errors or warnings."""
+    for notebook_path in NOTEBOOKS_DIR.glob("*.ipynb"):
+        with open(notebook_path, "r", encoding="utf-8") as f:
+            nb = nbformat.read(f, as_version=4)
+
+        code_cells = [cell for cell in nb.cells if cell.cell_type == "code"]
+        assert all(cell.execution_count is not None for cell in code_cells), (
+            f"{notebook_path.name} has code cells without executed output"
+        )
+
+        outputs = [output for cell in code_cells for output in cell.get("outputs", [])]
+        error_outputs = [
+            output for output in outputs if output.get("output_type") == "error"
+        ]
+        stderr_outputs = [
+            output.get("text", "").strip()
+            for output in outputs
+            if output.get("output_type") == "stream"
+            and output.get("name") == "stderr"
+            and output.get("text", "").strip()
+        ]
+        rendered_figures = [
+            output
+            for output in outputs
+            if output.get("output_type") in {"display_data", "execute_result"}
+            and "image/png" in output.get("data", {})
+        ]
+
+        assert not error_outputs, f"{notebook_path.name} contains error outputs"
+        assert not stderr_outputs, (
+            f"{notebook_path.name} contains stderr output:\n"
+            + "\n".join(stderr_outputs)
+        )
+        assert rendered_figures, (
+            f"{notebook_path.name} has no committed rendered figures"
+        )
+
+
 def test_notebook_uses_correct_dataset():
     """Test that notebooks use the correct HuggingFace dataset."""
     correct_dataset = "contouraid/dosemetrics-data"
@@ -139,6 +189,32 @@ def test_notebook_uses_correct_structure_names():
                     pytest.fail(
                         f"{notebook_path.name} cell {i} uses 'Target' instead of PTV/CTV/GTV"
                     )
+
+
+def test_notebooks_avoid_promotional_recaps():
+    """Examples should end with results rather than promotional recap sections."""
+    prohibited_phrases = (
+        "## Summary",
+        "## Next Steps",
+        "Try the Live Demo",
+        "Want to experiment",
+        "For more information",
+        "NIfTI Export Capabilities",
+    )
+
+    for notebook_path in NOTEBOOKS_DIR.glob("*.ipynb"):
+        with open(notebook_path, "r", encoding="utf-8") as f:
+            nb = nbformat.read(f, as_version=4)
+
+        markdown = "\n".join(
+            cell.source for cell in nb.cells if cell.cell_type == "markdown"
+        )
+        code = "\n".join(cell.source for cell in nb.cells if cell.cell_type == "code")
+        source = f"{markdown}\n{code}"
+        found = [phrase for phrase in prohibited_phrases if phrase in source]
+        assert not found, (
+            f"{notebook_path.name} contains promotional recap text: {found}"
+        )
 
 
 def test_markdown_python_blocks_use_importable_public_api():

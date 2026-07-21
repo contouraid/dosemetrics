@@ -24,6 +24,7 @@ def compute_dvh(
     structure: Structure,
     max_dose: Optional[float] = None,
     step_size: float = 0.1,
+    verbose: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Compute dose-volume histogram for a structure.
@@ -36,6 +37,7 @@ def compute_dvh(
         structure: Structure to compute DVH for
         max_dose: Maximum dose for histogram bins (auto-detect if None)
         step_size: Bin width in Gy
+        verbose: Print a compact summary when ``True`` (default: ``False``)
 
     Returns:
         Tuple of (dose_bins, volume_percentages)
@@ -49,7 +51,7 @@ def compute_dvh(
         >>> dose = Dose.from_dicom("rtdose.dcm")
         >>> ptv = structures.get_structure("PTV")
         >>>
-        >>> dose_bins, volumes = dvh.compute_dvh(dose, ptv)
+        >>> dose_bins, volumes = dvh.compute_dvh(dose, ptv, verbose=True)
         >>>
         >>> # Plot DVH
         >>> import matplotlib.pyplot as plt
@@ -62,6 +64,8 @@ def compute_dvh(
     if len(dose_values) == 0:
         bins = np.array([0.0])
         volumes = np.array([0.0])
+        if verbose:
+            print(f"{structure.name} DVH: empty structure")
         return bins, volumes
 
     if max_dose is None:
@@ -74,6 +78,13 @@ def compute_dvh(
             for dose_bin in bins
         ]
     )
+
+    if verbose:
+        print(
+            f"{structure.name} DVH: {len(bins)} bins, "
+            f"{bins[0]:.2f}-{bins[-1]:.2f} Gy, "
+            f"{volumes.min():.1f}-{volumes.max():.1f}% volume"
+        )
 
     return bins, volumes
 
@@ -333,13 +344,16 @@ def extract_dvh_metrics(
 # Dose statistics functions (formerly in statistics.py)
 
 
-def compute_dose_statistics(dose: Dose, structure: Structure) -> Dict[str, float]:
+def compute_dose_statistics(
+    dose: Dose, structure: Structure, verbose: bool = False
+) -> Dict[str, float]:
     """
     Compute comprehensive dose statistics for a structure.
 
     Args:
         dose: Dose distribution object
         structure: Structure to analyze
+        verbose: Print the returned statistics when ``True`` (default: ``False``)
 
     Returns:
         Dictionary with statistics including:
@@ -355,14 +369,12 @@ def compute_dose_statistics(dose: Dose, structure: Structure) -> Dict[str, float
         >>> structures = StructureSet(...)
         >>> ptv = structures.get_structure("PTV")
         >>>
-        >>> stats = dvh.compute_dose_statistics(dose, ptv)
-        >>> print(f"Mean dose: {stats['mean_dose']:.2f} Gy")
-        >>> print(f"D95: {stats['D95']:.2f} Gy")
+        >>> stats = dvh.compute_dose_statistics(dose, ptv, verbose=True)
     """
     dose_values = dose.get_dose_in_structure(structure)
 
     if len(dose_values) == 0:
-        return {
+        statistics = {
             "mean_dose": 0.0,
             "max_dose": 0.0,
             "min_dose": 0.0,
@@ -374,19 +386,35 @@ def compute_dose_statistics(dose: Dose, structure: Structure) -> Dict[str, float
             "D02": 0.0,
             "D98": 0.0,
         }
+    else:
+        statistics = {
+            "mean_dose": float(np.mean(dose_values)),
+            "max_dose": float(np.max(dose_values)),
+            "min_dose": float(np.min(dose_values)),
+            "median_dose": float(np.median(dose_values)),
+            "std_dose": float(np.std(dose_values)),
+            "D95": float(np.percentile(dose_values, 5)),  # 95% receives at least this
+            "D50": float(np.percentile(dose_values, 50)),
+            "D05": float(np.percentile(dose_values, 95)),  # 5% receives at least this
+            "D02": float(np.percentile(dose_values, 98)),  # 2% receives at least this
+            "D98": float(np.percentile(dose_values, 2)),  # 98% receives at least this
+        }
 
-    return {
-        "mean_dose": float(np.mean(dose_values)),
-        "max_dose": float(np.max(dose_values)),
-        "min_dose": float(np.min(dose_values)),
-        "median_dose": float(np.median(dose_values)),
-        "std_dose": float(np.std(dose_values)),
-        "D95": float(np.percentile(dose_values, 5)),  # 95% receives at least this
-        "D50": float(np.percentile(dose_values, 50)),
-        "D05": float(np.percentile(dose_values, 95)),  # 5% receives at least this
-        "D02": float(np.percentile(dose_values, 98)),  # 2% receives at least this
-        "D98": float(np.percentile(dose_values, 2)),  # 98% receives at least this
-    }
+    if verbose:
+        print(f"{structure.name} dose statistics (Gy)")
+        for label, key in (
+            ("Mean", "mean_dose"),
+            ("Minimum", "min_dose"),
+            ("Maximum", "max_dose"),
+            ("D98", "D98"),
+            ("D95", "D95"),
+            ("D50", "D50"),
+            ("D05", "D05"),
+            ("D02", "D02"),
+        ):
+            print(f"  {label:7s} {statistics[key]:.2f}")
+
+    return statistics
 
 
 def compute_mean_dose(dose: Dose, structure: Structure) -> float:
@@ -511,7 +539,8 @@ def compute_dvh_auc(
 
     Returns:
         DVH AUC value. If normalize=True, returns value in [0, 1].
-        If normalize=False, returns value in Gy (dose × volume units).
+        If normalize=False, returns the trapezoidal integral in Gy·% for a
+        non-degenerate dose range.
 
     References:
         Adapted from DVHAUC metric in GDP-HMM AAPM Challenge.

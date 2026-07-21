@@ -123,6 +123,27 @@ class TestPlotFunctions(unittest.TestCase):
         # Check legend exists with both labels
         legend = ax.get_legend()
         self.assertIsNotNone(legend)
+
+    def test_plot_dvh_comparison_with_evaluated_structure(self):
+        shifted = Target(
+            name="PTV",
+            mask=self.structure1.mask,
+            spacing=self.structure1.spacing,
+            origin=(1.0, 0.0, 0.0),
+        )
+        dose2 = Dose(
+            dose_array=self.dose.dose_array,
+            spacing=self.dose.spacing,
+            origin=(1.0, 0.0, 0.0),
+        )
+        fig, ax = plot.plot_dvh_comparison(
+            self.dose,
+            dose2,
+            self.structure1,
+            evaluated_structure=shifted,
+        )
+        self.assertIsInstance(fig, plt.Figure)
+        self.assertEqual(len(ax.lines), 2)
     
     def test_plot_dvh_band(self):
         """Test DVH band plotting for population."""
@@ -188,6 +209,40 @@ class TestPlotFunctions(unittest.TestCase):
         
         self.assertIsInstance(fig, plt.Figure)
         self.assertIsInstance(ax, plt.Axes)
+
+    def test_plot_dose_slice_with_contours(self):
+        """The high-level slice helper draws structures and an isodose."""
+        fig, ax = plot.plot_dose_slice(
+            self.dose,
+            structures=self.structures,
+            structure_names=["PTV", "OAR"],
+            background=np.zeros(self.dose.shape),
+            prescription_dose=25.0,
+        )
+
+        self.assertIsInstance(fig, plt.Figure)
+        self.assertGreaterEqual(len(ax.collections), 2)
+        self.assertIsNotNone(ax.get_legend())
+
+    def test_plot_metric_values(self):
+        fig, ax = plot.plot_metric_values({"Coverage": 0.9, "Spillage": 0.1})
+        self.assertIsInstance(fig, plt.Figure)
+        self.assertEqual(len(ax.patches), 2)
+
+    def test_plot_dose_difference(self):
+        evaluated = Dose(
+            self.dose.dose_array + 1.0,
+            spacing=self.dose.spacing,
+            origin=self.dose.origin,
+        )
+        fig, ax = plot.plot_dose_difference(
+            self.dose,
+            evaluated,
+            structures=self.structures,
+            structure_names=["PTV"],
+        )
+        self.assertIsInstance(fig, plt.Figure)
+        self.assertIsNotNone(ax.get_legend())
     
     def test_save_figure(self):
         """Test saving figures in multiple formats."""

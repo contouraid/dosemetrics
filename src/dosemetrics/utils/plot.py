@@ -9,7 +9,7 @@ This module provides functions for creating publication-ready plots at different
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Union, Tuple
+from typing import Dict, List, Mapping, Optional, Union, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -85,11 +85,7 @@ def plot_dvh(
 
     if not relative_volume:
         # DVH returns relative volume by default, convert to absolute if needed
-        volumes = (
-            volumes / 100.0 * structure.volume_cc
-            if hasattr(structure, "volume_cc")
-            else volumes
-        )
+        volumes = volumes / 100.0 * structure.volume_cc()
 
     # Plot
     if label is None:
@@ -210,6 +206,7 @@ def plot_dvh_comparison(
     bins: int = 1000,
     relative_volume: bool = True,
     figsize: Tuple[float, float] = (8, 6),
+    evaluated_structure: Optional[Structure] = None,
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     Compare DVHs from two different dose distributions.
@@ -221,7 +218,7 @@ def plot_dvh_comparison(
     dose1, dose2 : Dose
         Dose distributions to compare
     structure : Structure
-        Structure to analyze
+        Structure on the first dose grid
     labels : Tuple[str, str]
         Labels for the two doses
     bins : int
@@ -230,6 +227,9 @@ def plot_dvh_comparison(
         Plot relative vs absolute volume
     figsize : Tuple[float, float]
         Figure size
+    evaluated_structure : Structure, optional
+        Corresponding structure on the second dose grid. Defaults to
+        ``structure`` when both doses share the same grid.
 
     Returns
     -------
@@ -244,6 +244,8 @@ def plot_dvh_comparison(
     """
     fig, ax = plt.subplots(figsize=figsize)
 
+    evaluated_structure = evaluated_structure or structure
+
     # Plot both DVHs
     plot_dvh(
         dose1,
@@ -257,7 +259,7 @@ def plot_dvh_comparison(
     )
     plot_dvh(
         dose2,
-        structure,
+        evaluated_structure,
         bins=bins,
         relative_volume=relative_volume,
         ax=ax,
@@ -611,12 +613,18 @@ def plot_metric_comparison(
 def plot_dose_slice(
     dose: Dose,
     slice_idx: Optional[int] = None,
-    axis: int = 2,
+    axis: int = 0,
     structures: Optional[StructureSet] = None,
     structure_names: Optional[List[str]] = None,
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
     cmap: str = "viridis",
+    background: Optional[np.ndarray] = None,
+    background_window: Optional[Tuple[float, float]] = None,
+    min_dose: Optional[float] = None,
+    prescription_dose: Optional[float] = None,
+    contour_colors: Optional[Mapping[str, str]] = None,
+    alpha: float = 0.82,
     show_colorbar: bool = True,
     figsize: Tuple[float, float] = (10, 8),
 ) -> Tuple[plt.Figure, plt.Axes]:
@@ -628,9 +636,10 @@ def plot_dose_slice(
     dose : Dose
         Dose distribution
     slice_idx : int, optional
-        Slice index (default: middle slice)
+        Slice index. By default, use the slice with the largest cross-section
+        of the first selected structure, or the middle slice without structures.
     axis : int
-        Axis to slice along (0=sagittal, 1=coronal, 2=axial)
+        Array axis to slice along (default: 0, axial for dosemetrics arrays)
     structures : StructureSet, optional
         Structures to overlay
     structure_names : List[str], optional
@@ -639,6 +648,19 @@ def plot_dose_slice(
         Dose value range for colormap
     cmap : str
         Colormap name
+    background : np.ndarray, optional
+        Image volume to draw beneath the dose colorwash
+    background_window : Tuple[float, float], optional
+        Lower and upper display limits for the background image
+    min_dose : float, optional
+        Hide dose values below this threshold. Defaults to 5% of maximum dose
+        when a background is supplied and zero otherwise.
+    prescription_dose : float, optional
+        Draw this isodose as a magenta contour
+    contour_colors : Mapping[str, str], optional
+        Per-structure contour colors
+    alpha : float
+        Dose colorwash opacity when a background is supplied
     show_colorbar : bool
         Whether to show colorbar
     figsize : Tuple[float, float]
@@ -655,29 +677,50 @@ def plot_dose_slice(
     ...     structure_names=['PTV', 'Heart']
     ... )
     """
-    fig, ax = plt.subplots(figsize=figsize)
+    if axis not in (0, 1, 2):
+        raise ValueError(f"axis must be 0, 1, or 2; got {axis}")
+    if background is not None and background.shape != dose.dose_array.shape:
+        raise ValueError("background must have the same shape as the dose array")
 
-    # Get middle slice if not specified
-    if slice_idx is None:
+    struct_list = []
+    if structures is not None:
+        names = structure_names or structures.structure_names
+        struct_list = [structures[name] for name in names if name in structures]
+
+    if slice_idx is None and struct_list:
+        reduce_axes = tuple(index for index in range(3) if index != axis)
+        slice_idx = int(np.argmax(struct_list[0].mask.sum(axis=reduce_axes)))
+    elif slice_idx is None:
         slice_idx = dose.dose_array.shape[axis] // 2
 
-    # Extract slice
-    if axis == 0:
-        dose_slice = dose.dose_array[slice_idx, :, :]
-    elif axis == 1:
-        dose_slice = dose.dose_array[:, slice_idx, :]
-    else:  # axis == 2
-        dose_slice = dose.dose_array[:, :, slice_idx]
+    def take_slice(array: np.ndarray) -> np.ndarray:
+        return np.take(array, slice_idx, axis=axis)
 
-    # Plot dose
+    fig, ax = plt.subplots(figsize=figsize)
+    dose_slice = take_slice(dose.dose_array)
+    if background is not None:
+        background_limits = background_window or (None, None)
+        ax.imshow(
+            take_slice(background),
+            origin="lower",
+            cmap="gray",
+            vmin=background_limits[0],
+            vmax=background_limits[1],
+        )
+
+    threshold = min_dose
+    if threshold is None:
+        threshold = 0.05 * dose.max_dose if background is not None else 0.0
+    visible_dose = np.ma.masked_less(dose_slice, threshold)
     im = ax.imshow(
-        dose_slice.T,
+        visible_dose,
         origin="lower",
         cmap=cmap,
         vmin=vmin,
         vmax=vmax,
         aspect="equal",
         interpolation="bilinear",
+        alpha=alpha if background is not None else 1.0,
     )
 
     # Add colorbar
@@ -685,22 +728,29 @@ def plot_dose_slice(
         cbar = plt.colorbar(im, ax=ax)
         cbar.set_label("Dose (Gy)", fontsize=12)
 
-    # Overlay structure contours
-    if structures:
-        struct_list = (
-            [s for s in structures if s.name in structure_names]
-            if structure_names
-            else list(structures)
+    colors = contour_colors or {}
+    for index, structure in enumerate(struct_list):
+        mask_slice = take_slice(structure.mask)
+        if not np.any(mask_slice):
+            continue
+        color = colors.get(structure.name, DEFAULT_COLORS[index % len(DEFAULT_COLORS)])
+        ax.contour(mask_slice, levels=[0.5], colors=[color], linewidths=1.8)
+        ax.plot([], [], color=color, linewidth=1.8, label=structure.name)
+
+    if prescription_dose is not None and dose_slice.min() <= prescription_dose <= dose_slice.max():
+        ax.contour(
+            dose_slice,
+            levels=[prescription_dose],
+            colors=["magenta"],
+            linewidths=2.0,
+        )
+        ax.plot(
+            [], [], color="magenta", linewidth=2.0,
+            label=f"{prescription_dose:g} Gy isodose",
         )
 
-        for i, structure in enumerate(struct_list):
-            # Get contour on this slice
-            # Note: This is a simplified version - actual implementation would need
-            # proper coordinate transformation and contour extraction
-            # Placeholder for contour plotting
-            # In practice, you'd extract the contour points for this slice
-            # and plot them using ax.plot()
-            pass
+    if struct_list or prescription_dose is not None:
+        ax.legend(loc="upper right", framealpha=0.85)
 
     ax.set_xlabel("X (pixels)", fontsize=12)
     ax.set_ylabel("Y (pixels)", fontsize=12)
@@ -710,6 +760,97 @@ def plot_dose_slice(
 
     fig.tight_layout()
 
+    return fig, ax
+
+
+def plot_metric_values(
+    values: Mapping[str, float],
+    title: str = "Metric values",
+    ylabel: str = "Value",
+    ylim: Optional[Tuple[float, float]] = None,
+    horizontal: bool = False,
+    figsize: Tuple[float, float] = (9, 5),
+) -> Tuple[plt.Figure, plt.Axes]:
+    """Plot a small mapping of scalar metric names to values.
+
+    This convenience function keeps routine metric visualization free of
+    notebook-specific pandas and Matplotlib setup.
+    """
+    fig, ax = plt.subplots(figsize=figsize)
+    labels = list(values)
+    data = list(values.values())
+    colors = [DEFAULT_COLORS[index % len(DEFAULT_COLORS)] for index in range(len(data))]
+
+    if horizontal:
+        bars = ax.barh(labels, data, color=colors)
+        ax.bar_label(bars, fmt="%.3f", padding=3)
+        ax.set_xlabel(ylabel)
+    else:
+        bars = ax.bar(labels, data, color=colors)
+        ax.bar_label(bars, fmt="%.3f", padding=3)
+        ax.set_ylabel(ylabel)
+        ax.tick_params(axis="x", rotation=30)
+
+    if ylim is not None:
+        ax.set_ylim(*ylim)
+    ax.set_title(title)
+    ax.grid(axis="y" if not horizontal else "x", alpha=0.25)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    fig.tight_layout()
+    return fig, ax
+
+
+def plot_dose_difference(
+    reference: Dose,
+    evaluated: Dose,
+    structures: Optional[StructureSet] = None,
+    structure_names: Optional[List[str]] = None,
+    slice_idx: Optional[int] = None,
+    axis: int = 0,
+    percentile: float = 99.0,
+    figsize: Tuple[float, float] = (9, 7),
+) -> Tuple[plt.Figure, plt.Axes]:
+    """Plot an evaluated-minus-reference dose slice on a symmetric scale."""
+    if reference.shape != evaluated.shape:
+        raise ValueError("reference and evaluated dose arrays must have matching shapes")
+    difference = evaluated.dose_array - reference.dose_array
+
+    struct_list = []
+    if structures is not None:
+        names = structure_names or structures.structure_names
+        struct_list = [structures[name] for name in names if name in structures]
+    if slice_idx is None and struct_list:
+        reduce_axes = tuple(index for index in range(3) if index != axis)
+        slice_idx = int(np.argmax(struct_list[0].mask.sum(axis=reduce_axes)))
+    elif slice_idx is None:
+        slice_idx = difference.shape[axis] // 2
+
+    difference_slice = np.take(difference, slice_idx, axis=axis)
+    limit = float(np.percentile(np.abs(difference), percentile))
+    if limit == 0:
+        limit = 1.0
+    fig, ax = plt.subplots(figsize=figsize)
+    image = ax.imshow(
+        difference_slice,
+        origin="lower",
+        cmap="RdBu_r",
+        vmin=-limit,
+        vmax=limit,
+    )
+    for index, structure in enumerate(struct_list):
+        mask_slice = np.take(structure.mask, slice_idx, axis=axis)
+        if np.any(mask_slice):
+            color = DEFAULT_COLORS[index % len(DEFAULT_COLORS)]
+            ax.contour(mask_slice, levels=[0.5], colors=[color], linewidths=1.5)
+            ax.plot([], [], color=color, label=structure.name)
+    if struct_list:
+        ax.legend(loc="upper right")
+    ax.set_title(f"Dose difference (evaluated - reference) · slice {slice_idx}")
+    ax.set_xlabel("x voxel")
+    ax.set_ylabel("y voxel")
+    fig.colorbar(image, ax=ax, label="Dose difference (Gy)", shrink=0.82)
+    fig.tight_layout()
     return fig, ax
 
 
