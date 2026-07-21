@@ -5,12 +5,15 @@ from __future__ import annotations
 import os
 import warnings
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, TYPE_CHECKING, Union
 
 from ..dose import Dose
 from ..io import dicom_io, load_structure_set
 from ..structure_set import StructureSet
 from ..structures import StructureType
+
+if TYPE_CHECKING:
+    import numpy as np
 
 
 EXAMPLE_DATASET = "contouraid/dosemetrics-data"
