@@ -10,7 +10,6 @@ edit_uri: edit/main/docs/
 # part of the public documentation site.
 exclude_docs: |
   architecture/
-  design-prompts.md
   examples/
   user-guide/gamma-performance.md
   user-guide/geometric-analysis.md
